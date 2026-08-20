@@ -9,12 +9,19 @@ declare( strict_types=1 );
 
 namespace DP\Core;
 
+use DP\Core\Cli\Commands;
+use DP\Core\Content\ContentModel;
+
 /**
  * Owns the plugin's lifetime.
  *
- * Phase 0 registers nothing. Everything that follows — post types, taxonomies,
- * meta, blocks, REST routes, CLI commands — is attached from here so there is
- * exactly one place that knows what this plugin does.
+ * Everything the plugin does — post types, taxonomies, meta, blocks, REST
+ * routes, CLI commands — is attached from here, so there is exactly one place
+ * that knows what this plugin is.
+ *
+ * Collaborators are built in `boot()` and injected, not reached for inside
+ * `register()`. Constructing them touches no WordPress function, so it is safe
+ * before `init`; registering them is what has to wait for it.
  */
 final class Plugin {
 
@@ -28,12 +35,16 @@ final class Plugin {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $file    Absolute path to the plugin's entry file.
-	 * @param string $version Plugin version.
+	 * @param string       $file    Absolute path to the plugin's entry file.
+	 * @param string       $version Plugin version.
+	 * @param ContentModel $content The content model: post types, taxonomies, meta.
+	 * @param Commands     $cli     The WP-CLI commands, if WP-CLI is what is running.
 	 */
 	private function __construct(
 		private readonly string $file,
-		private readonly string $version
+		private readonly string $version,
+		private readonly ContentModel $content,
+		private readonly Commands $cli
 	) {}
 
 	/**
@@ -47,7 +58,7 @@ final class Plugin {
 	 */
 	public static function boot( string $file, string $version ): self {
 		if ( null === self::$instance ) {
-			self::$instance = new self( $file, $version );
+			self::$instance = new self( $file, $version, ContentModel::create(), Commands::create() );
 			add_action( 'init', self::$instance->register( ... ) );
 		}
 
@@ -57,11 +68,16 @@ final class Plugin {
 	/**
 	 * Register everything the plugin provides.
 	 *
-	 * Deliberately empty in Phase 0.
+	 * Runs on `init`, which is the earliest hook where `register_post_type()`,
+	 * `register_taxonomy()` and `register_post_meta()` are all valid and the
+	 * latest at which the REST API and the rewrite rules will still see them.
 	 *
 	 * @return void
 	 */
-	public function register(): void {}
+	public function register(): void {
+		$this->content->register();
+		$this->cli->register();
+	}
 
 	/**
 	 * Absolute path to the plugin's entry file.
