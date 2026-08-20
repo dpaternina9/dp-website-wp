@@ -39,7 +39,7 @@ final class Destinations {
 	private const CACHE_KEY = 'dpaternina_template_pages';
 
 	/**
-	 * The map, once resolved, for the rest of the request.
+	 * The map, once resolved, for the rest of the request. Keyed by slug.
 	 *
 	 * @var array<string, int>|null
 	 */
@@ -107,19 +107,39 @@ final class Destinations {
 	/**
 	 * The URL of the page carrying one of this theme's custom templates.
 	 *
-	 * @param string $template The template file name, e.g. `dp-contact.html`.
+	 * @param string $template The template's slug, e.g. `dp-contact`. A `.html`
+	 *                         extension is accepted and ignored.
 	 * @return string|null Null when David has not assigned that template to anything.
 	 */
 	public function by_template( string $template ): ?string {
 		$pages = $this->template_pages();
+		$slug  = $this->slug( $template );
 
-		if ( ! isset( $pages[ $template ] ) ) {
+		if ( ! isset( $pages[ $slug ] ) ) {
 			return null;
 		}
 
-		$permalink = get_permalink( $pages[ $template ] );
+		$permalink = get_permalink( $pages[ $slug ] );
 
 		return is_string( $permalink ) ? $permalink : null;
+	}
+
+	/**
+	 * A template's slug, whichever of its two spellings arrived.
+	 *
+	 * WordPress offers a block theme's custom templates to the admin under their
+	 * slugs — `dp-contact` — and that is what a page assigned from the dropdown
+	 * stores. A page imported from a classic theme, or written by an older
+	 * version of this code, carries the file name instead. Both mean the same
+	 * template, so both resolve to the same key rather than to a silent miss.
+	 *
+	 * @param string $template Either spelling.
+	 * @return string
+	 */
+	private function slug( string $template ): string {
+		return str_ends_with( $template, '.html' )
+			? substr( $template, 0, -5 )
+			: $template;
 	}
 
 	/**
@@ -134,7 +154,7 @@ final class Destinations {
 	}
 
 	/**
-	 * Template file name to page ID, for every published page that has one.
+	 * Template slug to page ID, for every published page that has one.
 	 *
 	 * The last page to claim a template wins, deterministically: the query is
 	 * ordered by ID so two pages carrying `dp-contact.html` always resolve to
@@ -188,7 +208,7 @@ final class Destinations {
 			$template = get_page_template_slug( $id );
 
 			if ( is_string( $template ) && str_starts_with( $template, 'dp-' ) ) {
-				$map[ $template ] = $id;
+				$map[ $this->slug( $template ) ] = $id;
 			}
 		}
 

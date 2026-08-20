@@ -198,6 +198,57 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
+	 * Every template the chrome names is one WordPress will actually offer.
+	 *
+	 * This is the assertion that catches a spelling difference nobody would
+	 * notice by reading: WordPress offers a block theme's custom templates to
+	 * the admin under their slugs, so a page assigned Contact from the dropdown
+	 * stores `dp-contact` and a resolver looking for `dp-contact.html` finds
+	 * nothing, forever, in silence.
+	 *
+	 * @return void
+	 */
+	public function test_every_named_template_is_one_the_admin_offers(): void {
+		$offered = array_keys( wp_get_theme()->get_post_templates()['page'] ?? array() );
+
+		$this->assertNotEmpty( $offered );
+
+		foreach ( Navigation::TEMPLATES as $destination => $template ) {
+			$this->assertContains(
+				$template,
+				$offered,
+				sprintf( 'The "%s" destination names a template the admin does not offer.', $destination )
+			);
+		}
+	}
+
+	/**
+	 * A page assigned its template the way the admin assigns it still resolves.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_assigned_through_rest_still_resolves(): void {
+		$contact = $this->seed_page( 'Say hello' );
+
+		$updated = wp_update_post(
+			array(
+				'ID'            => $contact,
+				'page_template' => Navigation::TEMPLATES['contact'],
+			),
+			true
+		);
+
+		$this->assertIsInt( $updated );
+		$this->assertSame( Navigation::TEMPLATES['contact'], get_page_template_slug( $contact ) );
+
+		delete_transient( 'dpaternina_template_pages' );
+
+		$navigation = new Navigation( new Destinations() );
+
+		$this->assertSame( $this->permalink( $contact ), $navigation->url_for( 'contact' ) );
+	}
+
+	/**
 	 * Every destination the theme offers resolves or is deliberately absent.
 	 *
 	 * @return void

@@ -49,16 +49,23 @@ final class Navigation {
 	 * The template names are this theme's own, declared in its own theme.json,
 	 * which is precisely the branch CLAUDE.md section 5.1 prescribes: "branch on
 	 * the assigned template (`get_page_template_slug()`) … never on a slug".
-	 * A page carrying `dp-contact.html` *is* the contact page, by David's
-	 * decision, whatever he called it and wherever he moved it.
+	 * A page carrying `dp-contact` *is* the contact page, by David's decision,
+	 * whatever he called it and wherever he moved it.
+	 *
+	 * They are written without the `.html` extension because that is what
+	 * WordPress stores. A block theme's custom templates are offered to the
+	 * admin — and validated by the REST API — under their slugs, so a page
+	 * assigned Contact from the dropdown carries `dp-contact` in
+	 * `_wp_page_template`. `Destinations` normalises either form anyway, since
+	 * a page imported from elsewhere may well carry the file name.
 	 *
 	 * @var array<string, string>
 	 */
 	public const TEMPLATES = array(
-		'contact' => 'dp-contact.html',
-		'work'    => 'dp-work.html',
-		'about'   => 'dp-about.html',
-		'resume'  => 'dp-resume.html',
+		'contact' => 'dp-contact',
+		'work'    => 'dp-work',
+		'about'   => 'dp-about',
+		'resume'  => 'dp-resume',
 	);
 
 	/**

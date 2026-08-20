@@ -90,8 +90,17 @@ test.describe( 'the house style on the page', () => {
 		await page.goto( `/?page_id=${ id }` );
 		await page.evaluate( () => document.fonts.ready );
 
+		/*
+		 * Scoped to the post's content. Phase 5 wrapped every template in the
+		 * site chrome, and the CTA band that closes each one carries a heading
+		 * of its own — correctly, and with the house style applied to it. What
+		 * this test is about is the vocabulary a *post* is written in, so it
+		 * looks inside the article rather than at the page.
+		 */
+		const content = page.locator( '.wp-block-post-content' );
+
 		await test.step( 'h4 is mono caps in the accent colour, not the display face', async () => {
-			const h4 = page.locator( 'h4.wp-block-heading' );
+			const h4 = content.locator( 'h4.wp-block-heading' );
 
 			await expect( h4 ).toHaveCSS( 'font-family', /JetBrains Mono/ );
 			await expect( h4 ).not.toHaveCSS(
@@ -105,7 +114,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'h2 and h3 keep the display face and their own rhythm', async () => {
-			const h2 = page.locator( 'h2.wp-block-heading' );
+			const h2 = content.locator( 'h2.wp-block-heading' );
 
 			await expect( h2 ).toHaveCSS(
 				'font-family',
@@ -113,15 +122,15 @@ test.describe( 'the house style on the page', () => {
 			);
 			await expect( h2 ).toHaveCSS( 'font-size', '30px' );
 			await expect( h2 ).toHaveCSS( 'margin-top', '48px' );
-			await expect( page.locator( 'h3.wp-block-heading' ) ).toHaveCSS(
+			await expect( content.locator( 'h3.wp-block-heading' ) ).toHaveCSS(
 				'margin-top',
 				'36px'
 			);
 		} );
 
 		await test.step( 'list markers are rendered, in a 28px column', async () => {
-			const ul = page.locator( 'ul.wp-block-list' );
-			const ol = page.locator( 'ol.wp-block-list' );
+			const ul = content.locator( 'ul.wp-block-list' );
+			const ol = content.locator( 'ol.wp-block-list' );
 
 			await expect( ul ).toHaveAttribute( 'role', 'list' );
 			await expect( ol ).toHaveAttribute( 'role', 'list' );
@@ -166,7 +175,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'the quote is the pull quote', async () => {
-			const quote = page.locator( 'blockquote.wp-block-quote' );
+			const quote = content.locator( 'blockquote.wp-block-quote' );
 
 			await expect( quote ).toHaveCSS( 'border-left-width', '2px' );
 			await expect( quote ).toHaveCSS( 'border-left-color', TEAL );
@@ -189,7 +198,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'the code block is labelled and forced dark', async () => {
-			const code = page.locator( 'pre.wp-block-code' );
+			const code = content.locator( 'pre.wp-block-code' );
 
 			await expect( code ).toHaveClass( /dp-dark/ );
 			await expect( code ).toHaveCSS( 'background-color', BAND );
@@ -203,7 +212,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'the callout renders without the plugin registering anything', async () => {
-			const callout = page.locator( '.wp-block-dp-callout' );
+			const callout = content.locator( '.wp-block-dp-callout' );
 
 			await expect( callout ).toBeVisible();
 			await expect( callout ).toHaveCSS( 'display', 'flex' );
@@ -218,7 +227,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'the separator is a 1px spectrum line at 60%', async () => {
-			const rule = page.locator( 'hr.wp-block-separator' );
+			const rule = content.locator( 'hr.wp-block-separator' );
 
 			await expect( rule ).toHaveCSS( 'height', '1px' );
 			await expect( rule ).toHaveCSS( 'opacity', '0.6' );
@@ -230,7 +239,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'the table scrolls rather than squeezing', async () => {
-			const table = page.locator( 'figure.wp-block-table' );
+			const table = content.locator( 'figure.wp-block-table' );
 
 			await expect( table ).toHaveCSS( 'overflow-x', 'auto' );
 			await expect( table.locator( 'th' ).first() ).toHaveCSS(
@@ -244,9 +253,7 @@ test.describe( 'the house style on the page', () => {
 		} );
 
 		await test.step( 'body copy sits on the design’s measure', async () => {
-			const paragraph = page
-				.locator( '.wp-block-post-content p' )
-				.first();
+			const paragraph = content.locator( 'p' ).first();
 
 			await expect( paragraph ).toHaveCSS( 'color', SECONDARY );
 			await expect( paragraph ).toHaveCSS( 'font-size', '16px' );
@@ -268,9 +275,11 @@ test.describe( 'the house style on the page', () => {
 
 		await page.goto( `/?page_id=${ id }` );
 
-		await expect( page.locator( 'h4.wp-block-heading' ) ).toBeVisible();
-		await expect( page.locator( 'pre.wp-block-code' ) ).toBeVisible();
-		await expect( page.locator( '.wp-block-dp-callout' ) ).toBeVisible();
+		const content = page.locator( '.wp-block-post-content' );
+
+		await expect( content.locator( 'h4.wp-block-heading' ) ).toBeVisible();
+		await expect( content.locator( 'pre.wp-block-code' ) ).toBeVisible();
+		await expect( content.locator( '.wp-block-dp-callout' ) ).toBeVisible();
 
 		await context.close();
 	} );
