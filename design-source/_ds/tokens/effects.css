@@ -1,0 +1,52 @@
+/* dP effects — radii, borders, shadows, motion */
+:root {
+  /* Corner radii — every step on the 4px grid, doubling then easing off.
+     4 · 8 · 12 · 16 · 24 · pill · circle */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  /* Where each one belongs:
+     xs   badges' inner marks, tags, tight chips
+     sm   inputs inside dense tables, small thumbnails
+     md   inputs, selects, textareas, small surfaces
+     lg   cards and panels
+     xl   modals, sheets, large feature surfaces
+     pill buttons, badges, filter chips
+     circle icon buttons, avatars, the logo badge */
+
+  /* Borders */
+  --border-width: 1px; /* @kind other */
+  --border-width-strong: 2px; /* @kind other */
+
+  /* Shadows — restrained, cool-tinted for depth on dark; soft on light */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.35);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.45);
+  --shadow-glow-teal: 0 0 0 1px rgba(8,217,214,0.4), 0 8px 30px rgba(8,217,214,0.25);
+  --shadow-glow-pink: 0 0 0 1px rgba(255,46,99,0.4), 0 8px 30px rgba(255,46,99,0.25);
+
+  /* Motion — decelerating curves only. Nothing overshoots, nothing bounces.
+     Real objects slow to a stop; springy easing reads as decoration. */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1); /* @kind other */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+  --ease-emphasis: cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
+  --dur-fast: 120ms; /* @kind other */
+  --dur-base: 200ms; /* @kind other */
+  --dur-slow: 380ms; /* @kind other */
+}
+
+/* Shadows above are tuned for dark surfaces, where a 35% black scrim reads as depth.
+   On white the same values read as dirt. Light mode gets its own, much lighter set,
+   tinted with ink rather than pure black so it stays in the palette. */
+.dp-light {
+  --shadow-sm: 0 1px 2px rgba(12,12,14,0.08);
+  --shadow-md: 0 6px 20px rgba(12,12,14,0.10);
+  --shadow-lg: 0 20px 48px rgba(12,12,14,0.14);
+  --shadow-glow-teal: 0 0 0 1px rgba(6,179,176,0.35), 0 6px 22px rgba(6,179,176,0.18);
+  --shadow-glow-pink: 0 0 0 1px rgba(224,20,80,0.35), 0 6px 22px rgba(224,20,80,0.18);
+}

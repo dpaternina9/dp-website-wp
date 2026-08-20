@@ -1,0 +1,19 @@
+<!-- NOTE: inline base64 dP mark replaced with assets/dp-mark-gradient-128.png during import. -->
+<x-dc>
+<div style="{{ wrapStyle }}">
+  <sc-if value="{{ showMark }}">
+    <img src="assets/dp-mark-gradient-128.png" alt="" width="64" height="64" style="display: block; flex: none">
+  </sc-if>
+  <div style="flex: 1 1 260px; min-width: 0">
+    <div style="font-family: var(--font-display); font-size: var(--fs-base); letter-spacing: var(--ls-tight); margin-bottom: 8px; text-wrap: pretty">{{ title }}</div>
+    <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ line }}</p>
+  </div>
+  <div style="flex: none">
+    <Button variant="secondary" size="md" onClick="{{ onClick }}">{{ buttonLabel }}</Button>
+  </div>
+</div>
+</x-dc>
+<!-- props: title, line, buttonLabel, variant ('plain'|'filled'), showMark, onClick
+     wrapStyle = { padding clamp(24px,4vw,32px); radius lg; border 1px var(--border-subtle);
+                   background: filled ? var(--bg-surface) : transparent;
+                   display flex; align-items center; gap 24px; flex-wrap wrap } -->

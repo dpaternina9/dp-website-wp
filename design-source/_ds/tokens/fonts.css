@@ -1,0 +1,7 @@
+/* dP webfonts — Google Fonts @font-face closure.
+   Display: Bricolage Grotesque · Body: Manrope · Mono: JetBrains Mono
+
+   The pairing works on a contrast axis: Bricolage is a characterful grotesque with
+   irregular, slightly condensed forms; Manrope is smooth and near-geometric. Two faces
+   from the same family of shapes would read as a mistake rather than a choice. */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap');

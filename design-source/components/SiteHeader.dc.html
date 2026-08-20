@@ -1,0 +1,101 @@
+<!-- NOTE: inline base64 dP mark replaced with assets/dp-mark-gradient-128.png during import. -->
+<x-dc>
+<helmet>
+<style>
+  @keyframes dpPanelIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+  @keyframes dpLiveDot { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { @keyframes dpPanelIn { from { opacity: 1; } to { opacity: 1; } } }
+</style>
+</helmet>
+
+<header style="position: sticky; top: 0; z-index: 30; background: var(--bg-page); border-bottom: 1px solid var(--border-subtle)">
+  <div style="max-width: var(--container-lg); margin: 0 auto; padding: 12px var(--gutter); display: flex; align-items: center; justify-content: space-between; gap: 24px">
+
+    <div style="display: flex; align-items: center; gap: 12px; flex: none">
+      <div onClick="{{ onHome }}" role="link" tabindex="0" style="cursor: pointer; display: flex; align-items: center" title="dpaternina.com">
+        <img src="assets/dp-mark-gradient-128.png" alt="dP — David Paternina" width="34" height="34" style="display: block">
+      </div>
+      <sc-if value="{{ live }}">
+        <div onClick="{{ onWatchLive }}" role="link" tabindex="0" title="Live on Twitch right now" style="cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 9px; border-radius: var(--radius-pill); border: 1px solid var(--dp-pink); background: color-mix(in srgb, var(--dp-pink) 14%, transparent); transition: background var(--dur-base) var(--ease-standard)" style-hover="background: color-mix(in srgb, var(--dp-pink) 24%, transparent)">
+          <span style="width: 7px; height: 7px; border-radius: var(--radius-circle); background: var(--dp-pink); animation: dpLiveDot 1.8s ease-in-out infinite"></span>
+          <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink)">LIVE</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- WIDE (host width >= 720px) -->
+    <sc-if value="{{ wide }}">
+      <nav style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+          <div onClick="{{ it.onClick }}" role="link" tabindex="0" style="position: relative; cursor: pointer; padding: 12px 16px; font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); transition: color var(--dur-base) var(--ease-standard)" style-hover="color: var(--text-primary)">
+            {{ it.label }}
+            <sc-if value="{{ it.active }}"><div style="position: absolute; left: 16px; right: 16px; bottom: 4px; height: 2px; background: var(--dp-teal)"></div></sc-if>
+          </div>
+        </sc-for>
+        <div style="width: 12px"></div>
+        <Button variant="secondary" size="sm" onClick="{{ onContact }}">Get in touch</Button>
+      </nav>
+    </sc-if>
+
+    <!-- NARROW (host width < 720px): hamburger -> full-screen panel -->
+    <sc-if value="{{ narrow }}">
+      <button type="button" onClick="{{ toggleMenu }}" aria-label="Menu" aria-expanded="{{ menuOpen }}" style="display: flex; align-items: center; justify-content: center; width: var(--target-comfortable); height: var(--target-comfortable); margin-right: -10px; border-radius: var(--radius-circle); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); cursor: pointer; transition: border-color var(--dur-base) var(--ease-standard)" style-hover="border-color: var(--accent-text)">
+        <sc-if value="{{ menuClosed }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg>
+        </sc-if>
+        <sc-if value="{{ menuOpen }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </sc-if>
+      </button>
+    </sc-if>
+
+  </div>
+
+  <sc-if value="{{ showPanel }}">
+    <div style="position: fixed; inset: 0; z-index: 40; background: var(--bg-page); display: flex; flex-direction: column; animation: dpPanelIn var(--dur-base) var(--ease-out) both">
+      <div style="flex: none; padding: 12px var(--gutter); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle)">
+        <img src="assets/dp-mark-gradient-128.png" alt="" width="34" height="34" style="display: block">
+        <button type="button" onClick="{{ closeMenu }}" aria-label="Close menu" style="display: flex; align-items: center; justify-content: center; width: var(--target-comfortable); height: var(--target-comfortable); margin-right: -10px; border-radius: var(--radius-circle); border: 1px solid var(--border-subtle); background: transparent; color: var(--text-primary); cursor: pointer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+        </button>
+      </div>
+      <nav style="flex: 1; min-height: 0; overflow-y: auto; padding: 8px var(--gutter) 24px; display: flex; flex-direction: column">
+        <sc-for list="{{ items }}" as="it" hint-placeholder-count="4">
+          <!-- panelStyle: flex row, space-between, gap 16, minHeight var(--target-comfortable),
+               padding 16px 0, borderBottom 1px solid var(--border-subtle),
+               font-display 700 var(--fs-xl), ls-tight,
+               color = active ? var(--accent) : var(--text-primary) -->
+          <div onClick="{{ it.onNavigate }}" role="link" tabindex="0" style="{{ it.panelStyle }}">
+            <span>{{ it.label }}</span>
+            <sc-if value="{{ it.active }}">
+              <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">HERE</span>
+            </sc-if>
+          </div>
+        </sc-for>
+      </nav>
+      <div style="flex: none; padding: 20px var(--gutter) calc(24px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 16px">
+        <Button variant="primary" size="lg" full-width onClick="{{ contactFromPanel }}">Get in touch</Button>
+        <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">DPATERNINA.COM</div>
+      </div>
+    </div>
+  </sc-if>
+</header>
+</x-dc>
+
+<!-- LOGIC
+props: active ('home'|'timeline'|'blog'|'post'|'about'|'contact'|'page'|'watch'|'series'|'category'|'resume'|'notfound'),
+       live: boolean, onHome/onTimeline/onBlog/onWatch/onAbout/onContact
+
+Nav items and their active rule:
+  Home     active when active === 'home'
+  Work     active when active === 'timeline'
+  Blog     active when active in {blog, post, series, category}
+  Watch    active when active === 'watch'
+  About    active when active === 'about'
++ "Get in touch" secondary button (sm) at the end of the wide nav.
+
+Behaviour:
+  - narrow = host width < 720px  (container query in the WP build; do NOT reimplement the JS probe)
+  - Escape closes the panel; body scroll is locked while the panel is open
+  - selecting a nav item closes the panel then navigates
+-->

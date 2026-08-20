@@ -1,0 +1,31 @@
+includes:
+	- vendor/szepeviktor/phpstan-wordpress/extension.neon
+	- vendor/phpstan/phpstan-phpunit/extension.neon
+	- vendor/phpstan/phpstan-phpunit/rules.neon
+
+parameters:
+	level: 9
+	phpVersion: 80400
+
+	paths:
+		- plugins/dp-core
+		- themes/dpaternina
+		- tests
+
+	excludePaths:
+		analyseAndScan:
+			- */vendor/*
+			- */node_modules/*
+			- */build/*
+		analyse:
+			# Loads the WordPress test-suite bootstrap, whose functions only exist
+			# inside the wp-env tests container. Nothing to gain from analysing it.
+			- tests/bootstrap.php
+
+	# WP_UnitTestCase and friends live in the WordPress test suite, which is not a
+	# Composer dependency here — wp-env supplies it inside the container. Stubs give
+	# PHPStan the symbols without pulling the suite into vendor/.
+	scanFiles:
+		- vendor/php-stubs/wordpress-tests-stubs/wordpress-tests-stubs.php
+
+	treatPhpDocTypesAsCertain: false

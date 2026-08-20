@@ -1,0 +1,18 @@
+<x-dc>
+<div onClick="{{ onClick }}" role="link" tabindex="0" style="cursor: pointer; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface); transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px); border-color: var(--accent-text)">
+  <div style="width: 100%; aspect-ratio: 16 / 10; background: var(--band)">
+    <image-slot id="{{ slot }}" shape="rect" fit="cover" placeholder="Drop a project shot"></image-slot>
+  </div>
+  <div style="padding: 24px; display: flex; flex-direction: column; gap: 10px; flex: 1">
+    <div style="display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">
+      <span style="color: var(--hue-gold)">{{ year }}</span>
+      <span>{{ org }}</span>
+    </div>
+    <h3 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-md); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ title }}</h3>
+    <p style="margin: 0; flex: 1; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ line }}</p>
+  </div>
+</div>
+</x-dc>
+<!-- props: slot (image id), year, org (CAPS), title, line, onClick
+     Used on /work in a grid: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap 20px.
+     Clicking a card opens the matching entry on the timeline below. -->

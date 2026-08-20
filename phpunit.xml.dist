@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/bootstrap.php"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+	beStrictAboutOutputDuringTests="true"
+	beStrictAboutTodoAnnotatedTests="true"
+	convertDeprecationsToExceptions="true"
+	convertErrorsToExceptions="true"
+	convertNoticesToExceptions="true"
+	convertWarningsToExceptions="true"
+	failOnRisky="true"
+	failOnWarning="true"
+	cacheResultFile=".phpunit.result.cache"
+>
+	<testsuites>
+		<!--
+		Pure logic. No WordPress, no database. Brain Monkey mocks the hooks.
+		Runs on the host: composer test:unit
+		-->
+		<testsuite name="Unit">
+			<directory suffix="Test.php">tests/Unit</directory>
+		</testsuite>
+
+		<!--
+		Real WordPress, real database, via the wp-env `tests` environment.
+		Runs inside the container: composer test:integration
+		-->
+		<testsuite name="Integration">
+			<directory suffix="Test.php">tests/Integration</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">plugins/dp-core/src</directory>
+			<directory suffix=".php">themes/dpaternina/src</directory>
+		</include>
+	</coverage>
+
+	<php>
+		<ini name="display_errors" value="1"/>
+		<ini name="error_reporting" value="-1"/>
+	</php>
+</phpunit>

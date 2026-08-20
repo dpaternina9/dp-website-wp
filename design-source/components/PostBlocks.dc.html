@@ -1,0 +1,103 @@
+<!-- The house style: EVERY block the blog is allowed to render.
+     This is the authoritative mapping target for core block styles in theme.json. -->
+<x-dc>
+<div>
+  <sc-for list="{{ blocks }}" as="b">
+    <div>
+      <!-- p -> core/paragraph -->
+      <sc-if value="{{ b.isP }}">
+        <p style="margin: 24px 0 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ b.text }}</p>
+      </sc-if>
+      <!-- h2 -> core/heading level 2 -->
+      <sc-if value="{{ b.isH2 }}">
+        <h2 style="margin: 48px 0 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-display); color: var(--text-primary); text-wrap: balance">{{ b.text }}</h2>
+      </sc-if>
+      <!-- h3 -> core/heading level 3 -->
+      <sc-if value="{{ b.isH3 }}">
+        <h3 style="margin: 36px 0 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-md); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); color: var(--text-primary); text-wrap: balance">{{ b.text }}</h3>
+      </sc-if>
+      <!-- h4 -> core/heading level 4. NOTE: h4 is MONO CAPS in accent, not display. -->
+      <sc-if value="{{ b.isH4 }}">
+        <h4 style="margin: 32px 0 0; font-family: var(--font-mono); font-weight: 500; font-size: var(--fs-xs); letter-spacing: var(--ls-caps); text-transform: uppercase; color: var(--accent-text)">{{ b.text }}</h4>
+      </sc-if>
+      <!-- quote -> core/quote (block style "dp-pull") -->
+      <sc-if value="{{ b.isQuote }}">
+        <blockquote style="margin: 32px 0; padding: clamp(20px, 4vw, 24px) clamp(20px, 5vw, 32px); border-left: var(--border-width-strong) solid var(--dp-teal); background: var(--bg-surface); border-radius: 0 var(--radius-lg) var(--radius-lg) 0">
+          <p style="margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-normal); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ b.text }}</p>
+          <sc-if value="{{ b.hasCite }}">
+            <footer style="margin-top: 12px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ b.cite }}</footer>
+          </sc-if>
+        </blockquote>
+      </sc-if>
+      <!-- ul / ol -> core/list. Markers are RENDERED, not native:
+           ul marker = "—"   ol marker = zero-padded index "01", "02", …
+           mono, --fs-xs, colour var(--accent-text), in a 28px grid column. -->
+      <sc-if value="{{ b.isList }}">
+        <div style="margin: 20px 0 0; display: flex; flex-direction: column; gap: 12px">
+          <sc-for list="{{ b.items }}" as="it">
+            <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; align-items: baseline; max-width: var(--measure)">
+              <span style="font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--accent-text)">{{ it.marker }}</span>
+              <span style="font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ it.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <!-- code -> core/code wrapped in a labelled dp-dark surface. Label defaults to "SHELL". -->
+      <sc-if value="{{ b.isCode }}">
+        <div class="dp-dark" style="margin: 28px 0; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); background: var(--band); overflow: hidden">
+          <div style="padding: 10px 20px; border-bottom: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ b.codeLabel }}</div>
+          <pre style="margin: 0; padding: 20px; overflow-x: auto; font-family: var(--font-mono); font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--accent-text); white-space: pre-wrap; overflow-wrap: anywhere">{{ b.code }}</pre>
+        </div>
+      </sc-if>
+      <!-- note -> custom block dp/callout. ONE PER POST (house rule). Label defaults to "NOTE". -->
+      <sc-if value="{{ b.isNote }}">
+        <div style="margin: 28px 0; padding: clamp(20px, 4vw, 24px); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--dp-teal) 8%, var(--bg-surface)); border: 1px solid color-mix(in srgb, var(--dp-teal) 30%, transparent); display: flex; flex-direction: column; gap: 8px">
+          <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">{{ b.noteLabel }}</span>
+          <p style="margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-primary); text-wrap: pretty">{{ b.note }}</p>
+        </div>
+      </sc-if>
+      <!-- image -> core/image with caption. 3/2 aspect, radius md, caption is mono caps. -->
+      <sc-if value="{{ b.isImage }}">
+        <figure style="margin: 32px 0; display: flex; flex-direction: column; gap: 12px">
+          <div style="width: 100%; aspect-ratio: 3 / 2; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface)">
+            <image-slot id="{{ b.slotId }}" shape="rect" fit="cover" placeholder="Drop an inline figure"></image-slot>
+          </div>
+          <figcaption style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ b.caption }}</figcaption>
+        </figure>
+      </sc-if>
+      <!-- table -> core/table. Header row on --bg-surface, mono caps; rows separated by a
+           60%-opacity subtle border; horizontally scrollable at min-width 420px. -->
+      <sc-if value="{{ b.isTable }}">
+        <div style="margin: 28px 0; border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); overflow: hidden">
+          <div style="overflow-x: auto">
+            <div style="min-width: 420px">
+              <div style="display: flex; gap: 16px; padding: 14px 20px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle)">
+                <sc-for list="{{ b.tableHead }}" as="h">
+                  <span style="flex: 1 1 0; min-width: 0; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ h.text }}</span>
+                </sc-for>
+              </div>
+              <sc-for list="{{ b.tableRows }}" as="r">
+                <div style="display: flex; gap: 16px; padding: 14px 20px; border-top: 1px solid color-mix(in srgb, var(--border-subtle) 60%, transparent)">
+                  <sc-for list="{{ r.cells }}" as="c">
+                    <span style="flex: 1 1 0; min-width: 0; font-size: var(--fs-sm); line-height: var(--lh-normal); color: var(--text-secondary)">{{ c.text }}</span>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+      <!-- rule -> core/separator. A 1px spectrum-gradient line at 60% opacity. -->
+      <sc-if value="{{ b.isRule }}">
+        <div style="margin: 44px 0; height: 1px; background: var(--dp-gradient-spectrum); opacity: 0.6"></div>
+      </sc-if>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+
+<!-- BLOCK VOCABULARY (the complete allowed set — see the "house-style" sample post):
+       p · h2 · h3 · h4 · quote(+cite) · ul · ol · code(+codeLabel) · note(+noteLabel)
+       · image(+caption) · table{head,rows} · rule
+     `h` is an alias for `h2`.
+     House limits: 2 quotes/post, 6 list items, 15 code lines, 1 callout/post. -->

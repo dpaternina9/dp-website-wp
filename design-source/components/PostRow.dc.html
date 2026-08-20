@@ -1,0 +1,47 @@
+<x-dc>
+<div onClick="{{ onOpen }}" role="link" tabindex="0" style="{{ rowStyle }}" style-hover="{{ hoverStyle }}">
+  <!-- narrow (<560px): date + category on one mono bar above the title -->
+  <sc-if value="{{ showMetaBar }}">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps)">
+      <span style="color: var(--text-muted)">{{ date }}</span>
+      <span style="color: var(--hue-pink)">{{ cat }}</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showLeftDate }}">
+    <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ date }}</span>
+  </sc-if>
+
+  <div style="min-width: 0">
+    <h3 style="margin: 0 0 6px; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ title }}</h3>
+    <p style="margin: 0; max-width: var(--measure); font-size: {{ excerptSize }}; line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ excerpt }}</p>
+  </div>
+
+  <sc-if value="{{ showRightCat }}">
+    <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink); text-align: right">{{ cat }}</span>
+  </sc-if>
+
+  <sc-if value="{{ showRightStack }}">
+    <div style="text-align: right; display: flex; flex-direction: column; gap: 8px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); white-space: nowrap">
+      <span style="color: var(--hue-pink)">{{ cat }}</span>
+      <span style="color: var(--text-muted)">{{ date }}</span>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<!-- props: variant ('list'|'compact'), date, cat, title, excerpt, onOpen
+     Breakpoint: narrow = own width < 560px  (container query in the WP build)
+
+     variant 'list'    (blog index / archive)
+       grid-template-columns: narrow ? 1fr : 130px minmax(0,1fr) 130px
+       gap 28px (10px narrow); padding 18px 8px; border-bottom 1px var(--border-subtle)
+       excerpt --fs-sm
+       hover: background color-mix(in srgb, var(--text-primary) 3%, transparent)
+
+     variant 'compact' (related / series lists)
+       grid-template-columns: narrow ? 1fr : minmax(0,1fr) auto
+       gap 24px (10px narrow); padding 18px 0; border-top 1px var(--border-subtle)
+       excerpt --fs-base
+       hover: padding-left 10px
+
+     Category token is always --hue-pink; date is always --text-muted. -->

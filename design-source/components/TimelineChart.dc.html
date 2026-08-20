@@ -1,0 +1,211 @@
+<x-dc>
+<helmet>
+<style>
+  @keyframes dpUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { @keyframes dpUp { from { opacity: 1; } to { opacity: 1; } } }
+</style>
+</helmet>
+
+<div>
+  <div style="display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; align-items: center">
+    <dc-import name="FilterPills" options="{{ filterOptions }}" value="{{ filter }}" on-change="{{ onFilterChange }}" extra-label="{{ toggleAllLabel }}" on-extra="{{ onToggleAll }}"></dc-import>
+  </div>
+
+  <div style="{{ cardStyle }}">
+    <div style="{{ scrollerStyle }}">
+      <div style="{{ innerStyle }}">
+
+        <div style="{{ headStyle }}">
+          <div style="{{ legendStyle }}">
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: var(--radius-xs); background: var(--dp-teal); flex: none"></span>ROLES</span>
+            <span style="display: inline-flex; align-items: center; gap: 8px"><span style="width: 16px; height: 8px; border-radius: var(--radius-xs); background: var(--dp-gold); flex: none"></span>SHIPPED</span>
+            <sc-for list="{{ accentLegend }}" as="a">
+              <span style="display: inline-flex; align-items: center; gap: 8px"><span style="{{ a.swatchStyle }}"></span>{{ a.label }}</span>
+            </sc-for>
+          </div>
+          <sc-if value="{{ showTrack }}">
+            <div style="display: flex; justify-content: space-between">
+              <sc-for list="{{ years }}" as="y" hint-placeholder-count="13">
+                <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-wide); color: var(--text-muted)">{{ y.label }}</span>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 18px">
+          <sc-for list="{{ lanes }}" as="l" hint-placeholder-count="6">
+            <div style="{{ l.wrapStyle }}">
+              <div style="{{ l.rowStyle }}">
+
+              <div style="{{ gridStyle }}">
+                <div onClick="{{ l.onClick }}" role="button" tabindex="0" aria-expanded="{{ l.isOpen }}" style="{{ labelCellStyle }}">
+                  <div style="{{ l.orgStyle }}">{{ l.org }}</div>
+                  <div style="font-size: var(--fs-xs); color: var(--text-muted)">{{ l.title }}</div>
+                  <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-wide); color: var(--text-muted); margin-top: 4px">{{ l.range }}</div>
+                  <sc-if value="{{ isStack }}">
+                    <span style="{{ l.chevronStyle }}">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                    </span>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ showTrack }}">
+                  <div style="position: relative; height: 40px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--text-primary) 3%, transparent)">
+                    <div onClick="{{ l.onClick }}" style="{{ l.barStyle }}"></div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ l.isOpen }}">
+                <div style="{{ detailGridStyle }}">
+                  <div style="{{ l.kindLabelStyle }}">{{ l.kindLabel }}</div>
+                  <div>
+                    <p style="margin: 0 0 12px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ l.detail }}</p>
+                    <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ l.stack }}</div>
+                  </div>
+                </div>
+              </sc-if>
+              </div>
+
+              <div style="{{ l.shipsWrapStyle }}">
+              <sc-for list="{{ l.ships }}" as="sh">
+                <div style="{{ sh.rowStyle }}">
+                  <div style="{{ shipGridStyle }}">
+                    <div onClick="{{ sh.onClick }}" role="button" tabindex="0" aria-expanded="{{ sh.isOpen }}" style="{{ labelCellStyle }}">
+                      <div style="{{ sh.headingRowStyle }}">
+                        <span style="{{ sh.orgStyle }}">{{ sh.org }}</span>
+                      </div>
+                      <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-wide); color: var(--text-muted); margin-top: 4px">{{ sh.range }}</div>
+                      <sc-if value="{{ isStack }}">
+                        <span style="{{ sh.chevronStyle }}">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                        </span>
+                      </sc-if>
+                    </div>
+                    <sc-if value="{{ showTrack }}">
+                      <div style="position: relative; height: 32px; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--text-primary) 2%, transparent)">
+                        <div onClick="{{ sh.onClick }}" style="{{ sh.barStyle }}"></div>
+                      </div>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ sh.isOpen }}">
+                    <div style="{{ sh.detailStyle }}">
+                      <div style="{{ detailColsStyle }}">
+                        <div style="flex: 1 1 320px; min-width: 0">
+                          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold); margin-bottom: 12px">SHIPPED · {{ sh.range }}</div>
+                          <h3 style="{{ headlineStyle }}">{{ sh.headline }}</h3>
+                          <p style="margin: 0 0 16px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ sh.detail }}</p>
+                          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px">
+                            <sc-for list="{{ sh.bullets }}" as="b" hint-placeholder-count="3">
+                              <div style="display: flex; gap: 12px; align-items: baseline; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary)">
+                                <span style="color: var(--hue-gold); font-family: var(--font-mono); font-size: var(--fs-xs); flex: none">—</span>
+                                <span style="max-width: var(--measure); text-wrap: pretty">{{ b.text }}</span>
+                              </div>
+                            </sc-for>
+                          </div>
+                          <div style="display: flex; flex-wrap: wrap; gap: 20px 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle)">
+                            <div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 4px">MY ROLE</div>
+                              <div style="font-size: var(--fs-sm)">{{ sh.role }}</div>
+                            </div>
+                            <div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 4px">STACK</div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold)">{{ sh.stack }}</div>
+                            </div>
+                            <div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 4px">WRITE-UP</div>
+                              <div onClick="{{ onReadPost }}" role="link" tabindex="0" style="cursor: pointer; font-size: var(--fs-sm); color: var(--accent-text)" style-hover="color: var(--dp-teal-600)">Read the post →</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style="flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+                          <div style="border-radius: var(--radius-sm); background: var(--bg-page); border: 1px solid var(--border-subtle); overflow: hidden">
+                            <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap">
+                              <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ sh.artifactLabel }}</span>
+                              <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold)">EXAMPLE</span>
+                            </div>
+                            <pre style="margin: 0; padding: 16px; font-family: var(--font-mono); font-size: var(--fs-xs); line-height: var(--lh-relaxed); color: var(--text-secondary); overflow-x: auto">{{ sh.artifact }}</pre>
+                          </div>
+                          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+                            <div style="flex: 1 1 140px; padding: 16px; border-radius: var(--radius-sm); background: var(--bg-page); border: 1px solid var(--border-subtle)">
+                              <div style="font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-display); color: var(--hue-gold)">{{ sh.stat1 }}</div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-top: 4px">{{ sh.stat1Label }}</div>
+                            </div>
+                            <div style="flex: 1 1 140px; padding: 16px; border-radius: var(--radius-sm); background: var(--bg-page); border: 1px solid var(--border-subtle)">
+                              <div style="font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-display); color: var(--text-secondary)">{{ sh.stat2 }}</div>
+                              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-top: 4px">{{ sh.stat2Label }}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+      </div>
+    </div>
+    <sc-if value="{{ isScroll }}">
+      <div style="padding-top: 14px; margin-top: 4px; border-top: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">SWIPE THE TRACK →</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+
+<!-- ============================ REFERENCE LOGIC ============================
+props: lanes: Lane[], filter: 'Everything'|'Roles'|'Shipped', onFilterChange,
+       open: Record<string,boolean>, onToggle(key), allOpen, onToggleAll,
+       onReadPost, mobileMode: 'stack'|'scroll', yearStart=2014, yearEnd=2026
+
+THREE MODES (driven by the component's own width, NOT the viewport):
+  bars   host width >= 700px           label column 200px + year track
+  stack  host width < 700, mobileMode 'stack'   labels only, no track, chevrons
+  scroll host width < 700, mobileMode 'scroll'  label column 128px, sticky, horizontal scroll (min-width 720px inner)
+
+POSITIONING
+  pos(y) = ((y - yearStart) / (yearEnd - yearStart + 1)) * 100
+  bar.left = pos(start)%
+  bar.width = min(pos(end) - pos(start)%, (100 - pos(start))%)
+  bar.minWidth = 64 (roles) / 40 (ships); maxWidth = (100 - pos(start))%
+  Fractional years encode months: 2026.4 ≈ May 2026.
+
+FILTER
+  Everything -> all lanes, all ships
+  Roles      -> all lanes, ships hidden
+  Shipped    -> only lanes with ships
+
+OPEN-STATE KEYS
+  role key = lane.org + lane.title            e.g. 'MonsterInsightsDeveloper team lead'
+  ship key = lane.org + ship.org              e.g. 'MonsterInsightsNatural-language queries'
+
+COLOURS
+  role bar   lane.accent || var(--dp-teal)
+  ship bar   var(--dp-gold)
+  closed bar background: color-mix(in srgb, <color> 38%, var(--bg-surface))
+  open bar:  solid <color> + box-shadow 0 0 0 4px color-mix(in srgb, <color> 16%, transparent)
+  A lane carrying its own `accent` also earns a legend swatch (e.g. Fanxie Lab = pink).
+
+LAYOUT NOTES (verbatim from the design)
+  - Ships hang off a hairline rail: shipsWrapStyle paddingLeft = 16 (stack) / 20 (bars),
+    and the ship label column subtracts that same padding back out so ship bars stay
+    true to the year axis.
+  - Open rows tint with color-mix(in srgb, var(--dp-white) 4%, transparent)
+    (2.5% for ships in bars mode) and bleed -12px (stack) / -16px (bars) into the card padding.
+  - In scroll mode anything meant to be READ (legend, expanded detail) is pinned to
+    width = max(240, hostWidth - 60) so it stays inside the viewport.
+  - Expanded ship panel: background var(--band), 1px var(--border-subtle),
+    radius sm, animation dpUp var(--dur-slow) var(--ease-out) both.
+  - Card: padding clamp(20px,3vw,32px) (bars) / 4px 16px 24px (stack),
+    radius lg, bg var(--bg-surface), 1px var(--border-subtle).
+  - Chevron (stack only): absolute right 4, translateY(-50%), rotate 180deg when open,
+    colour var(--dp-teal) when open else var(--text-muted).
+
+WORDPRESS NOTE: the design's width probe (ResizeObserver + polling) exists only because
+the design tool cannot express media queries. The theme must use container queries
+(@container) and the `details`/`summary` element for the disclosure behaviour instead —
+same three modes, same numbers, no JS required for layout.
+============================================================================ -->

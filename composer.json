@@ -1,0 +1,67 @@
+{
+  "name": "dpaternina/dp-site",
+  "description": "dpaternina.com — block theme + companion plugin monorepo.",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.4"
+  },
+  "require-dev": {
+    "brain/monkey": "^2.6",
+    "php-stubs/wordpress-tests-stubs": "^7.0",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "phpstan/phpstan": "^2.1",
+    "phpstan/phpstan-phpunit": "^2.0",
+    "phpunit/phpunit": "^9.6",
+    "roave/security-advisories": "dev-latest",
+    "squizlabs/php_codesniffer": "^3.11",
+    "szepeviktor/phpstan-wordpress": "^2.0",
+    "wp-coding-standards/wpcs": "^3.1",
+    "yoast/phpunit-polyfills": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "DP\\Core\\": "plugins/dp-core/src/",
+      "DP\\Theme\\": "themes/dpaternina/src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "DP\\Tests\\Unit\\": "tests/Unit/",
+      "DP\\Tests\\Integration\\": "tests/Integration/"
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true,
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  },
+  "scripts": {
+    "post-install-cmd": [
+      "@dump-core-autoload"
+    ],
+    "post-update-cmd": [
+      "@dump-core-autoload"
+    ],
+    "dump-core-autoload": "@composer dump-autoload --working-dir=plugins/dp-core --optimize --no-interaction",
+    "lint": "phpcs",
+    "lint:fix": "phpcbf",
+    "analyse": "phpstan analyse --memory-limit=1G",
+    "test": [
+      "@test:unit",
+      "@test:integration"
+    ],
+    "test:unit": "phpunit --testsuite Unit",
+    "test:integration": "npx wp-env run tests-cli --env-cwd=wp-content/dp-repo vendor/bin/phpunit --testsuite Integration"
+  },
+  "scripts-descriptions": {
+    "lint": "PHPCS: WordPress-Coding-Standards + PHPCompatibilityWP (PHP 8.4).",
+    "analyse": "PHPStan level 9 with szepeviktor/phpstan-wordpress.",
+    "test": "PHPUnit: Unit on the host, Integration inside the wp-env tests container.",
+    "dump-core-autoload": "Regenerate plugins/dp-core/vendor/autoload.php so the mounted plugin can boot."
+  }
+}

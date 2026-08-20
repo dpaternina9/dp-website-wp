@@ -1,0 +1,140 @@
+<!-- COMPONENT LIBRARY — "Every part the site is built from."
+     Eleven components. Button, Badge, Input and Switch come straight from the design
+     system bundle and are NOT redefined here.
+
+     The `WP:` lines are the DESIGNER'S suggested mapping. Per the Ledger, WordPress
+     mapping is explicitly handed off — treat these as intent, not as binding decisions
+     (in particular, we are not using ACF; see docs/plan.md).
+
+  INDEX                       tag
+    SiteHeader                nav
+    SiteFooter                nav
+    PageHero                  layout
+    SectionHead               layout
+    FilterPills               control
+    PostRow                   content
+    WorkCard                  content
+    CtaBanner                 content
+    ContactMethod             content
+    PostBlocks                content
+    TimelineChart             feature
+
+  ── SiteHeader ────────────────────────────────────────────────────────────────
+  Sticky masthead. Above 720px: logo + four links. Below: one button opening a
+  full-screen panel.
+  WP: header.php -> get_template_part('parts/site-header');
+      active state from is_front_page() / is_post_type_archive()
+    active   'home'|'timeline'|'blog'|'post'|'about'|'contact'
+             Drives the teal underline and the HERE marker in the panel.
+    onHome · onTimeline · onBlog · onAbout · onContact  () => void
+             One handler per destination. Becomes an href in WordPress.
+
+  ── SiteFooter ────────────────────────────────────────────────────────────────
+  Closing rule, mark, and the same five destinations as the header.
+  WP: footer.php -> get_template_part('parts/site-footer')
+
+  ── PageHero ──────────────────────────────────────────────────────────────────
+  The opening of every page that is not the homepage.
+  WP: parts/page-hero · title = the_title() · deck = page deck field
+      · meta = 'UPDATED ' + the_modified_date('M Y')
+    title    string   Fluid 36 -> 60px. Set titleMax to keep a sensible measure.
+    deck     string   Optional. Capped at 68ch.
+    meta     string   Optional mono line; adds the rule underneath it.
+    width    'lg'|'md'|'reading'  1120px, 880px, or 720px for long-form.
+    tight    boolean  Halves the bottom padding when a rule already closes the block.
+
+  ── SectionHead ───────────────────────────────────────────────────────────────
+  A labelled rule. Either a mono kicker in one of five tones, or a display heading —
+  with a quiet meta note OR one link on the right, never both.
+  WP: parts/section-head · args: label, as, tone, meta, action, action_url
+    label    string
+    as       'kicker'|'heading'   Mono uppercase, or display face at 30px.
+    tone     'teal'|'pink'|'gold'|'purple'|'muted'   Kicker only. Teal is the default.
+    meta     string   Quiet note on the right. Ignored when an action is set.
+    action + onAction   A teal link on the right instead of the meta note.
+
+  ── FilterPills ───────────────────────────────────────────────────────────────
+  One row of mutually exclusive pills, wrapping when it runs out of room. The optional
+  dashed pill on the end is an action, not a filter.
+  WP: parts/filter-pills · options from get_terms() · value from get_query_var('cat')
+    options    string[]   First one is usually the everything case.
+    value      string
+    onChange   (label: string) => void   Fires with the LABEL, not an index.
+    extraLabel string     Optional dashed pill on the end.
+    onExtra    () => void
+
+  ── PostRow ───────────────────────────────────────────────────────────────────
+  One post in a list. Under 560px the date and category move to a line above the title.
+  WP: parts/post-row inside the loop · list on archive.php, compact on front-page.php
+    variant  'list'|'compact'
+    date · cat  string  Mono metadata; position depends on measured width.
+    title    string   Display face, 24px.
+    excerpt  string   14px in list, 16px in compact.
+    onOpen   () => void   The whole row is the target.
+
+  ── WorkCard ──────────────────────────────────────────────────────────────────
+  A shipped thing as a card. Fills its grid track; lifts 3px on hover.
+  WP: parts/work-card · post type shipped_work · fields year, org, one_liner, shot
+    slot     string   Unique id for the image drop zone.
+    year · org  string  Gold year, muted org, one mono line.
+    title    string
+    line     string   One sentence. Longer than two and the grid goes ragged.
+    onClick  () => void   Opens the matching entry on the timeline.
+
+  ── CtaBanner ─────────────────────────────────────────────────────────────────
+  A line of copy and one button, closing a page or a post.
+  WP: parts/cta-banner · args: title, line, button_label, button_url, variant, show_mark
+    title, line, buttonLabel + onClick   Always a SECONDARY button — the page already
+                                         has its primary.
+    variant  'plain'|'filled'   Filled adds the graphite surface.
+    showMark boolean            Adds the 64px gradient monogram on the left.
+
+  ── ContactMethod ─────────────────────────────────────────────────────────────
+  One way to reach me. A real link, 44px tall, borders teal on hover.
+  WP: parts/contact-method · repeater contact_methods (label, value, url)
+    label  string  Mono, uppercase, muted.
+    value  string  Wraps rather than overflowing on a phone.
+    href   string  mailto:, https:, whatever the method needs.
+  Live values in the design: EMAIL hello@dpaternina.com · X @dapd007 · AGENCY fanxielab.com
+
+  ── PostBlocks ────────────────────────────────────────────────────────────────
+  The whole writing kit. Blog posts and standalone pages render through the SAME
+  component, which is why they cannot drift apart.
+  WP: Gutenberg block styles in theme.json, NOT a template part.
+      p -> core/paragraph · ul/ol -> core/list · quote -> core/quote · code -> core/code
+      · note -> a custom dp/callout · image -> core/image · table -> core/table
+      · rule -> core/separator
+    body  Array<{ p | h2 | h3 | h4 | quote | ul | ol | code | note | image | table | rule }>
+
+  ── TimelineChart ─────────────────────────────────────────────────────────────
+  The record. Roles as bars against a year track, shipped things nested underneath,
+  any number open at once. Drops the bars below 700px.
+  WP: parts/timeline · post types role and shipped_work
+      · fields start_year, end_year, parent_role, artifact, stats
+      · open/filter state stays in JS
+    lanes      Lane[]                    Roles, each with a ships array. start/end are
+                                         DECIMAL years (2026.4 ≈ May 2026).
+    open       Record<string, boolean>   Controlled. Key = org+title for a role,
+                                         org+ship.org for a shipped thing.
+    onToggle   (key: string) => void     Held by the PAGE, so a featured card can open
+                                         an entry directly.
+    filter + onFilterChange   'Everything'|'Roles'|'Shipped'   Renders its own FilterPills.
+    allOpen + onToggleAll     Drives the trailing dashed pill.
+    mobileMode 'stack'|'scroll'          What replaces the bars below 700px.
+                                         DECIDED: 'stack'.
+    yearStart · yearEnd  number          The track. Defaults 2014 -> 2026.
+    onReadPost () => void                The write-up link inside an expanded entry.
+
+  ══ RULES THAT HOLD ACROSS ALL OF THEM ═══════════════════════════════════════
+  1. Every component loads the design system bundle itself so it renders standalone.
+  2. NOTHING uses a media query. Type and spacing come from clamp() tokens, grids use
+     auto-fit with a min(), and the three components that need a genuinely different
+     layout measure their own width with a ResizeObserver.
+     (WP build: replace the ResizeObserver with @container queries.)
+  3. Interactive state is controlled from the PAGE, never hidden inside a component.
+     That is what lets a featured work card open an entry on the timeline.
+  4. Targets are 44px where the action is primary and 36px everywhere else.
+  5. ONE GRADIENT PER VIEW. Across this site that budget goes to the monogram, the blog
+     featured panel, the contact form edge, and the rule between post sections — never
+     two in the same screen.
+-->

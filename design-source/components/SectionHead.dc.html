@@ -1,0 +1,20 @@
+<x-dc>
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle)">
+  <sc-if value="{{ isHeading }}">
+    <h2 style="margin: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: balance">{{ label }}</h2>
+  </sc-if>
+  <sc-if value="{{ isKicker }}">
+    <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: {{ toneColor }}">{{ label }}</span>
+  </sc-if>
+  <sc-if value="{{ hasAction }}">
+    <div onClick="{{ onAction }}" role="button" tabindex="0" style="cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text); transition: color var(--dur-base) var(--ease-standard)" style-hover="color: var(--dp-teal-600)">{{ action }}</div>
+  </sc-if>
+  <sc-if value="{{ hasMeta }}">
+    <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); text-wrap: balance">{{ meta }}</span>
+  </sc-if>
+</div>
+</x-dc>
+<!-- props: label, as ('kicker'|'heading'), tone ('teal'|'pink'|'gold'|'purple'|'muted'), meta, action, onAction
+     TONES: teal->var(--hue-teal) pink->var(--hue-pink) gold->var(--hue-gold)
+            purple->var(--hue-purple) muted->var(--text-muted)
+     `meta` only renders when there is no `action`. -->

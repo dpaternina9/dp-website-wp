@@ -1,0 +1,68 @@
+# --- Dependencies -----------------------------------------------------------
+/node_modules/
+**/node_modules/
+/vendor/
+**/vendor/
+
+# --- Build output -----------------------------------------------------------
+/build/
+**/build/
+/dist/
+**/dist/
+*.zip
+
+# --- Local environment ------------------------------------------------------
+# .wp-env.json is committed; the per-developer override never is.
+.wp-env.override.json
+/wp-env/
+
+# --- Tooling caches ---------------------------------------------------------
+.phpunit.result.cache
+.phpunit.cache/
+.phpcs-cache
+/.php-cs-fixer.cache
+.phpstan.cache/
+/.cache/
+**/.cache/
+.eslintcache
+.stylelintcache
+/.husky/_/
+
+# --- Test artefacts ---------------------------------------------------------
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+/coverage/
+/artifacts/
+
+# --- Generated content ------------------------------------------------------
+# Résumé PDFs and any other renderer output are cached artefacts, never sources.
+/generated/
+**/generated/
+*.pdf
+# ...but design-source/ is the contract. Nothing in it is ever dropped silently.
+!design-source/**
+
+# --- Logs and OS cruft ------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Deliberately NOT ignored -----------------------------------------------
+# composer.lock and package-lock.json ARE committed. Pinning the toolchain is
+# the point of Phase 0: CI, David's machine, and the release workflow must all
+# resolve byte-identical dependency trees.
+#
+# plugins/dp-core/vendor/ is NOT committed. It holds only a generated Composer
+# autoloader; `composer install` at the root regenerates it, and the release
+# workflow regenerates it again when it builds the zip. See docs/adr/0001.

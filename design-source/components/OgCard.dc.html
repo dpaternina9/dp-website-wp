@@ -1,0 +1,38 @@
+<!-- 1200 x 630 social card. Rendered server-side per post (see docs/plan.md, Phase 7). -->
+<x-dc>
+<div style="width: 1200px; height: 630px; position: relative; overflow: hidden; background: var(--bg-page); font-family: var(--font-body); color: var(--text-primary); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding: 72px">
+
+  <div aria-hidden="true" style="{{ orbStyle }}"></div>
+  <div aria-hidden="true" style="position: absolute; right: -80px; bottom: -140px; width: 520px; height: 520px; border-radius: var(--radius-circle); border: 1px solid color-mix(in srgb, var(--dp-teal) 16%, transparent); pointer-events: none"></div>
+
+  <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px">
+    <div style="display: flex; align-items: center; gap: 18px">
+      <img src="assets/dp-mark-gradient-128.png" alt="" width="52" height="52" style="display: block">
+      <span style="font-family: var(--font-mono); font-size: 18px; letter-spacing: var(--ls-caps); color: var(--text-secondary)">DPATERNINA.COM</span>
+    </div>
+    <span style="{{ kickerStyle }}">{{ kicker }}</span>
+  </div>
+
+  <div style="position: relative; max-width: 940px">
+    <h1 style="{{ titleStyle }}">{{ title }}</h1>
+    <p style="margin: 28px 0 0; max-width: 780px; font-size: 26px; line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ line }}</p>
+  </div>
+
+  <div style="position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-top: 28px; border-top: 1px solid var(--border-subtle)">
+    <span style="font-family: var(--font-mono); font-size: 18px; letter-spacing: var(--ls-caps); color: var(--text-muted)">DAVID PATERNINA</span>
+    <span style="font-family: var(--font-mono); font-size: 18px; letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ meta }}</span>
+  </div>
+
+</div>
+</x-dc>
+<!-- props: title, kicker (e.g. "MY LIFE STORY · PART 6"), line, meta ("MAR 2026 · 9 MIN READ"),
+            tone 'teal'|'pink'|'gold'|'purple'  (raw --dp-* hue, NOT --hue-*)
+
+  orbStyle    absolute; left -160; top -220; 760x760; border-radius circle;
+              radial-gradient(circle at 50% 50%, color-mix(in srgb, <tone> 26%, transparent) 0%, transparent 64%)
+  kickerStyle mono 16px; ls-caps; padding 10px 18px; radius pill;
+              border 1px <tone>; color <tone>;
+              background color-mix(in srgb, <tone> 12%, transparent); white-space nowrap
+  titleStyle  display 700; font-size = title.length > 58 ? 62 : 76;
+              line-height 1.08; ls-display; text-wrap balance
+-->

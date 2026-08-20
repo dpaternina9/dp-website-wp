@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/wp-env.json",
+  "core": null,
+  "phpVersion": "8.4",
+  "themes": [
+    "./themes/dpaternina"
+  ],
+  "plugins": [
+    "./plugins/dp-core",
+    "https://downloads.wordpress.org/plugin/stackable-ultimate-gutenberg-blocks.zip"
+  ],
+  "config": {
+    "WP_DEBUG": true,
+    "WP_DEBUG_LOG": true,
+    "WP_DEBUG_DISPLAY": false,
+    "SCRIPT_DEBUG": true,
+    "WP_ENVIRONMENT_TYPE": "local",
+    "WP_DISABLE_FATAL_ERROR_HANDLER": true
+  },
+  "env": {
+    "development": {
+      "port": 8888
+    },
+    "tests": {
+      "port": 8889,
+      "config": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_DISPLAY": false,
+        "SCRIPT_DEBUG": false
+      },
+      "mappings": {
+        "wp-content/dp-repo": "."
+      }
+    }
+  },
+  "lifecycleScripts": {
+    "afterStart": "wp-env run cli wp theme activate dpaternina && wp-env run tests-cli wp theme activate dpaternina"
+  }
+}

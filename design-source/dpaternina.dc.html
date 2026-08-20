@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0B0B0C">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#0B0B0C"></rect><circle cx="100" cy="100" r="52" fill="none" stroke="#2ED3C6" stroke-width="4"></circle><text x="100" y="116" text-anchor="middle" font-family="Georgia, serif" font-size="46" font-weight="700" fill="#F5F5F4">dP</text></svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/colors.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/typography.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/effects.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/tokens/base.css">
+<link rel="stylesheet" href="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/styles.css">
+<script src="_ds/dp-david-paternina-design-system-0f0b50ca-34ba-49d7-9109-171b45bfd16b/_ds_bundle.js"></script>
+<link rel="stylesheet" href="theme.css">
+<script src="./image-slot.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg-page); }
+  body { font-family: var(--font-body); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent-text); text-decoration: none; }
+  a:hover { color: var(--accent-hover); }
+  ::selection { background: color-mix(in srgb, var(--dp-teal) 35%, transparent); }
+  @keyframes dpUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes dpPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  @keyframes dpOrb { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -52%) scale(1.08); } }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: var(--bg-page); overflow-x: hidden">
+  <div id="{{ hostId }}" style="height: 0; overflow: hidden" aria-hidden="true"></div>
+
+  <sc-if value="{{ chrome }}" hint-placeholder-val="{{ true }}">
+    <dc-import name="SiteHeader" active="{{ view }}" live="{{ live }}" on-home="{{ goHome }}" on-timeline="{{ goTimeline }}" on-blog="{{ goBlog }}" on-watch="{{ goWatch }}" on-about="{{ goAbout }}" on-contact="{{ goContact }}" hint-size="100%,67px"></dc-import>
+  </sc-if>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <div>
+    <section style="position: relative; max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y) var(--gutter) 64px">
+      <div style="position: absolute; top: -120px; left: 50%; transform: translateX(-50%); width: min(760px, 120vw); height: 620px; border-radius: var(--radius-circle); background: radial-gradient(circle, color-mix(in srgb, var(--dp-teal) var(--glow-soft), transparent) 0%, transparent 62%); pointer-events: none"></div>
+      <div style="position: relative; animation: dpUp var(--dur-slow) var(--ease-out) both">
+        <div style="display: flex; align-items: center; margin-bottom: 32px">
+          <img src="assets/dp-mark-gradient-128.png" alt="dP" width="40" height="40" style="display: block">
+        </div>
+        <h1 style="margin: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-display); line-height: var(--lh-tight); letter-spacing: var(--ls-display); text-wrap: balance">
+          I'm David, and I build <span style="color: {{ heroAccent }}">useful</span> things.
+        </h1>
+        <p style="margin: 40px 0 0; max-width: var(--measure); font-size: var(--fs-lg); line-height: var(--lh-relaxed); color: var(--text-primary); text-wrap: pretty">
+          I run Fanxie Lab, an agency in Colombia, and I build my own iOS and SaaS products. Before that I spent four years leading development at MonsterInsights, on a plugin that runs on 3M+ sites.
+        </p>
+        <p style="margin: 24px 0 0; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">
+          I used to keep two websites — one for the work, one for the writing — as if they were different people. They aren't. So this is the whole thing: what I'm building, the record of how I got here, and everything I've been thinking about along the way.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px">
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="lg" onClick="{{ goTimeline }}" hint-size="180px,52px">See the work</x-import>
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="lg" onClick="{{ goBlog }}" hint-size="150px,52px">Read the writing</x-import>
+        </div>
+      </div>
+    </section>
+
+    <sc-if value="{{ showNow }}" hint-placeholder-val="{{ true }}">
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 24px var(--gutter) var(--section-y)">
+      <div style="margin-bottom: 24px">
+        <dc-import name="SectionHead" label="RIGHT NOW" tone="teal" meta="AUG 2026" hint-size="100%,40px"></dc-import>
+      </div>
+      <div style="{{ bentoStyle }}">
+
+        <div style="{{ tileLab }}" style-hover="transform: translateY(-3px); box-shadow: var(--shadow-lg)">
+          <div style="display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: flex-end; justify-content: space-between">
+            <div style="max-width: var(--measure)">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px">
+                <span style="width: 8px; height: 8px; border-radius: var(--radius-circle); background: var(--dp-pink); animation: dpPulse 2.4s ease-in-out infinite"></span>
+                <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink)">MY AGENCY · TAKING PARTNERS</span>
+              </div>
+              <h3 style="margin: 0 0 12px; font-family: var(--font-display); font-size: var(--fs-xl); letter-spacing: var(--ls-tight)">Fanxie Lab</h3>
+              <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">An innovation lab for partners across Latin America — design, research, and development. We work as collaborators, not vendors, and we build our own products with the same care.</p>
+            </div>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="md" onClick="{{ goContact }}" hint-size="200px,44px">Work with Fanxie Lab</x-import>
+          </div>
+        </div>
+
+        <div style="{{ tileKiveo }}">
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 16px">
+            <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold)">LIVE ON THE APP STORE</span>
+            <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">NATIVE iOS</span>
+          </div>
+          <h3 style="margin: 0 0 8px; font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-tight)">Kiveo</h3>
+          <p style="margin: 0 0 12px; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">A private reading journal for iOS. Save quotes, write reflections, track sessions — built for deep reading, not speed.</p>
+          <p style="margin: 0 0 20px; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-muted); text-wrap: pretty">500+ downloads and 1,345 reflections saved so far. Built solo, SwiftUI front to back — no accounts, nothing leaves the device.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto">
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="sm" hint-size="120px,36px">See Kiveo</x-import>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="ghost" size="sm" onClick="{{ goBlog }}" hint-size="120px,36px">How I built it</x-import>
+          </div>
+        </div>
+
+        <div style="{{ tileBeacon }}">
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text); margin-bottom: 16px">WAITLIST OPEN</div>
+          <h3 style="margin: 0 0 8px; font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-tight)">BeaconStat</h3>
+          <p style="margin: 0 0 12px; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Usage analytics for distributed software. Know what ships and what sticks.</p>
+          <p style="margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-muted); text-wrap: pretty">Plugin installs, feature adoption, and version distribution across a user base you don't host.</p>
+        </div>
+
+        <div style="{{ tileCloud }}">
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 16px">INTERNAL · FANXIE CLOUD</div>
+          <p style="margin: 0 0 12px; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Our own managed hosting stack, tuned for WordPress and running the sites we ship.</p>
+          <p style="margin: 0; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-purple)">REDIS · VARNISH · CLOUDFLARE · DIGITALOCEAN</p>
+        </div>
+
+        <div style="{{ tileOff }}">
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-purple); margin-bottom: 12px">OFF THE CLOCK</div>
+          <p style="margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Espresso, a guitar through too many amp sims, and being judged daily by two cats.</p>
+        </div>
+
+      </div>
+
+      <div style="margin-bottom: 20px">
+        <dc-import name="SectionHead" label="THE RECORD" tone="muted" action="FULL TIMELINE →" on-action="{{ goTimeline }}" hint-size="100%,40px"></dc-import>
+      </div>
+      <div style="{{ recordGridStyle }}">
+        <sc-for list="{{ record }}" as="r" hint-placeholder-count="6">
+          <div style="{{ r.cellStyle }}">
+            <div style="{{ r.orgStyle }}">{{ r.org }}</div>
+            <div style="{{ r.roleStyle }}">{{ r.role }}</div>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-top: 4px">{{ r.years }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+    </sc-if>
+
+    <section style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: var(--band)">
+      <div style="max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y) var(--gutter)">
+        <h2 style="margin: 0 0 16px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 4.5vw, 3rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">Things I've shipped.</h2>
+        <p style="margin: 0 0 48px; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Performance, privacy, and user experience — the intersection I'm most at home in, and the three things usually traded away first.</p>
+        <div style="display: flex; flex-direction: column; gap: 0">
+          <div style="padding: 32px 0; border-top: 1px solid var(--border-subtle)">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px">
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="teal" hint-size="90px,22px">WORDPRESS</x-import>
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="purple" hint-size="50px,22px">AI</x-import>
+            </div>
+            <h3 style="margin: 0 0 16px; font-family: var(--font-display); font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">Natural-language analytics</h3>
+            <p style="margin: 0 0 16px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Site owners ask questions about their traffic in plain English and get real answers. Built inside a plugin serving millions of sites — so it had to be fast, private, and impossible to get wrong.</p>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">PHP · VUE.JS · REST APIS · WP-CLI</div>
+          </div>
+          <div style="padding: 32px 0; border-top: 1px solid var(--border-subtle)">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px">
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="teal" hint-size="80px,22px">PLATFORM</x-import>
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="purple" hint-size="70px,22px">INFRA</x-import>
+            </div>
+            <h3 style="margin: 0 0 16px; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">Agency platform &amp; ops</h3>
+            <p style="margin: 0 0 16px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">API design, transactional email, R2 storage, and server provisioning — the tooling that lets a small agency run real client infrastructure without a dedicated ops team.</p>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">LARAVEL · NESTJS · CLOUDFLARE</div>
+          </div>
+          <div style="padding: 32px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle)">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px">
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="teal" hint-size="50px,22px">iOS</x-import>
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="purple" hint-size="80px,22px">PRIVACY</x-import>
+            </div>
+            <h3 style="margin: 0 0 16px; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">Native iOS apps</h3>
+            <p style="margin: 0 0 16px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Small, privacy-first apps with native performance and nothing phoning home. Built mostly to prove to myself that I could keep the whole thing in my head.</p>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">SWIFT · SWIFTUI · CLOUDKIT</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="border-top: 1px solid var(--border-subtle); background: var(--band)">
+      <div style="max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y) var(--gutter)">
+        <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px 24px; margin: 0 0 40px">
+          <h2 style="margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 4.5vw, 3rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">Latest writing.</h2>
+          <div onClick="{{ goBlog }}" role="link" tabindex="0" style="cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">ALL POSTS →</div>
+        </div>
+        <div style="display: flex; flex-direction: column">
+          <sc-for list="{{ posts }}" as="p" hint-placeholder-count="3">
+            <dc-import name="PostRow" variant="compact" date="{{ p.date }}" cat="{{ p.cat }}" title="{{ p.title }}" excerpt="{{ p.excerpt }}" on-open="{{ p.onOpen }}" hint-size="100%,112px"></dc-import>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isTimeline }}">
+  <div>
+    <dc-import name="PageHero" title="Where I worked, what came out of it." deck="There's no separate portfolio here. Three projects I'd show first, then every role I've held and everything that came out of each one." title-max="20ch" hint-size="100%,300px"></dc-import>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 24px var(--gutter) 64px">
+      <div style="margin-bottom: 32px">
+        <dc-import name="SectionHead" as="heading" label="Featured work" meta="CLICK ONE TO OPEN IT ON THE TIMELINE ↓" hint-size="100%,48px"></dc-import>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 20px">
+        <sc-for list="{{ featuredWork }}" as="w" hint-placeholder-count="3">
+          <dc-import name="WorkCard" slot="{{ w.slot }}" year="{{ w.year }}" org="{{ w.org }}" title="{{ w.title }}" line="{{ w.line }}" on-click="{{ w.onClick }}" hint-size="100%,380px"></dc-import>
+        </sc-for>
+      </div>
+    </section>
+
+    <section id="timeline-chart" style="max-width: var(--container-lg); margin: 0 auto; padding: 20px var(--gutter) 120px">
+      <div style="margin-bottom: 24px">
+        <dc-import name="SectionHead" as="heading" label="The whole record" meta="2014 — NOW" hint-size="100%,48px"></dc-import>
+      </div>
+      <p style="margin: 0 0 24px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Every project hangs off the job it came from. Open a role for the context, open a shipped thing for the full story — as many at once as you like.</p>
+      <dc-import name="TimelineChart" lanes="{{ laneData }}" filter="{{ filter }}" on-filter-change="{{ onFilterChange }}" open="{{ open }}" on-toggle="{{ onToggle }}" all-open="{{ allOpen }}" on-toggle-all="{{ toggleAll }}" on-read-post="{{ goBlog }}" mobile-mode="{{ timelineMobileMode }}" hint-size="100%,620px"></dc-import>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px 24px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border-subtle)">
+        <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary)">Dates and titles only get you so far. What these years actually felt like is in the writing.</p>
+        <span onClick="{{ goBlog }}" style="cursor: pointer; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">READ THE SERIES →</span>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isBlog }}">
+  <div>
+    <dc-import name="PageHero" title="Writing." deck="Photography, travel, music, food, and occasional ramblings." hint-size="100%,240px"></dc-import>
+
+    <sc-if value="{{ showFeatured }}" hint-placeholder-val="{{ true }}">
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--gutter) 40px">
+      <div onClick="{{ featured.onOpen }}" style="cursor: pointer; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 0; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface); transition: transform var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px)">
+        <div style="padding: 44px">
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="{{ featured.tone }}" hint-size="110px,22px">{{ featured.kicker }}</x-import>
+          <h2 style="margin: 24px 0 16px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-2xl); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">{{ featured.title }}</h2>
+          <p style="margin: 0 0 24px; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ featured.lead }}</p>
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ featured.meta }}</div>
+        </div>
+        <div style="min-height: 300px; background: var(--dp-gradient-spectrum); opacity: 0.9; display: flex; align-items: center; justify-content: center">
+          <img src="assets/dp-mark-white-128.png" alt="" style="width: 96px; opacity: 0.55">
+        </div>
+      </div>
+    </section>
+    </sc-if>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--gutter) 120px">
+      <div style="margin: 24px 0 20px">
+        <dc-import name="FilterPills" options="{{ catOptions }}" value="{{ cat }}" on-change="{{ onCatChange }}" hint-size="100%,44px"></dc-import>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0 0 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border-subtle)">
+        <span onClick="{{ goSeries }}" role="link" tabindex="0" style="cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink)">READ MY LIFE STORY IN ORDER →</span>
+        <span onClick="{{ goCategories }}" role="link" tabindex="0" style="cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)" style-hover="color: var(--text-secondary)">BROWSE BY CATEGORY →</span>
+      </div>
+      <div style="display: flex; flex-direction: column">
+        <sc-for list="{{ listed }}" as="p" hint-placeholder-count="6">
+          <dc-import name="PostRow" variant="list" date="{{ p.date }}" cat="{{ p.cat }}" title="{{ p.title }}" excerpt="{{ p.excerpt }}" on-open="{{ p.onOpen }}" hint-size="100%,104px"></dc-import>
+        </sc-for>
+      </div>
+      <sc-if value="{{ noResults }}">
+        <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 20px; padding: 72px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle)">
+          <div style="display: flex; align-items: center; gap: 14px">
+            <img src="assets/dp-mark-white-128.png" alt="" width="30" height="30" style="display: block; opacity: 0.3">
+            <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">0 POSTS IN {{ cat }}</span>
+          </div>
+          <h3 style="margin: 0; max-width: 28ch; font-family: var(--font-display); font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: balance">Nothing filed under this one yet.</h3>
+          <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">I write when there is something worth writing down, which means some categories sit empty for a while. Try another, or read the series instead.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px">
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ resetFilters }}" hint-size="150px,44px">Show everything</x-import>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="ghost" size="md" onClick="{{ goSeries }}" hint-size="150px,44px">Read the series</x-import>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ pager.show }}">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border-subtle)">
+        <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ pager.range }}</div>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <button type="button" onClick="{{ pager.prev }}" style="{{ pager.prevStyle }}" style-hover="color: var(--text-primary); border-color: var(--text-muted)">PREV</button>
+          <sc-for list="{{ pager.items }}" as="pg" hint-placeholder-count="2">
+            <button type="button" onClick="{{ pg.onClick }}" style="{{ pg.style }}">{{ pg.n }}</button>
+          </sc-for>
+          <button type="button" onClick="{{ pager.next }}" style="{{ pager.nextStyle }}" style-hover="color: var(--text-primary); border-color: var(--text-muted)">NEXT</button>
+        </div>
+      </div>
+      <sc-if value="{{ pager.atEnd }}">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 32px; padding: 28px 0 0; border-top: 1px solid var(--border-subtle)">
+          <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">That is the end of the archive — you have reached the oldest post I kept. The life-story series starts further back than this list goes.</p>
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ goSeries }}" hint-size="170px,44px">Start the series</x-import>
+        </div>
+      </sc-if>
+      </sc-if>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isPost }}">
+  <div>
+    <article style="max-width: var(--container-md); margin: 0 auto; padding: 72px var(--gutter) 48px">
+      <div onClick="{{ goBlog }}" style="cursor: pointer; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 32px">← ALL POSTS</div>
+      <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="{{ post.tone }}" hint-size="110px,22px">{{ post.kicker }}</x-import>
+      <h1 style="margin: 24px 0 16px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 4.5vw, 3rem); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">{{ post.title }}</h1>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-bottom: 32px; border-bottom: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">
+        <img src="assets/dp-mark-white-128.png" alt="" width="26" height="26" style="display: block">
+        <span>DAVID PATERNINA</span>
+        <span>·</span>
+        <span>{{ post.date }}</span>
+        <span>·</span>
+        <span>{{ post.read }}</span>
+      </div>
+      <figure style="margin: 32px 0 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface)">
+          <image-slot id="post-hero" shape="rect" fit="cover" placeholder="Drop the post's lead image"></image-slot>
+        </div>
+        <figcaption style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ post.caption }}</figcaption>
+      </figure>
+      <p style="margin: 32px 0 0; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-primary); text-wrap: pretty">{{ post.lead }}</p>
+      <dc-import name="PostBlocks" body="{{ post.body }}" hint-size="100%,900px"></dc-import>
+    </article>
+    <section style="max-width: var(--container-md); margin: 0 auto; padding: 24px var(--gutter) 120px; display: flex; flex-direction: column; gap: 24px">
+      <sc-if value="{{ post.inSeries }}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 2px; border-radius: var(--radius-lg); background: var(--dp-gradient-warm)">
+          <div style="padding: 28px; border-radius: var(--radius-md); background: var(--bg-surface); display: flex; flex-direction: column; gap: 24px">
+            <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px">
+              <div>
+                <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink); margin-bottom: 8px">{{ post.kicker }}</div>
+                <h3 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-tight)">{{ seriesTitle }}</h3>
+              </div>
+              <span onClick="{{ goSeries }}" role="link" tabindex="0" style="cursor: pointer; white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">ALL PARTS →</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px">
+              <sc-if value="{{ hasSeriesPrev }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ seriesPrev.onOpen }}" role="link" tabindex="0" style="cursor: pointer; padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); transition: border-color var(--dur-base) var(--ease-standard)" style-hover="border-color: var(--dp-pink)">
+                  <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 10px">← {{ seriesPrev.part }}</div>
+                  <div style="font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">{{ seriesPrev.title }}</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ hasSeriesNext }}">
+                <div onClick="{{ seriesNext.onOpen }}" role="link" tabindex="0" style="cursor: pointer; padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); text-align: right; transition: border-color var(--dur-base) var(--ease-standard)" style-hover="border-color: var(--dp-pink)">
+                  <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 10px">{{ seriesNext.part }} →</div>
+                  <div style="font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">{{ seriesNext.title }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; flex-direction: column; gap: 20px; padding-top: 8px">
+        <dc-import name="SectionHead" label="KEEP READING" tone="muted" action="ALL POSTS →" on-action="{{ goBlog }}" hint-size="100%,40px"></dc-import>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px">
+          <sc-for list="{{ related }}" as="r" hint-placeholder-count="3">
+            <div onClick="{{ r.onOpen }}" role="link" tabindex="0" style="cursor: pointer; display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); background: var(--band); transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px); border-color: var(--accent-text)">
+              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ r.kicker }}</div>
+              <div style="font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ r.title }}</div>
+              <div style="margin-top: auto; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ r.read }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 16px">
+        <sc-if value="{{ hasPrev }}">
+          <div onClick="{{ prevPost.onOpen }}" style="cursor: pointer; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px); border-color: var(--accent-text)">
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 12px">← NEWER</div>
+            <div style="font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">{{ prevPost.title }}</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ nextPost.onOpen }}" style="cursor: pointer; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); text-align: right; transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px); border-color: var(--accent-text)">
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 12px">OLDER →</div>
+            <div style="font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">{{ nextPost.title }}</div>
+          </div>
+        </sc-if>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isAbout }}">
+  <div style="max-width: var(--container-lg); margin: 0 auto; padding: 80px var(--gutter) 120px">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 48px; align-items: start">
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        <h1 style="margin: 0 0 12px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 5.5vw, 3.75rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">Hi, I'm David.</h1>
+        <p style="margin: 0; font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-primary); text-wrap: pretty">I'm a software developer and product builder in Colombia. I run Fanxie Lab, and I build my own iOS and SaaS products on the side of it.</p>
+        <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Most of my work sits where performance, privacy, and the actual experience meet — the three things that get traded away first when a deadline shows up. I've spent enough years watching that trade get made to have opinions about it.</p>
+        <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">When I'm not writing code I'm pulling espresso shots, playing guitar through too many amp sims, or being judged by two cats. I write about some of that here.</p>
+      </div>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 12px">
+        <div style="width: 100%; aspect-ratio: 4 / 5; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface)">
+          <image-slot id="about-portrait" shape="rect" fit="cover" placeholder="Drop your portrait"></image-slot>
+        </div>
+        <figcaption style="display: flex; flex-wrap: wrap; gap: 8px 16px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">
+          <span>COLOMBIA</span>
+          <span style="color: var(--border-subtle)">/</span>
+          <span>FANXIE LAB</span>
+          <span style="color: var(--border-subtle)">/</span>
+          <span>KIVEO</span>
+          <span style="color: var(--border-subtle)">/</span>
+          <span>TWO CATS</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div style="margin: 72px 0 0; max-width: var(--measure)">
+      <h2 style="margin: 0 0 20px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-2xl); line-height: var(--lh-snug); letter-spacing: var(--ls-display)">The part I'm best at is scale that has to stay quiet.</h2>
+      <p style="margin: 0 0 20px; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">For four years I worked on an analytics plugin running on around three million WordPress sites, in PHP, Vue.js, REST APIs and WP-CLI. At that size every change is a performance decision, and the interesting problem is never the feature — it's shipping it without anyone noticing you were there.</p>
+      <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">That habit carried into everything since. The rest of what I do, in short:</p>
+    </div>
+
+    <div style="margin: 32px 0 0; display: flex; flex-direction: column">
+      <div style="{{ skillRowStyle }}">
+        <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">BACKEND</span>
+        <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Laravel and NestJS on DigitalOcean and Cloudflare — API design, transactional email, R2 storage, provisioning. The unglamorous half that decides whether the rest works.</p>
+      </div>
+      <div style="{{ skillRowStyle }}">
+        <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">NATIVE iOS</span>
+        <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Swift, SwiftUI and CloudKit. Apps that keep their data on the device and do not phone home, because that is the version I want to use.</p>
+      </div>
+      <div style="{{ skillRowLastStyle }}">
+        <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--accent-text)">FRONTEND</span>
+        <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Vue.js and PHP at scale, and enough design work to know when an interface problem is really a product problem.</p>
+      </div>
+    </div>
+
+    <div style="margin: 64px 0 0; max-width: var(--measure)">
+      <p style="margin: 0 0 28px; font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-primary); text-wrap: pretty">The long version of how I got here is a series I'm still writing, one part at a time. The short version is a timeline — roles, and the things that came out of them.</p>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap">
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="lg" onClick="{{ goTimeline }}" hint-size="170px,52px">See the record</x-import>
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="lg" onClick="{{ goContact }}" hint-size="140px,52px">Get in touch</x-import>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isPage }}">
+  <div>
+    <dc-import name="PageHero" width="reading" tight="{{ true }}" title="{{ page.title }}" deck="{{ page.deck }}" meta="{{ page.updated }}" hint-size="100%,300px"></dc-import>
+    <article style="max-width: var(--container-md); margin: 0 auto; padding: 8px var(--gutter) 48px">
+      <dc-import name="PostBlocks" body="{{ page.body }}" hint-size="100%,900px"></dc-import>
+    </article>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isContact }}">
+  <div>
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 88px var(--gutter) 120px">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: clamp(40px, 6vw, 64px); align-items: start">
+        <div>
+          <h1 style="margin: 0 0 22px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 5.5vw, 3.75rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">Let's build something.</h1>
+          <p style="margin: 0 0 32px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Agency work through Fanxie Lab, product conversations, or just a note about espresso and guitars. I read everything.</p>
+          <div style="display: flex; flex-direction: column; gap: 12px; max-width: 420px">
+            <sc-for list="{{ contactMethods }}" as="m" hint-placeholder-count="3">
+              <dc-import name="ContactMethod" label="{{ m.label }}" value="{{ m.value }}" href="{{ m.href }}" hint-size="100%,64px"></dc-import>
+            </sc-for>
+          </div>
+        </div>
+        <div style="padding: 2px; border-radius: var(--radius-lg); background: var(--dp-gradient-cool)">
+          <sc-if value="{{ showForm }}" hint-placeholder-val="{{ true }}">
+          <div style="padding: 32px; border-radius: var(--radius-md); background: var(--bg-surface); display: flex; flex-direction: column; gap: 16px">
+            <h2 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: var(--ls-tight)">Send a note</h2>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Input" label="Name" placeholder="Your name" hint-size="100%,72px"></x-import>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Input" label="Email" placeholder="you@company.com" hint-size="100%,72px"></x-import>
+            <div>
+              <label style="display: block; font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); margin-bottom: 8px">What's on your mind?</label>
+              <textarea rows="5" placeholder="A project, a question, a recommendation for a good roaster." style="width: 100%; box-sizing: border-box; padding: 16px; border-radius: var(--radius-md); background: var(--bg-page); border: 1px solid var(--border-subtle); color: var(--text-primary); font-family: var(--font-body); font-size: var(--fs-sm); line-height: var(--lh-relaxed); resize: vertical; outline: none"></textarea>
+            </div>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="lg" full-width="{{ true }}" onClick="{{ onSubmit }}" hint-size="100%,52px">Send it</x-import>
+            <p style="margin: 0; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); line-height: var(--lh-relaxed); color: var(--text-muted)">GOES STRAIGHT TO MY INBOX. NO LIST, NO AUTOREPLY.</p>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ sent }}">
+          <div style="padding: 44px 32px; border-radius: var(--radius-md); background: var(--bg-surface); display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-height: 380px; justify-content: center">
+            <div style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: var(--radius-circle); border: 1px solid var(--dp-teal); background: color-mix(in srgb, var(--dp-teal) 12%, transparent)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--dp-teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+            </div>
+            <h2 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-xl); letter-spacing: var(--ls-tight); text-wrap: balance">It landed. Thanks.</h2>
+            <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">I read everything and reply to almost everything, usually within a couple of days. If it is urgent and I have gone quiet, email me directly at hello@dpaternina.com.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px">
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ goBlog }}" hint-size="150px,44px">Read something</x-import>
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="ghost" size="md" onClick="{{ retrySend }}" hint-size="130px,44px">Send another</x-import>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ failed }}">
+          <div style="padding: 44px 32px; border-radius: var(--radius-md); background: var(--bg-surface); display: flex; flex-direction: column; align-items: flex-start; gap: 18px; min-height: 380px; justify-content: center">
+            <div style="display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; border-radius: var(--radius-circle); border: 1px solid var(--dp-pink); background: color-mix(in srgb, var(--dp-pink) 12%, transparent)">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--dp-pink)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5"></path><path d="M12 17h.01"></path></svg>
+            </div>
+            <h2 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-xl); letter-spacing: var(--ls-tight); text-wrap: balance">That did not send.</h2>
+            <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Something on my end dropped it, and I would rather tell you than pretend otherwise. Your message is still in the form — try again, or email me directly and skip this thing entirely.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px">
+              <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="md" onClick="{{ retrySend }}" hint-size="120px,44px">Try again</x-import>
+              <a href="mailto:hello@dpaternina.com" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: var(--radius-pill); border: 1px solid var(--border-subtle); font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-secondary)">EMAIL INSTEAD</a>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isWatch }}">
+  <div>
+    <dc-import name="PageHero" title="Watch." deck="{{ watchLead }}" hint-size="100%,240px"></dc-import>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--gutter) 56px">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 0; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface)">
+        <div style="position: relative; min-height: 300px; overflow: hidden">
+          <div style="{{ featuredVideo.fallbackStyle }}"></div>
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px">
+            <img src="assets/dp-mark-white-128.png" alt="" width="44" height="44" style="display: block; opacity: 0.22">
+            <span style="{{ featuredVideo.fallbackLabelStyle }}">{{ featuredVideo.source }}</span>
+          </div>
+          <div style="{{ featuredVideo.thumbStyle }}"></div>
+          <sc-if value="{{ live }}">
+            <div style="position: absolute; left: 20px; top: 20px; display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--bg-page) 82%, transparent); border: 1px solid var(--dp-pink)">
+              <span style="width: 7px; height: 7px; border-radius: var(--radius-circle); background: var(--dp-pink); animation: dpPulse 2s ease-in-out infinite"></span>
+              <span style="{{ featuredVideo.badgeStyle }}">{{ featuredVideo.badge }}</span>
+            </div>
+          </sc-if>
+        </div>
+        <div style="padding: 40px; display: flex; flex-direction: column; gap: 16px">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px">
+            <span style="{{ featuredVideo.badgeStyle }}">{{ watchFeaturedLabel }} ON {{ featuredVideo.source }}</span>
+            <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ featuredMeta }}</span>
+          </div>
+          <h2 style="margin: 0; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-2xl); line-height: var(--lh-snug); letter-spacing: var(--ls-display); text-wrap: balance">{{ featuredVideo.title }}</h2>
+          <p style="margin: 0; font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ featuredVideo.note }}</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; padding-top: 12px">
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="md" hint-size="180px,44px">{{ watchPrimaryLabel }}</x-import>
+            <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="ghost" size="md" hint-size="140px,44px">Follow</x-import>
+          </div>
+          <p style="margin: 0; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); line-height: var(--lh-relaxed); color: var(--text-muted)">PLAYERS LOAD ONLY WHEN YOU PRESS PLAY</p>
+        </div>
+      </div>
+    </section>
+
+    <section style="border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); background: var(--band)">
+      <div style="max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y) var(--gutter)">
+        <div style="margin-bottom: 28px">
+          <dc-import name="SectionHead" as="heading" label="The archive" meta="TWITCH VODS · YOUTUBE UPLOADS" hint-size="100%,48px"></dc-import>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); gap: 20px">
+          <sc-for list="{{ vods }}" as="v" hint-placeholder-count="5">
+            <div style="display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-subtle); background: var(--bg-surface); cursor: pointer; transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="transform: translateY(-3px); border-color: var(--accent-text)">
+              <div style="position: relative; aspect-ratio: 16 / 9; overflow: hidden">
+                <div style="{{ v.fallbackStyle }}"></div>
+                <div style="position: absolute; inset: 0; padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box">
+                  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+                    <span style="{{ v.badgeStyle }}">{{ v.source }}</span>
+                    <img src="assets/dp-mark-white-128.png" alt="" width="22" height="22" style="display: block; opacity: 0.2">
+                  </div>
+                  <div style="display: flex; align-items: baseline; gap: 10px">
+                    <span style="{{ v.durStyle }}">{{ v.dur }}</span>
+                    <span style="{{ v.fallbackLabelStyle }}">{{ v.when }}</span>
+                  </div>
+                </div>
+                <div style="{{ v.thumbStyle }}"></div>
+              </div>
+              <div style="padding: 22px; display: flex; flex-direction: column; gap: 10px; flex: 1">
+                <h3 style="margin: 0; font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ v.title }}</h3>
+                <p style="margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ v.note }}</p>
+                <span style="margin-top: auto; padding-top: 8px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ v.footer }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y) var(--gutter) 120px">
+      <div style="margin-bottom: 24px">
+        <dc-import name="SectionHead" as="heading" label="What the stream runs on" meta="UPDATED AUG 2026" hint-size="100%,48px"></dc-import>
+      </div>
+      <p style="margin: 0 0 40px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Nothing here is sponsored and none of it is new. It is the same desk I work at, with a light and a mic added. The full list of what I build with lives on <span onClick="{{ goPage }}" role="link" tabindex="0" style="cursor: pointer; color: var(--accent-text)">Uses</span>.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 32px 40px">
+        <sc-for list="{{ gear }}" as="g" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="{{ g.labelStyle }}">{{ g.group }}</div>
+            <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+              <div style="padding: 18px 0; border-bottom: 1px solid var(--border-subtle)">
+                <div style="font-size: var(--fs-sm); font-weight: 600; margin-bottom: 6px; text-wrap: pretty">{{ it.name }}</div>
+                <p style="margin: 0; font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ it.note }}</p>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isSeries }}">
+  <div>
+    <section style="position: relative; max-width: var(--container-lg); margin: 0 auto; padding: 80px var(--gutter) 48px; overflow: hidden">
+      <div aria-hidden="true" style="position: absolute; top: -160px; left: 12%; width: min(620px, 110vw); height: 520px; border-radius: var(--radius-circle); background: radial-gradient(circle, color-mix(in srgb, var(--dp-pink) 12%, transparent) 0%, transparent 62%); pointer-events: none"></div>
+      <div style="position: relative; max-width: var(--container-md)">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 28px">
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Badge" tone="pink" hint-size="90px,22px">SERIES</x-import>
+          <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ seriesWritten }}</span>
+        </div>
+        <h1 style="margin: 0 0 24px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 6vw, 4rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display); text-wrap: balance">{{ seriesTitle }}</h1>
+        <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ seriesDeck }}</p>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 8px var(--gutter) 48px">
+      <h2 style="margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">Start with these</h2>
+      <p style="margin: 0 0 20px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">The parts that are finished, newest last. Each one reads on its own, so it does not matter much where you start.</p>
+      <div style="display: flex; flex-direction: column; border-bottom: 1px solid var(--border-subtle)">
+        <sc-for list="{{ seriesOut }}" as="s" hint-placeholder-count="2">
+          <div onClick="{{ s.onOpen }}" role="link" tabindex="0" style="{{ s.rowStyle }}">
+            <div>
+              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-pink)">{{ s.part }}</div>
+              <div style="margin-top: 6px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ s.meta }}</div>
+            </div>
+            <div>
+              <h3 style="margin: 0 0 8px; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); text-wrap: pretty">{{ s.title }}</h3>
+              <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ s.note }}</p>
+            </div>
+            <div style="{{ s.statusStyle }}">READ IT →</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--gutter) 64px">
+      <h2 style="margin: 0 0 8px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">Still to come</h2>
+      <p style="margin: 0 0 8px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Drafted, in the order the years run. They get a number when they go up.</p>
+      <div style="display: flex; flex-direction: column">
+        <sc-for list="{{ seriesPlanned }}" as="s" hint-placeholder-count="4">
+          <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 24px; padding: 18px 0; border-top: 1px solid var(--border-subtle)">
+            <div style="min-width: 60px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ s.part }}</div>
+            <div style="flex: 1 1 280px">
+              <h3 style="margin: 0 0 6px; font-family: var(--font-display); font-size: var(--fs-base); line-height: var(--lh-snug); letter-spacing: var(--ls-tight); color: var(--text-secondary); text-wrap: pretty">{{ s.title }}</h3>
+              <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-muted); text-wrap: pretty">{{ s.note }}</p>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ s.years }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--border-subtle)">
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ goBlog }}" hint-size="160px,44px">All writing</x-import>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isCategory }}">
+  <div>
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 72px var(--gutter) 32px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 24px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">
+        <span onClick="{{ goBlog }}" role="link" tabindex="0" style="cursor: pointer; color: var(--accent-text)">WRITING</span>
+        <span aria-hidden="true">/</span>
+        <span>CATEGORY</span>
+      </div>
+      <h1 style="margin: 0 0 20px; max-width: 24ch; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 6vw, 3.75rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display); text-wrap: balance">{{ archiveTitle }}</h1>
+      <p style="margin: 0 0 20px; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ archiveTerm }}</p>
+      <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ archiveCount }} · NEWEST FIRST</div>
+    </section>
+
+    <section style="max-width: var(--container-lg); margin: 0 auto; padding: 0 var(--gutter) 64px">
+      <div style="display: flex; flex-direction: column; border-top: 1px solid var(--border-subtle)">
+        <sc-for list="{{ archived }}" as="p" hint-placeholder-count="3">
+          <dc-import name="PostRow" variant="list" date="{{ p.date }}" cat="{{ p.cat }}" title="{{ p.title }}" excerpt="{{ p.excerpt }}" on-open="{{ p.onOpen }}" hint-size="100%,104px"></dc-import>
+        </sc-for>
+      </div>
+      <sc-if value="{{ archiveEmpty }}">
+        <p style="margin: 0; padding: 48px 0; font-size: var(--fs-base); color: var(--text-muted)">Nothing filed here yet.</p>
+      </sc-if>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-subtle)">
+        <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">That is everything filed under this one. The full archive is in date order, all categories together.</p>
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ goBlog }}" hint-size="160px,44px">All writing</x-import>
+      </div>
+    </section>
+
+    <section style="border-top: 1px solid var(--border-subtle); background: var(--band)">
+      <div style="max-width: var(--container-lg); margin: 0 auto; padding: var(--section-y-sm) var(--gutter) 120px">
+        <h2 style="margin: 0 0 20px; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); letter-spacing: var(--ls-tight)">Other categories</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px">
+          <sc-for list="{{ archiveSiblings }}" as="c" hint-placeholder-count="4">
+            <div onClick="{{ c.onClick }}" role="link" tabindex="0" style="{{ c.style }}">
+              <span>{{ c.label }}</span>
+              <span style="color: var(--text-muted)">{{ c.count }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isResume }}">
+  <div>
+    <section style="max-width: var(--container-md); margin: 0 auto; padding: 80px var(--gutter) 40px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border-subtle)">
+        <div>
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 16px">RÉSUMÉ · UPDATED AUG 2026</div>
+          <h1 style="margin: 0 0 12px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 5vw, 3.25rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">David Paternina</h1>
+          <p style="margin: 0; font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary)">Software developer and product builder · Colombia</p>
+        </div>
+        <a href="assets/david-paternina-resume.pdf" download style="display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 24px; border-radius: var(--radius-pill); background: var(--dp-teal); color: var(--bg-page); font-family: var(--font-body); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 11 5 5 5-5"></path><path d="M5 21h14"></path></svg>
+          Download PDF
+        </a>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-md); margin: 0 auto; padding: 0 var(--gutter) 40px">
+      <p style="margin: 0 0 32px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Twelve years building software, four of them leading development on an analytics plugin running on more than three million WordPress sites. I work where performance, privacy, and user experience meet — usually the first three things traded away when a deadline appears.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px 24px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">
+        <a href="mailto:hello@dpaternina.com">HELLO@DPATERNINA.COM</a>
+        <span style="color: var(--border-subtle)">/</span>
+        <span>DPATERNINA.COM</span>
+        <span style="color: var(--border-subtle)">/</span>
+        <a href="https://fanxielab.com">FANXIELAB.COM</a>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-md); margin: 0 auto; padding: 24px var(--gutter) 40px">
+      <div style="margin-bottom: 8px">
+        <dc-import name="SectionHead" as="heading" label="Experience" meta="2014 — NOW" hint-size="100%,48px"></dc-import>
+      </div>
+      <div style="display: flex; flex-direction: column; border-bottom: 1px solid var(--border-subtle)">
+        <sc-for list="{{ resumeRoles }}" as="r" hint-placeholder-count="6">
+          <div style="{{ r.rowStyle }}">
+            <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ r.range }}</div>
+            <div>
+              <h3 style="margin: 0 0 4px; font-family: var(--font-display); font-size: var(--fs-lg); line-height: var(--lh-snug); letter-spacing: var(--ls-tight)">{{ r.title }}</h3>
+              <div style="font-size: var(--fs-sm); font-weight: 600; color: var(--accent-text); margin-bottom: 12px">{{ r.org }}</div>
+              <p style="margin: 0 0 12px; max-width: var(--measure); font-size: var(--fs-sm); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">{{ r.detail }}</p>
+              <sc-if value="{{ r.hasShips }}">
+                <div style="display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding-left: 16px; border-left: 1px solid var(--border-subtle)">
+                  <sc-for list="{{ r.ships }}" as="s" hint-placeholder-count="2">
+                    <div style="font-size: var(--fs-sm); color: var(--text-secondary)">{{ s.label }} <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ s.range }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ r.stack }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="max-width: var(--container-md); margin: 0 auto; padding: 24px var(--gutter) 120px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 28px 0 0">
+        <p style="margin: 0; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">The interactive version of this — with the projects that came out of each role — is the timeline.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px">
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="md" onClick="{{ goTimeline }}" hint-size="160px,44px">Open the timeline</x-import>
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="ghost" size="md" onClick="{{ goContact }}" hint-size="130px,44px">Get in touch</x-import>
+        </div>
+      </div>
+    </section>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isNotFound }}">
+  <div style="position: relative; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden">
+    <div aria-hidden="true" style="position: absolute; left: 50%; top: 38%; width: min(720px, 130vw); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: var(--radius-circle); background: radial-gradient(circle, color-mix(in srgb, var(--dp-teal) 10%, transparent) 0%, transparent 64%); pointer-events: none"></div>
+    <div style="flex: none; padding: 20px var(--gutter)">
+      <div onClick="{{ goHome }}" role="link" tabindex="0" style="cursor: pointer; display: inline-flex; align-items: center" title="dpaternina.com">
+        <img src="assets/dp-mark-white-128.png" alt="dP — David Paternina" width="34" height="34" style="display: block">
+      </div>
+    </div>
+    <div style="position: relative; flex: 1; display: flex; align-items: center">
+      <div style="max-width: var(--container-md); margin: 0 auto; width: 100%; padding: 64px var(--gutter) 96px">
+        <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold); margin-bottom: 24px">ERROR 404 · PAGE NOT FOUND</div>
+        <h1 style="margin: 0 0 24px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 7vw, 4.5rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display); text-wrap: balance">This one did not survive the merge.</h1>
+        <p style="margin: 0 0 16px; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">I spent years running two websites and folded them into this one. A few URLs did not make it across, and this appears to be one of them.</p>
+        <p style="margin: 0 0 40px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-muted); text-wrap: pretty">If you followed a link from somewhere and it landed here, tell me where it came from and I will put a redirect in.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 56px">
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="lg" onClick="{{ goHome }}" hint-size="150px,52px">Back to home</x-import>
+          <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="lg" onClick="{{ goContact }}" hint-size="170px,52px">Report the link</x-import>
+        </div>
+        <div style="padding-top: 28px; border-top: 1px solid var(--border-subtle)">
+          <div style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); margin-bottom: 20px">OR TRY ONE OF THESE</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 12px">
+            <div onClick="{{ goTimeline }}" role="link" tabindex="0" style="{{ lostLink }}" style-hover="border-color: var(--accent-text); transform: translateY(-3px)">
+              <span style="font-family: var(--font-display); font-size: var(--fs-base); letter-spacing: var(--ls-tight)">The work</span>
+              <span style="font-size: var(--fs-sm); color: var(--text-secondary)">Every role, and what came out of it</span>
+            </div>
+            <div onClick="{{ goBlog }}" role="link" tabindex="0" style="{{ lostLink }}" style-hover="border-color: var(--accent-text); transform: translateY(-3px)">
+              <span style="font-family: var(--font-display); font-size: var(--fs-base); letter-spacing: var(--ls-tight)">The writing</span>
+              <span style="font-size: var(--fs-sm); color: var(--text-secondary)">Dev, photography, food, music</span>
+            </div>
+            <div onClick="{{ goWatch }}" role="link" tabindex="0" style="{{ lostLink }}" style-hover="border-color: var(--accent-text); transform: translateY(-3px)">
+              <span style="font-family: var(--font-display); font-size: var(--fs-base); letter-spacing: var(--ls-tight)">Watch</span>
+              <span style="font-size: var(--fs-sm); color: var(--text-secondary)">Streams, VODs, and the desk</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ isOffline }}">
+  <div style="min-height: 100vh; display: flex; flex-direction: column">
+    <div style="flex: none; padding: 20px var(--gutter)">
+      <img src="assets/dp-mark-white-128.png" alt="dP — David Paternina" width="34" height="34" style="display: block; opacity: 0.5">
+    </div>
+    <div style="flex: 1; display: flex; align-items: center">
+      <div style="max-width: var(--container-md); margin: 0 auto; width: 100%; padding: 64px var(--gutter) 96px">
+        <div style="display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-purple); margin-bottom: 24px">
+          <span style="width: 7px; height: 7px; border-radius: var(--radius-circle); background: var(--dp-purple)"></span>
+          NO CONNECTION
+        </div>
+        <h1 style="margin: 0 0 24px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2rem, 6vw, 3.75rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display); text-wrap: balance">You are offline, and so is this.</h1>
+        <p style="margin: 0 0 32px; max-width: var(--measure); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Pages you have already opened are cached on your device and still readable. This one never got that far.</p>
+        <div style="max-width: 520px; padding: 22px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--band); font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.9; letter-spacing: var(--ls-caps); color: var(--text-secondary); margin-bottom: 36px">
+          <div>$ curl dpaternina.com</div>
+          <div style="color: var(--hue-purple)">curl: (6) could not resolve host</div>
+          <div style="color: var(--text-muted)">retrying when you are back …</div>
+        </div>
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="secondary" size="lg" onClick="{{ goHome }}" hint-size="140px,52px">Try again</x-import>
+      </div>
+    </div>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ showCta }}" hint-placeholder-val="{{ true }}">
+  <section style="position: relative; overflow: hidden; isolation: isolate">
+    <div aria-hidden="true" style="position: absolute; left: 50%; top: 52%; width: min(760px, 120vw); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: var(--radius-circle); background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--dp-teal) var(--glow-core), transparent) 0%, color-mix(in srgb, var(--dp-teal) var(--glow-mid), transparent) 45%, transparent 70%); filter: blur(30px); animation: dpOrb 14s var(--ease-standard) infinite; pointer-events: none; z-index: -1"></div>
+    <div aria-hidden="true" style="position: absolute; left: 50%; top: 52%; width: min(300px, 62vw); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: var(--radius-circle); border: 1px solid color-mix(in srgb, var(--dp-teal) var(--glow-ring), transparent); pointer-events: none; z-index: -1"></div>
+    <div style="max-width: var(--container-lg); margin: 0 auto; padding: clamp(96px, 14vw, 160px) var(--gutter) clamp(104px, 15vw, 168px); text-align: center">
+      <h2 style="margin: 0 0 16px; font-family: var(--font-display); font-weight: 700; font-size: clamp(2.25rem, 6vw, 3.75rem); line-height: var(--lh-tight); letter-spacing: var(--ls-display)">Let's build something.</h2>
+      <p style="margin: 0 auto 36px; max-width: var(--measure); font-size: var(--fs-base); line-height: var(--lh-relaxed); color: var(--text-secondary); text-wrap: pretty">Product work, agency projects, or just a note about espresso, guitars, or cats. All welcome.</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: center">
+        <x-import component-from-global-scope="DPDanielPaterninaDesignSystem_0f0b50.Button" variant="primary" size="lg" onClick="{{ goContact }}" hint-size="140px,52px">Say hi</x-import>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ chrome }}" hint-placeholder-val="{{ true }}">
+    <dc-import name="SiteFooter" live="{{ live }}" on-home="{{ goHome }}" on-timeline="{{ goTimeline }}" on-blog="{{ goBlog }}" on-watch="{{ goWatch }}" on-about="{{ goAbout }}" on-contact="{{ goContact }}" on-page="{{ goPage }}" on-series="{{ goSeries }}" on-categories="{{ goCategories }}" on-resume="{{ goResume }}" on-colophon="{{ goColophon }}" on-privacy="{{ goPrivacy }}" hint-size="100%,320px"></dc-import>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;previewView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;site&quot;,&quot;home&quot;,&quot;timeline&quot;,&quot;blog&quot;,&quot;post&quot;,&quot;watch&quot;,&quot;series&quot;,&quot;category&quot;,&quot;about&quot;,&quot;resume&quot;,&quot;page&quot;,&quot;contact&quot;,&quot;notfound&quot;,&quot;offline&quot;],&quot;default&quot;:&quot;site&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Preview&quot;},&quot;heroAccent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;teal&quot;,&quot;pink&quot;,&quot;gold&quot;,&quot;purple&quot;],&quot;default&quot;:&quot;teal&quot;,&quot;tsType&quot;:&quot;'teal' | 'pink' | 'gold' | 'purple'&quot;,&quot;section&quot;:&quot;Brand&quot;},&quot;showNowStrip&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Home&quot;},&quot;isLive&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Watch&quot;},&quot;twitchLogin&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;patsypatz&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Watch&quot;},&quot;contactState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;form&quot;,&quot;sent&quot;,&quot;error&quot;],&quot;default&quot;:&quot;form&quot;,&quot;tsType&quot;:&quot;'form' | 'sent' | 'error'&quot;,&quot;section&quot;:&quot;Contact&quot;},&quot;timelineFilter&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Everything&quot;,&quot;Roles&quot;,&quot;Shipped&quot;],&quot;default&quot;:&quot;Everything&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Timeline&quot;},&quot;timelineMobileMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;stack&quot;,&quot;scroll&quot;],&quot;default&quot;:&quot;stack&quot;,&quot;tsType&quot;:&quot;'stack' | 'scroll'&quot;,&quot;section&quot;:&quot;Responsive&quot;}}">
+const LANES = [
+  {
+    org: 'Backbone Technology', title: 'Developer', start: 2014, end: 2016, range: '2014 — 2016',
+    detail: 'Placeholder role description — a couple of sentences on what the job was and what you owned.',
+    stack: 'STACK · PLACEHOLDER', ships: [],
+  },
+  {
+    org: 'Imaginamos', title: 'Developer', start: 2016, end: 2018, range: '2016 — 2018',
+    detail: 'Placeholder role description — a couple of sentences on what the job was and what you owned.',
+    stack: 'STACK · PLACEHOLDER', ships: [],
+  },
+  {
+    org: 'Aplyca', title: 'Developer', start: 2018, end: 2020, range: '2018 — 2020',
+    detail: 'Placeholder role description — a couple of sentences on what the job was and what you owned.',
+    stack: 'STACK · PLACEHOLDER', ships: [],
+  },
+  {
+    org: 'Globant', title: 'Developer', start: 2020, end: 2022, range: '2020 — 2022',
+    detail: 'Placeholder role description — a couple of sentences on what the job was and what you owned.',
+    stack: 'STACK · PLACEHOLDER', ships: [],
+  },
+  {
+    org: 'MonsterInsights', title: 'Developer team lead', start: 2022, end: 2026.4, range: '2022 — 2026',
+    detail: 'I led development on the most popular Google Analytics plugin for WordPress, running on over 3 million websites. The work was making complex analytics feel simple: shipping to millions of users, performance optimization, and analytics integration.',
+    stack: 'PHP · VUE.JS · REST APIS · WP-CLI',
+    ships: [
+      {
+        org: 'Natural-language queries', start: 2025, end: 2025.8, range: '2025',
+        headline: 'Ask your analytics a question.',
+        detail: 'AI-powered natural language queries that let site owners ask about their traffic in plain English instead of learning a reporting UI.',
+        bullets: [
+          { text: 'Ships inside a plugin that updates unattended on 3M+ sites — no breaking changes allowed.' },
+          { text: 'Answers have to be simple and true at once; a confident wrong number is worse than no answer.' },
+          { text: 'Privacy constraints shaped the architecture more than the model choice did.' },
+        ],
+        role: 'Developer team lead', stack: 'PHP · VUE.JS · REST APIS',
+        artifactLabel: 'QUERY → ANSWER',
+        artifact: '> which posts grew last month?\n\n/blog/getting-started   EXAMPLE  + EX%\n/blog/wp-cli-tricks     EXAMPLE  + EX%\n/pricing                EXAMPLE  + EX%\n\nreal figures to come',
+        stat1: '3M+', stat1Label: 'SITES ON THE PLUGIN', stat2: '—', stat2Label: 'ADOPTION',
+      },
+      {
+        org: 'Performance work', start: 2023, end: 2024.8, range: '2023 — 2024',
+        headline: 'Analytics that doesn\u2019t slow the site down.',
+        detail: 'Performance optimization and analytics integration across the plugin surface — page weight treated as a feature, not a report.',
+        bullets: [
+          { text: 'Specific wins and before/after numbers to be filled in.' },
+          { text: 'Touches caching, script loading, and the REST surface.' },
+        ],
+        role: 'Developer team lead', stack: 'PHP · VUE.JS · WP-CLI',
+        artifactLabel: 'WP-CLI SESSION',
+        artifact: '$ wp monsterinsights report --range=30d\nfetching from cache …   ok (48ms)\nreconciling ids …       ok\nSuccess: report generated.',
+        stat1: '—', stat1Label: 'LOAD TIME DELTA', stat2: '—', stat2Label: 'RELEASES',
+      },
+    ],
+  },
+  {
+    org: 'Fanxie Lab', title: 'CTO & founder', start: 2016, end: 2026.6, range: '2016 — now',
+    accent: 'var(--dp-pink)',
+    detail: 'The thread running under everything else. An innovation lab focused on design, research, and development methodologies — simple but sophisticated solutions, working closely with partners rather than treating them as clients. Partner work across Latin America, and the place my own products get built.',
+    stack: 'LARAVEL · NESTJS · SWIFTUI · DIGITALOCEAN · CLOUDFLARE',
+    ships: [
+      {
+        org: 'Kiveo', start: 2023, end: 2026.6, range: '2023 — now',
+        headline: 'Native, and nothing phoning home.',
+        detail: 'One line on what Kiveo does and who it\u2019s for — copy to come. Built solo, SwiftUI front to back, no accounts, nothing leaves the device.',
+        bullets: [
+          { text: 'No third-party analytics SDKs.' },
+          { text: 'No account required to use the app.' },
+          { text: 'Sync goes through the user\u2019s own iCloud, or not at all.' },
+        ],
+        role: 'Everything', stack: 'SWIFT · SWIFTUI · CLOUDKIT',
+        artifactLabel: 'SWIFTUI',
+        artifact: 'struct EntryList: View {\n  @Query var entries: [Entry]\n  var body: some View {\n    List(entries) { EntryRow($0) }\n      .animation(.snappy)\n  }\n}',
+        stat1: '0', stat1Label: 'TRACKERS', stat2: '—', stat2Label: 'APPS SHIPPED',
+      },
+      {
+        org: 'Agency platform & ops', start: 2024, end: 2026.6, range: '2024 — now',
+        headline: 'The plumbing a small agency runs on.',
+        detail: 'API design, transactional email, R2 storage, server provisioning, and the operational tooling that keeps partner infrastructure boring.',
+        bullets: [
+          { text: 'One command stands up a client site: droplet, DNS, TLS, storage, mail.' },
+          { text: 'Built so a two-person team can run real infrastructure without an ops hire.' },
+          { text: 'Partner list and scope to be filled in.' },
+        ],
+        role: 'CTO & founder', stack: 'LARAVEL · NESTJS · CLOUDFLARE · R2',
+        artifactLabel: 'PROVISIONING',
+        artifact: '$ fx site:create acme --stack=laravel\n→ droplet      ok\n→ dns + tls    ok\n→ r2 bucket    ok\n→ mail domain  ok\ndone in EXAMPLE s',
+        stat1: 'LATAM', stat1Label: 'PARTNER BASE', stat2: '—', stat2Label: 'SITES RUNNING',
+      },
+    ],
+  },
+];
+
+const POSTS = [
+  {
+    slug: 'house-style', date: 'AUG 2026', cat: 'DEV', read: '6 MIN READ',
+    title: 'The house style, and every piece of it',
+    excerpt: 'Every block this blog can render, in one post, so I stop reinventing them.',
+    lead: 'This is the reference post. Every element I let myself use in writing here appears once, in the order I usually reach for it.',
+    body: [
+      { p: 'The rule is that a post is text first. Everything below exists because a paragraph could not do the job — a quote carries someone else\'s voice, a list carries a set, code carries an exact string. If a block is decoration, it is not in the system.' },
+      { h2: 'Headings run three deep' },
+      { p: 'Level two splits a post into parts. It is the only heading most posts need, and it sits far enough from body copy that you can scan for it.' },
+      { h3: 'Level three groups within a part' },
+      { p: 'Same face, smaller, tighter to the paragraph it introduces. Use it when a section has two or three distinct moves.' },
+      { h4: 'Level four is for reference material' },
+      { p: 'Specs, options, parameters. If a post needs a fourth level in prose, the post wants splitting instead.' },
+      { h2: 'Lists' },
+      { p: 'Unordered for sets where order carries no meaning:' },
+      { ul: [
+        'One idea per item, no trailing punctuation.',
+        'Sentence case, same as everything else.',
+        'Three to six items — longer than that is a table.',
+      ] },
+      { p: 'Numbered only for genuine sequences:' },
+      { ol: [
+        'Write the thing badly and completely.',
+        'Cut every sentence that repeats the one before it.',
+        'Read it aloud once; fix whatever makes you stumble.',
+      ] },
+      { h2: 'Quotes' },
+      { p: 'A pull quote is for a line worth stopping on — someone else\'s words, or my own if they earn the space. Attribution is optional and stays quiet.' },
+      { quote: '"It\'s better done than perfect." I\'ll be damned if he wasn\'t right.', cite: 'A lead I had in 2013' },
+      { h2: 'Code' },
+      { p: 'Monospaced, labelled, and short enough to read in place. Anything longer than about fifteen lines goes in a repo and gets a link.' },
+      { codeLabel: 'SHELL', code: '$ npm run build --silent\n\n  bundle   142 kB → 61 kB gzip\n  css       18 kB →  4 kB gzip\n  done in 3.1s' },
+      { h2: 'Callouts' },
+      { p: 'One callout per post, maximum. It is for a caveat the reader will hit in practice, not for emphasis I failed to write into the sentence.' },
+      { noteLabel: 'NOTE', note: 'Numbers in these posts are from my own projects unless a source is linked. When I do not have the figure, I say so instead of estimating.' },
+      { h2: 'Images' },
+      { p: 'Inline images sit full column width, with a mono caption underneath. Photographs get room to breathe; screenshots get cropped to the part that matters.' },
+      { image: 'post-inline-1', caption: 'AN INLINE FIGURE — SAME WIDTH AS THE COLUMN' },
+      { h2: 'Tables' },
+      { p: 'For comparisons where the reader wants to look something up rather than read a paragraph about it.' },
+      { table: {
+        head: ['Block', 'Use it for', 'Limit'],
+        rows: [
+          ['Quote', 'A line in someone else\'s voice', 'Two per post'],
+          ['List', 'A set or a sequence', 'Six items'],
+          ['Code', 'An exact command or snippet', 'Fifteen lines'],
+          ['Callout', 'A caveat you will actually hit', 'One per post'],
+        ],
+      } },
+      { rule: true },
+      { p: 'That is the whole kit. If a post wants something that is not here, the something gets designed properly and added to this page — not improvised once and forgotten.' },
+    ],
+  },
+  {
+    slug: 'workaholic-years', date: 'MAR 2026', cat: 'MY LIFE STORY', part: 2, read: '9 MIN READ',
+    title: 'The workaholic years, and why I stopped',
+    excerpt: 'Hardly anyone would use that word about me today. That took work.',
+    lead: 'In the previous part I covered one of the most exhausting moments of my life. This one is about the years after — the ones I mostly spent at a desk.',
+    body: [
+      { p: "We're in 2012 now. For the first time I was working somewhere that felt like it actually cared about the people doing the work. We had the tools we needed. I had a title I was proud of. And I responded to all of that the only way I knew how: by working every hour I had." },
+      { p: 'It\'s funny, because if you asked people about me today, hardly anyone would use the word "workaholic". That\'s because I changed. Not gracefully, and not because I read the right book — because I had to.' },
+      { h: 'The line I still repeat' },
+      { p: 'My lead at the time watched me rewrite the same module for the third time in a week and said the only thing that ever got through to me about scope.' },
+      { quote: '"It\'s better done than perfect." I\'ll be damned if he wasn\'t right.' },
+      { p: "The next few years would kick my butt in ways I didn't see coming, and I'll get to those. But this is the chapter where the habit formed, and where the cost of it started quietly adding up." },
+    ],
+  },
+  {
+    slug: 'ai-features-users', date: 'FEB 2026', cat: 'DEV', read: '7 MIN READ',
+    title: 'Shipping AI features without betraying your users',
+    excerpt: 'What plain-English analytics taught me about privacy as a constraint.',
+    lead: 'I spent a year building a feature that answers questions about a site in plain English. The hard part was never the model.',
+    body: [
+      { p: 'The brief sounded simple: let someone type "which posts grew last month" and get a real answer. Every interesting version of that feature wants to send your data somewhere, and every version worth shipping refuses to.' },
+      { p: "So privacy became the constraint I designed against instead of the disclaimer I wrote afterwards. Aggregate before you leave the server. Send shapes, not rows. Make the prompt auditable by the person whose data it describes." },
+      { h: 'What it cost' },
+      { p: 'Two features died. The answers got slower by about 400ms. In exchange, I can explain exactly what leaves a customer\'s database, in one sentence, without a lawyer in the room.' },
+      { quote: 'If you can\'t say what leaves the server, you haven\'t finished the feature.' },
+    ],
+  },
+  {
+    slug: 'espresso-shot', date: 'JAN 2026', cat: 'FOOD', read: '5 MIN READ',
+    title: 'Three years of chasing the same espresso shot',
+    excerpt: 'A dial-in log, a grinder I regret, and one very good morning.',
+    lead: 'I have a spreadsheet of grind settings going back to 2023. I am aware of what that says about me.',
+    body: [
+      { p: 'The shot I keep chasing happened in a small place in Medellín — Colombian beans, roasted maybe five days earlier, and a barista who clearly was not measuring anything. Mine has been measured to the tenth of a gram for three years and has not landed there yet.' },
+      { p: 'What did improve: I stopped buying equipment to solve technique problems. The grinder I regret was a shortcut. The habit that worked was pulling one shot a day and writing down one variable.' },
+      { h: 'The current recipe' },
+      { p: '18g in, 36g out, 28 seconds, water at 93°C. Boring, repeatable, and about 80% of the way to that morning.' },
+    ],
+  },
+  {
+    slug: 'amp-sims', date: 'DEC 2025', cat: 'MUSIC', read: '4 MIN READ',
+    title: 'Too many amp sims, one guitar',
+    excerpt: 'On collecting tools instead of practicing, and what finally broke the loop.',
+    lead: 'At one point I owned nine amp simulators and could play four songs. The ratio was the problem.',
+    body: [
+      { p: 'Buying a plugin feels like progress. It has a version number, it changes the sound, it takes an afternoon to explore. Practicing feels like nothing for weeks and then feels like everything at once.' },
+      { p: 'What broke the loop was deleting all of them and keeping one preset for a month. The playing got better because there was nothing else to adjust.' },
+      { quote: 'Every tool I bought was a way of not sitting down with the instrument.' },
+      { p: 'Same thing happens with editors, frameworks, and note apps. I recognise the shape of it now, which is most of the fix.' },
+    ],
+  },
+  {
+    slug: 'city-you-stopped-noticing', date: 'NOV 2025', cat: 'PHOTOGRAPHY', read: '6 MIN READ',
+    title: 'Shooting a city you have stopped noticing',
+    excerpt: 'A month of walking the same six blocks with one prime lens.',
+    lead: 'I gave myself one lens, six blocks, and thirty days. The rule was that I could not go anywhere new.',
+    body: [
+      { p: 'The first week was terrible. I photographed the obvious things — the mural, the fruit cart, the dog outside the bakery — and got a folder of postcards nobody needed.' },
+      { p: 'Week three is when it turned. Once the subjects run out you start seeing light instead of objects: the ten minutes when the wall opposite my building goes orange, the reflection that only works after rain.' },
+      { h: 'What I kept' },
+      { p: 'Eleven frames out of about nine hundred. All of them are from the last ten days, and none of them are of anything I would have pointed a camera at on day one.' },
+    ],
+  },
+  {
+    slug: 'care-looks-like', date: 'OCT 2025', cat: 'MY LIFE STORY', part: 1, read: '8 MIN READ',
+    title: 'The job that taught me what care looks like',
+    excerpt: 'For the first time I worked somewhere that gave me what I needed.',
+    lead: 'Part five: the year I found out that most of what I had accepted as normal at work was not normal.',
+    body: [
+      { p: 'They bought the machine I asked for. Nobody made a speech about it. That was the whole thing — the request went in on Monday and the answer was yes, and I sat there recalibrating years of assumptions.' },
+      { p: 'It also raised the bar in a way I did not expect. When the environment stops being the obstacle, the only thing left in the way of the work is you.' },
+      { quote: 'Care at work is mostly logistics. It looks like the thing you asked for showing up.' },
+      { p: 'This is the chapter right before the one where I overcorrected and worked myself into the ground. Read them in order if you want the full picture.' },
+    ],
+  },
+];
+
+const PAGES = {};
+
+PAGES.uses = {
+  slug: 'uses',
+  title: 'Uses',
+  updated: 'UPDATED AUG 2026',
+  deck: 'The hardware, software, and small objects I actually reach for. If something is on this list it survived at least a year of use.',
+  body: [
+    { p: 'People ask about the setup more than anything else I write about, so it lives here instead of in my replies. I update the page when something changes, not on a schedule.' },
+    { h2: 'Desk' },
+    { image: 'page-figure-1', caption: 'THE DESK, AUGUST 2026' },
+    { ul: [
+      '16-inch laptop, docked, lid closed, one 27-inch display above it.',
+      'Mechanical keyboard with tactile switches — quiet enough for calls.',
+      'A notebook, because I still think better with a pen for the first ten minutes.',
+    ] },
+    { h2: 'What I build with' },
+    { p: 'The stack has not changed much in three years, which I take as a good sign.' },
+    { table: {
+      head: ['Tool', 'For', 'Since'],
+      rows: [
+        ['Neovim', 'Everything I type into a repo', '2019'],
+        ['Laravel + Vue', 'Client work and internal tools', '2017'],
+        ['SwiftUI', 'The iOS side of my own products', '2023'],
+        ['Figma', 'Interface work before it becomes code', '2020'],
+      ],
+    } },
+    { h3: 'Small utilities that earn their keep' },
+    { ul: [
+      'A clipboard history tool — the single biggest time saver on this list.',
+      'A window manager bound to muscle memory.',
+      'One password manager, one terminal, no launchers I have to configure.',
+    ] },
+    { h2: 'Off the clock' },
+    { p: 'The camera is one body and one 35mm prime. The guitar is one guitar. The coffee setup is deliberately unremarkable and produces the same shot every morning.' },
+    { codeLabel: 'ESPRESSO', code: '18g in · 36g out · 28s · 93°C' },
+    { noteLabel: 'NOTE', note: 'No affiliate links anywhere on this page. If you want a specific model number, ask me and I will tell you what I paid.' },
+    { rule: true },
+    { p: 'Last thing: none of this matters as much as sitting down and doing the work. The tools are just what happened to be nearby when I did.' },
+  ],
+};
+
+PAGES.colophon = {
+  slug: 'colophon',
+  title: 'Colophon',
+  updated: 'UPDATED AUG 2026',
+  deck: 'How this site is built, what it is made of, and who to blame for the parts that are wrong.',
+  body: [
+    { p: 'I kept two websites for years — one for the work, one for the writing — and maintained neither properly. This is the merge. It is built to be fast, quiet, and boring to run, because a site I dread deploying is a site I stop writing on.' },
+    { p: 'It is WordPress, which surprises people who assume I would reach for something newer. I write in WordPress every working day and I know precisely where it is slow. Publishing a post has to take one click, or the posts stop happening.' },
+    { h2: 'Type' },
+    { ul: [
+      'Display and headings set in the display face, tight tracking, weight 700 only.',
+      'Body copy at a measure of about 68 characters, because longer lines lose me too.',
+      'Everything mono — dates, labels, code, captions — is the same face at one size.',
+    ] },
+    { h2: 'Colour' },
+    { p: 'One dark ground, one teal accent, and three secondary hues that only appear to mark a category or a state. Nothing here is a gradient for its own sake; the gradient exists because the monogram does.' },
+    { table: {
+      head: ['Role', 'Where it shows up', 'Rule'],
+      rows: [
+        ['Teal', 'Links, active nav, primary buttons', 'The default accent'],
+        ['Pink', 'Fanxie Lab, the life-story series, live badge', 'Mine, personal'],
+        ['Gold', 'Shipped and live things', 'Earned, not decorative'],
+        ['Purple', 'Infrastructure and privacy', 'The quiet half'],
+      ],
+    } },
+    { h2: 'Built with' },
+    { p: 'WordPress, with a theme I wrote by hand — no page builder, no block library I did not choose, no plugin doing work that twenty lines of PHP would do. I have spent four years inside a plugin that runs on three million sites, so I know exactly how much of this stack I can leave out.' },
+    { p: 'It runs on Fanxie Cloud, our own managed hosting: Redis object cache, Varnish in front, Cloudflare at the edge, DigitalOcean underneath. Pages are served from cache and the database is barely awake.' },
+    { codeLabel: 'DEPLOY', code: '$ git push\n→ composer     ok\n→ theme build  ok (2.4s)\n→ rsync        ok\n→ cache flush  ok\nlive in 11s' },
+    { ul: [
+      'A hand-written block theme. The editor only offers blocks this design system has.',
+      'Four plugins, all load-bearing. I audit the list twice a year and it gets shorter.',
+      'No analytics script, no cookie banner, because there is nothing to consent to.',
+    ] },
+    { h2: 'Credits' },
+    { ul: [
+      'Photographs are mine unless a caption says otherwise.',
+      'The monogram is mine, drawn far too many times.',
+      'Any figure in a post comes from my own projects, or it is marked as missing.',
+    ] },
+    { noteLabel: 'FOUND A MISTAKE?', note: 'Broken link, wrong date, bad take — tell me and I will fix it. Corrections get made in place, and anything substantive gets a note at the bottom of the post.' },
+  ],
+};
+
+PAGES.privacy = {
+  slug: 'privacy',
+  title: 'Privacy',
+  updated: 'UPDATED AUG 2026',
+  deck: 'The short version: this site does not track you, and I do not have anything to sell about you.',
+  body: [
+    { p: 'I spent a year building analytics features while arguing that privacy is a constraint you design against, not a disclaimer you add afterwards. It would be strange to then run a personal site that watched you read it.' },
+    { h2: 'What this site collects' },
+    { p: 'Nothing that identifies you. No cookies are set. No third-party analytics, advertising, or social scripts load on any page.' },
+    { ul: [
+      'No cookies, no local storage used for tracking.',
+      'No Google Analytics, no Meta pixel, no session recording.',
+      'Aggregate page counts only, with no IP address stored and nothing linked to a person.',
+    ] },
+    { h2: 'If you write to me' },
+    { p: 'The contact form sends me an email with what you typed and nothing else. I keep it in my inbox until the conversation is over. I do not add you to a list, and there is no list to add you to.' },
+    { h2: 'Things I do not control' },
+    { p: 'Video on the Watch page comes from Twitch and YouTube. Thumbnails load from their image servers, so those services see that request. Players do not load at all until you press play, which is the one bit of this I can actually control.' },
+    { p: 'The site runs on WordPress. It sets a cookie only if you log in to the admin, which is me and nobody else.' },
+    { noteLabel: 'NOTE', note: 'If any of this changes, the date at the top of this page changes with it, and the change is described here rather than quietly rewritten.' },
+    { rule: true },
+    { p: 'Questions about any of it: hello@dpaternina.com.' },
+  ],
+};
+
+// Thumbnails are never uploaded — every one resolves to a Twitch or YouTube URL.
+// Live: static-cdn.jtvnw.net/previews-ttv/live_user_<login>-1280x720.jpg (public, no key).
+// YouTube: i.ytimg.com/vi/<id>/maxresdefault.jpg (public, no key).
+// Twitch VODs: thumbnail_url from the Helix /videos response, %{width}/%{height} substituted.
+const LIVE_NOW = {
+  id: 'live', source: 'TWITCH', live: true, tone: 'pink',
+  title: 'Building the Kiveo reading-stats screen, live',
+  meta: 'STREAMING NOW · 1H 12M IN',
+  note: 'SwiftUI charts, and finding out that my own reading data is embarrassing.',
+};
+
+const VIDEOS = [
+  {
+    id: 'v-1', source: 'TWITCH', tone: 'purple', vod: '',
+    title: 'Provisioning a client site from one command',
+    dur: '2H 41M', when: 'AUG 2026',
+    note: 'The whole fx site:create flow, including the part where DNS lies to me.',
+  },
+  {
+    id: 'v-2', source: 'YOUTUBE', tone: 'teal', yt: '',
+    title: 'Why your analytics plugin is slowing the site down',
+    dur: '18 MIN', when: 'JUL 2026',
+    note: 'A short, edited version of a rant I have given far too many times.',
+  },
+  {
+    id: 'v-3', source: 'TWITCH', tone: 'purple', vod: '',
+    title: 'Rewriting the query parser, badly, twice',
+    dur: '3H 05M', when: 'JUL 2026',
+    note: 'Unedited. Includes the hour I spent debugging a typo.',
+  },
+  {
+    id: 'v-4', source: 'YOUTUBE', tone: 'teal', yt: '',
+    title: 'SwiftUI without a backend: how Kiveo stores everything',
+    dur: '24 MIN', when: 'JUN 2026',
+    note: 'The architecture talk I wish existed when I started.',
+  },
+  {
+    id: 'v-5', source: 'TWITCH', tone: 'purple', vod: '',
+    title: 'Espresso, then eight hours of Laravel',
+    dur: '4H 18M', when: 'JUN 2026',
+    note: 'A normal working day, streamed. Surprisingly popular.',
+  },
+];
+
+// Each tile gets its own glow placement so a row of not-yet-fetched thumbnails reads as a
+// set of cards rather than five copies of one failure. Hue still codes the platform.
+const GLOW = [
+  { at: '32% 28%', mix: 22 },
+  { at: '68% 38%', mix: 16 },
+  { at: '50% 62%', mix: 20 },
+  { at: '28% 66%', mix: 15 },
+  { at: '72% 24%', mix: 21 },
+];
+
+const GEAR = [
+  {
+    group: 'Desk', tone: 'teal',
+    items: [
+      { name: '16-inch laptop, docked', note: 'Lid closed, one 27-inch display above it. Same machine I build on.' },
+      { name: 'Mechanical keyboard, tactile switches', note: 'Quiet enough that nobody on a call has complained yet.' },
+      { name: 'Arm-mounted display', note: 'Bought to get the camera to eye level. Kept for the desk space.' },
+    ],
+  },
+  {
+    group: 'Camera & light', tone: 'gold',
+    items: [
+      { name: 'Mirrorless body, 35mm prime', note: 'The same camera I shoot photography with. Clean HDMI out.' },
+      { name: 'One key light, one practical', note: 'Softbox at 45°, and a lamp behind me so the room is not a void.' },
+      { name: 'Capture card', note: 'Unremarkable, which is the highest praise a capture card gets.' },
+    ],
+  },
+  {
+    group: 'Audio', tone: 'purple',
+    items: [
+      { name: 'Dynamic mic on a boom', note: 'Dynamic, not condenser — it ignores the cats and the street.' },
+      { name: 'Small interface', note: 'Two inputs, one of which is a guitar when the stream goes off-topic.' },
+      { name: 'Closed-back headphones', note: 'For monitoring, and for pretending the doorbell did not ring.' },
+    ],
+  },
+  {
+    group: 'Software', tone: 'teal',
+    items: [
+      { name: 'OBS, with three scenes', note: 'Code, camera, and a break card. More scenes than that and I never switch.' },
+      { name: 'Neovim and a terminal', note: 'Font size cranked up so it is readable at 1080p.' },
+      { name: 'A tiny overlay set', note: 'Built from this site\u2019s design system, so the stream matches the site.' },
+    ],
+  },
+];
+
+const SERIES = {
+  slug: 'life-story',
+  title: 'My life story',
+  deck: 'The long version of how I got here, one part at a time. Each part stands on its own, and the numbers follow the order they went up.',
+  parts: [
+    { part: 1, slug: 'care-looks-like' },
+    { part: 2, slug: 'workaholic-years' },
+    { title: 'Before any of it was a job', years: '1995 — 2007', note: 'A borrowed computer, a dial-up connection, and no idea this was work people paid for.' },
+    { title: 'Learning the hard way', years: '2008 — 2010', note: 'School, detours, and the first time I shipped something a stranger used.' },
+    { title: 'The first office', years: '2011', note: 'What I accepted as normal, because I had nothing to compare it to.' },
+    { title: 'The exhausting year', years: '2011 — 2012', note: 'The part I put off writing the longest.' },
+  ],
+};
+
+// Category tokens are caps mono in chips and kickers; the archive heading is prose, so it
+// gets the sentence-case display name.
+const TERM_NAMES = {
+  'DEV': 'Dev',
+  'MY LIFE STORY': 'My life story',
+  'FOOD': 'Food',
+  'MUSIC': 'Music',
+  'PHOTOGRAPHY': 'Photography',
+};
+
+// Term descriptions for the category archives.
+const TERMS = {
+  'DEV': 'Building things and the decisions behind them — WordPress, PHP, Laravel, and whatever is currently on fire.',
+  'MY LIFE STORY': 'The long-form series about how I got here, written one part at a time.',
+  'FOOD': 'Mostly coffee, and the equipment I keep telling myself I do not need.',
+  'MUSIC': 'Guitar, recording at home, and buying tools instead of practising.',
+  'PHOTOGRAPHY': 'One prime lens, the same few streets, and what shows up after a month of looking.',
+};
+
+const CAPTIONS = {
+  'house-style': 'THE REFERENCE POST — EVERY BLOCK ONCE',
+  'workaholic-years': 'THE DESK I BARELY LEFT, 2013',
+  'ai-features-users': 'THE QUERY BOX, MID-REWRITE',
+  'espresso-shot': 'DIAL-IN NOTES AND THE MACHINE',
+  'amp-sims': 'ONE GUITAR, NINE PLUGINS LATER',
+  'city-you-stopped-noticing': 'DAY 26 — THE WALL OPPOSITE MY BUILDING',
+  'care-looks-like': 'THE OFFICE THAT SAID YES',
+};
+
+const HERO_ACCENTS = {
+  teal: 'var(--hue-teal)',
+  pink: 'var(--hue-pink)',
+  gold: 'var(--hue-gold)',
+  purple: 'var(--hue-purple)',
+};
+
+class Component extends DCLogic {
+  state = { w: 0, view: 'home', filter: null, cat: 'ALL', page: 1, postSlug: 'workaholic-years', pageSlug: 'uses', archiveCat: 'MY LIFE STORY', sent: null, open: { 'MonsterInsightsDeveloper team lead': true, 'MonsterInsightsNatural-language queries': true } };
+  hostId = 'dph-' + Math.random().toString(36).slice(2, 9);
+
+  // Width comes from a zero-height probe so it can never be pushed around by our own
+  // content. Several triggers because the host preview does not always run frame callbacks.
+  measure() {
+    const el = document.getElementById(this.hostId);
+    if (!el) return;
+    const w = Math.round(el.getBoundingClientRect().width);
+    if (w > 0 && Math.abs(w - this.state.w) > 4) this.setState({ w });
+  }
+
+  start() {
+    if (this.started) return;
+    const el = document.getElementById(this.hostId);
+    if (!el) { this.retry = setTimeout(() => this.start(), 32); return; }
+    this.started = true;
+    this.measure();
+    if (typeof ResizeObserver !== 'undefined') {
+      this.ro = new ResizeObserver(() => this.measure());
+      this.ro.observe(el);
+    } else {
+      this.setState({ w: 1200 });
+    }
+    this.onResize = () => this.measure();
+    window.addEventListener('resize', this.onResize);
+    this.poll = setInterval(() => this.measure(), 250);
+    setTimeout(() => { clearInterval(this.poll); this.poll = null; }, 4000);
+  }
+
+  stop() {
+    if (this.ro) this.ro.disconnect();
+    if (this.poll) clearInterval(this.poll);
+    if (this.retry) clearTimeout(this.retry);
+    if (this.onResize) window.removeEventListener('resize', this.onResize);
+  }
+
+  componentWillUnmount() { this.stop(); }
+
+  // The Tweaks "Preview screen" picker jumps to views that have no nav entry (404, offline).
+  componentDidUpdate(prevProps) {
+    const pv = this.props.previewView;
+    if (pv && pv !== 'site' && pv !== prevProps.previewView && pv !== this.state.view) {
+      this.setState({ view: pv });
+      window.scrollTo(0, 0);
+    }
+  }
+
+  go(view) {
+    return () => { this.setState({ view }); window.scrollTo(0, 0); };
+  }
+
+  focusWork(laneKey, shipKey) {
+    return () => {
+      this.setState(s => ({ open: { ...s.open, [laneKey]: true, [shipKey]: true } }));
+      setTimeout(() => {
+        const el = document.getElementById('timeline-chart');
+        if (!el) return;
+        const to = Math.max(0, window.scrollY + el.getBoundingClientRect().top - 24);
+        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: to, behavior: reduce ? 'auto' : 'smooth' });
+      });
+    };
+  }
+
+  openPost(slug) {
+    return () => { this.setState({ view: 'post', postSlug: slug }); window.scrollTo(0, 0); };
+  }
+
+  openPage(slug) {
+    return () => { this.setState({ view: 'page', pageSlug: slug }); window.scrollTo(0, 0); };
+  }
+
+  openArchive(cat) {
+    return () => { this.setState({ view: 'category', archiveCat: cat }); window.scrollTo(0, 0); };
+  }
+
+  submitContact(result) {
+    return e => {
+      if (e && e.preventDefault) e.preventDefault();
+      this.setState({ sent: result });
+      window.scrollTo(0, 0);
+    };
+  }
+
+  renderVals() {
+    if (!this.started) setTimeout(() => this.start(), 0);
+    const view = this.state.view;
+    const narrow = this.state.w > 0 && this.state.w < 700;
+    // 6 record cells: 3 / 2 / 1 all divide evenly, so no cell is ever orphaned on its own row.
+    const recordCols = this.state.w > 0 && this.state.w < 420 ? 1 : (narrow ? 2 : 3);
+    const bentoTile = {
+      display: 'flex', flexDirection: 'column',
+      padding: narrow ? 20 : 24,
+      borderRadius: 'var(--radius-lg)',
+      border: '1px solid var(--border-subtle)',
+      background: 'var(--band)',
+    };
+    const filter = this.state.filter ?? (this.props.timelineFilter ?? 'Everything');
+    const onToggle = key => this.setState(s => ({ open: { ...s.open, [key]: !s.open[key] } }));
+
+    const allKeys = [];
+    LANES.forEach(l => {
+      allKeys.push(l.org + l.title);
+      l.ships.forEach(sh => allKeys.push(l.org + sh.org));
+    });
+    const allOpen = allKeys.every(k => this.state.open[k]);
+
+    const withOpen = p => ({ ...p, onOpen: this.openPost(p.slug), meta: p.cat + ' · ' + p.read });
+    const cat = this.state.cat;
+    const catOptions = ['ALL'].concat(POSTS.map(p => p.cat).filter((c, i, a) => a.indexOf(c) === i));
+    const f0 = POSTS[0];
+    const featured = { ...withOpen(f0), kicker: f0.part ? 'SERIES · PART ' + f0.part : f0.cat, tone: f0.part ? 'pink' : 'teal' };
+    const showFeatured = cat === 'ALL';
+    const matching = POSTS
+      .filter(p => (cat === 'ALL' ? p.slug !== POSTS[0].slug : p.cat === cat))
+      .map(withOpen);
+    const PER_PAGE = 4;
+    const pageCount = Math.max(1, Math.ceil(matching.length / PER_PAGE));
+    const curPage = Math.min(this.state.page, pageCount);
+    const start = (curPage - 1) * PER_PAGE;
+    const listed = matching.slice(start, start + PER_PAGE);
+    const pageStyle = on => ({
+      cursor: 'pointer',
+      minWidth: 'var(--target-min)',
+      minHeight: 'var(--target-min)',
+      padding: '8px 14px',
+      borderRadius: 'var(--radius-pill)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 'var(--fs-xs)',
+      letterSpacing: 'var(--ls-caps)',
+      border: '1px solid ' + (on ? 'var(--dp-teal)' : 'var(--border-subtle)'),
+      background: on ? 'color-mix(in srgb, var(--dp-teal) 14%, transparent)' : 'transparent',
+      color: on ? 'var(--dp-teal)' : 'var(--text-secondary)',
+      transition: 'all var(--dur-base) var(--ease-standard)',
+    });
+    const stepStyle = enabled => ({
+      cursor: enabled ? 'pointer' : 'default',
+      minHeight: 'var(--target-min)',
+      padding: '8px 18px',
+      borderRadius: 'var(--radius-pill)',
+      fontFamily: 'var(--font-mono)',
+      fontSize: 'var(--fs-xs)',
+      letterSpacing: 'var(--ls-caps)',
+      border: '1px solid var(--border-subtle)',
+      background: 'transparent',
+      color: enabled ? 'var(--text-secondary)' : 'var(--text-muted)',
+      opacity: enabled ? 1 : 0.45,
+      transition: 'all var(--dur-base) var(--ease-standard)',
+    });
+    const setPage = n => () => this.setState({ page: Math.min(Math.max(1, n), pageCount) });
+    const pager = {
+      show: matching.length > PER_PAGE,
+      atEnd: matching.length > PER_PAGE && curPage === pageCount,
+      items: Array.from({ length: pageCount }, (_, i) => ({
+        key: i, n: i + 1, style: pageStyle(i + 1 === curPage), onClick: setPage(i + 1),
+      })),
+      prev: setPage(curPage - 1),
+      next: setPage(curPage + 1),
+      prevStyle: stepStyle(curPage > 1),
+      nextStyle: stepStyle(curPage < pageCount),
+      range: (start + 1) + '–' + (start + listed.length) + ' OF ' + matching.length +
+        (cat === 'ALL' ? ' POSTS' : ' IN ' + cat),
+    };
+    const home = POSTS.slice(0, 3).map(withOpen);
+
+    const featuredWork = [
+      {
+        key: 'kiveo', slot: 'work-kiveo', year: '2023 — NOW', org: 'FANXIE LAB',
+        title: 'Kiveo', line: 'Native iOS, built solo, with nothing leaving the device.',
+        stack: 'SWIFT · SWIFTUI · CLOUDKIT',
+        onClick: this.focusWork('Fanxie LabCTO & founder', 'Fanxie LabKiveo'),
+      },
+      {
+        key: 'nlq', slot: 'work-nlq', year: '2025', org: 'MONSTERINSIGHTS',
+        title: 'Natural-language queries', line: 'Ask your analytics a question instead of learning a reporting UI.',
+        stack: 'PHP · VUE.JS · REST APIS',
+        onClick: this.focusWork('MonsterInsightsDeveloper team lead', 'MonsterInsightsNatural-language queries'),
+      },
+      {
+        key: 'ops', slot: 'work-ops', year: '2024 — NOW', org: 'FANXIE LAB',
+        title: 'Agency platform & ops', line: 'The plumbing a small agency runs on, kept deliberately boring.',
+        stack: 'LARAVEL · NESTJS · CLOUDFLARE',
+        onClick: this.focusWork('Fanxie LabCTO & founder', 'Fanxie LabAgency platform & ops'),
+      },
+    ];
+
+    const idx = Math.max(0, POSTS.findIndex(p => p.slug === this.state.postSlug));
+    const cur = POSTS[idx];
+    const post = {
+      ...withOpen(cur),
+      kicker: cur.part ? 'SERIES · PART ' + cur.part : cur.cat,
+      tone: cur.part ? 'pink' : 'teal',
+      caption: CAPTIONS[cur.slug] ?? cur.cat,
+      inSeries: !!cur.part,
+      seriesLine: cur.part ? 'Part ' + cur.part + ' of ' + SERIES.title + '. It reads on its own.' : '',
+    };
+    const page = PAGES[this.state.pageSlug] ?? PAGES.uses;
+    const neighbour = i => (POSTS[i] ? { ...withOpen(POSTS[i]) } : null);
+    const prevPost = neighbour(idx - 1);
+    const nextPost = neighbour(idx + 1);
+
+    // Related: same category first, then whatever is newest, never the post you are on.
+    const sameCat = POSTS.filter(p => p.slug !== cur.slug && p.cat === cur.cat);
+    const filler = POSTS.filter(p => p.slug !== cur.slug && p.cat !== cur.cat);
+    const related = sameCat.concat(filler).slice(0, 3).map(p => ({
+      ...withOpen(p),
+      kicker: p.part ? 'PART ' + p.part : p.cat,
+      sameCat: p.cat === cur.cat,
+    }));
+
+    const written = SERIES.parts.filter(s => s.slug).map(s => {
+      const p = POSTS.find(x => x.slug === s.slug);
+      return { ...s, post: p };
+    });
+    // The series is numbered by when things happened but written out of order, so the page
+    // leads with the finished parts and keeps the unwritten arc as a plain outline below.
+    const seriesOut = SERIES.parts.filter(s => s.slug).map(s => {
+      const p = POSTS.find(x => x.slug === s.slug);
+      return {
+        key: s.part,
+        part: 'PART ' + s.part,
+        meta: p.date + ' · ' + p.read,
+        title: p.title,
+        note: p.excerpt,
+        onOpen: this.openPost(p.slug),
+        rowStyle: {
+          cursor: 'pointer',
+          display: 'grid',
+          gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : '120px minmax(0, 1fr) 110px',
+          gap: narrow ? '10px' : '28px',
+          alignItems: narrow ? 'start' : 'baseline',
+          padding: narrow ? '22px 0' : '26px 0',
+          borderTop: '1px solid var(--border-subtle)',
+        },
+        statusStyle: {
+          fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+          letterSpacing: 'var(--ls-caps)',
+          textAlign: narrow ? 'left' : 'right',
+          color: 'var(--accent-text)',
+        },
+      };
+    });
+    const seriesPlanned = SERIES.parts.filter(s => !s.slug).map(s => ({
+      key: s.title, part: 'DRAFT', title: s.title, note: s.note, years: s.years,
+    }));
+    const curPart = cur.part;
+    const seriesNeighbour = n => {
+      const hit = written.find(s => s.part === n);
+      return hit ? { part: 'PART ' + hit.part, title: hit.post.title, onOpen: this.openPost(hit.slug) } : null;
+    };
+    const seriesPrev = curPart ? seriesNeighbour(curPart - 1) : null;
+    const seriesNext = curPart ? seriesNeighbour(curPart + 1) : null;
+
+    // A category archive, not a category chooser: term header, its posts newest-first, and
+    // the sibling terms parked at the bottom the way a taxonomy archive does it.
+    const archiveCat = this.state.archiveCat;
+    const archived = POSTS.filter(p => p.cat === archiveCat).map(withOpen);
+    const archiveSiblings = POSTS.map(p => p.cat)
+      .filter((c, i, a) => a.indexOf(c) === i && c !== archiveCat)
+      .map(c => {
+        const n = POSTS.filter(p => p.cat === c).length;
+        return {
+          key: c, label: c, count: String(n),
+          onClick: this.openArchive(c),
+          style: {
+            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 10,
+            minHeight: 36, padding: '0 16px', borderRadius: 'var(--radius-pill)',
+            border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)',
+            fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+            letterSpacing: 'var(--ls-caps)', color: 'var(--text-primary)',
+            transition: 'all var(--dur-base) var(--ease-standard)',
+          },
+        };
+      });
+
+    const live = this.props.isLive ?? false;
+    const twitchLogin = (this.props.twitchLogin || 'patsypatz').trim();
+    const TONE_VAR = { pink: 'var(--dp-pink)', teal: 'var(--dp-teal)', purple: 'var(--dp-purple)', gold: 'var(--dp-gold)' };
+    const thumbFor = v => {
+      if (v.live) return twitchLogin ? 'https://static-cdn.jtvnw.net/previews-ttv/live_user_' + twitchLogin + '-1280x720.jpg' : '';
+      if (v.source === 'YOUTUBE') return v.yt ? 'https://i.ytimg.com/vi/' + v.yt + '/maxresdefault.jpg' : '';
+      return v.vod || '';
+    };
+    const videoCard = (v, i) => {
+      const hue = TONE_VAR[v.tone] ?? TONE_VAR.teal;
+      const glow = GLOW[(i ?? 0) % GLOW.length];
+      const url = thumbFor(v);
+      return {
+        key: v.id, ...v,
+        // The tile art already carries duration and date — the footer is the affordance.
+        footer: 'WATCH ON ' + v.source + ' →',
+        badge: v.live ? 'LIVE ON TWITCH' : v.source,
+        badgeStyle: {
+          fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+          letterSpacing: 'var(--ls-caps)',
+          color: v.live ? 'var(--hue-pink)' : (v.source === 'YOUTUBE' ? 'var(--hue-teal)' : 'var(--hue-purple)'),
+        },
+        // A background-image, not an <img>: a URL the platform has not returned yet fails
+        // silently instead of painting a broken-image glyph or needing an error handler.
+        thumbStyle: {
+          position: 'absolute', inset: 0,
+          backgroundImage: url ? 'url("' + url + '")' : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        },
+        // Sits underneath, permanently. It is the card's own art, not an error state.
+        fallbackStyle: {
+          position: 'absolute', inset: 0,
+          background: 'radial-gradient(circle at ' + glow.at + ', color-mix(in srgb, ' + hue + ' ' + glow.mix + '%, transparent) 0%, transparent 66%), var(--bg-page)',
+        },
+        durStyle: {
+          fontFamily: 'var(--font-mono)',
+          fontSize: 'clamp(1.5rem, 4.5vw, 2.25rem)',
+          letterSpacing: 'var(--ls-tight)',
+          color: 'color-mix(in srgb, ' + hue + ' 62%, var(--text-primary))',
+        },
+        fallbackLabelStyle: {
+          fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+          letterSpacing: 'var(--ls-caps)', color: 'var(--text-muted)',
+        },
+      };
+    };
+    // The live card is a separate entry, not the head of the archive — so it disappears
+    // entirely when the stream is off instead of sitting there claiming to be live.
+    const archive = VIDEOS.map(videoCard);
+    const featuredVideo = live ? videoCard(LIVE_NOW, 0) : archive[0];
+    const vods = live ? archive : archive.slice(1);
+    const gear = GEAR.map(g => ({
+      key: g.group, group: g.group,
+      items: g.items.map(it => ({ key: it.name, ...it })),
+      labelStyle: {
+        fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+        letterSpacing: 'var(--ls-caps)',
+        color: g.tone === 'gold' ? 'var(--hue-gold)' : (g.tone === 'purple' ? 'var(--hue-purple)' : 'var(--hue-teal)'),
+      },
+    }));
+
+    const sentState = this.state.sent ?? (this.props.contactState === 'form' ? null : this.props.contactState);
+    const chrome = view !== 'notfound' && view !== 'offline';
+
+    return {
+      view,
+      hostId: this.hostId,
+      laneData: LANES,
+      open: this.state.open,
+      onToggle,
+      allOpen,
+      filter,
+      onFilterChange: v => this.setState({ filter: v }),
+      timelineMobileMode: this.props.timelineMobileMode ?? 'stack',
+      bentoStyle: {
+        display: 'grid',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : 'repeat(6, minmax(0, 1fr))',
+        gap: narrow ? 12 : 16,
+        marginBottom: 40,
+      },
+      tileLab: { ...bentoTile, gridColumn: narrow ? 'auto' : 'span 6', padding: narrow ? 24 : 32, background: 'var(--bg-surface)', transition: 'transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard)' },
+      tileKiveo: { ...bentoTile, gridColumn: narrow ? 'auto' : 'span 3' },
+      tileBeacon: { ...bentoTile, gridColumn: narrow ? 'auto' : 'span 3' },
+      tileCloud: { ...bentoTile, gridColumn: narrow ? 'auto' : 'span 4' },
+      tileOff: { ...bentoTile, gridColumn: narrow ? 'auto' : 'span 2' },
+      chapterRowStyle: {
+        cursor: 'pointer',
+        display: 'grid',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : '92px 1fr auto',
+        gap: narrow ? '6px' : '20px',
+        alignItems: narrow ? 'start' : 'center',
+        padding: narrow ? '16px 20px' : '16px 24px',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-subtle)',
+        background: 'var(--bg-surface)',
+        transition: 'border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard)',
+      },
+      skillRowStyle: {
+        display: 'grid',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : '190px minmax(0, var(--measure))',
+        gap: narrow ? '10px' : '28px',
+        alignItems: 'baseline',
+        padding: '22px 0',
+        borderTop: '1px solid var(--border-subtle)',
+      },
+      skillRowLastStyle: {
+        display: 'grid',
+        gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : '190px minmax(0, var(--measure))',
+        gap: narrow ? '10px' : '28px',
+        alignItems: 'baseline',
+        padding: '22px 0',
+        borderTop: '1px solid var(--border-subtle)',
+        borderBottom: '1px solid var(--border-subtle)',
+      },
+      contactMethods: [
+        { key: 'email', label: 'EMAIL', value: 'hello@dpaternina.com', href: 'mailto:hello@dpaternina.com' },
+        { key: 'x', label: 'X', value: '@dapd007', href: 'https://x.com/dapd007' },
+        { key: 'agency', label: 'AGENCY', value: 'fanxielab.com', href: 'https://fanxielab.com' },
+      ],
+      toggleAll: () => {
+        const next = {};
+        if (!allOpen) allKeys.forEach(k => { next[k] = true; });
+        this.setState({ open: next });
+      },
+      isHome: view === 'home',
+      isTimeline: view === 'timeline',
+      isBlog: view === 'blog',
+      isPost: view === 'post',
+      isAbout: view === 'about',
+      isContact: view === 'contact',
+      goAbout: this.go('about'),
+      goContact: this.go('contact'),
+      isBlogish: view === 'blog' || view === 'post',
+      showCta: view !== 'contact' && view !== 'notfound' && view !== 'offline' && view !== 'resume',
+      goHome: this.go('home'),
+      goTimeline: this.go('timeline'),
+      goBlog: this.go('blog'),
+      goPost: this.go('post'),
+      heroAccent: HERO_ACCENTS[this.props.heroAccent] ?? 'var(--hue-teal)',
+      showNow: this.props.showNowStrip ?? true,
+      posts: home,
+      showFeatured,
+      featured,
+      listed,
+      noResults: listed.length === 0,
+      catOptions,
+      cat,
+      onCatChange: v => this.setState({ cat: v, page: 1 }),
+      pager,
+      featuredWork,
+      post,
+      page,
+      isPage: view === 'page',
+      goPage: this.openPage('uses'),
+      goColophon: this.openPage('colophon'),
+      goPrivacy: this.openPage('privacy'),
+
+      isWatch: view === 'watch',
+      isSeries: view === 'series',
+      isCategory: view === 'category',
+      isResume: view === 'resume',
+      isNotFound: view === 'notfound',
+      isOffline: view === 'offline',
+      goWatch: this.go('watch'),
+      goSeries: this.go('series'),
+      goResume: this.go('resume'),
+      goCategories: this.openArchive('MY LIFE STORY'),
+      chrome,
+      live,
+
+      featuredVideo,
+      vods,
+      gear,
+      watchPrimaryLabel: live ? 'Watch the stream' : (featuredVideo.source === 'YOUTUBE' ? 'Watch on YouTube' : 'Watch on Twitch'),
+      watchFeaturedLabel: live ? 'LIVE NOW' : 'LATEST',
+      featuredMeta: live ? featuredVideo.meta : (featuredVideo.dur + ' · ' + featuredVideo.when),
+      watchLead: live
+        ? 'I am live right now — the stream is up top, and everything below it is the archive.'
+        : 'Not live at the moment. Long unedited streams live on Twitch, shorter edited pieces on YouTube, and both end up here.',
+      seriesTitle: SERIES.title,
+      seriesDeck: SERIES.deck,
+      seriesOut,
+      seriesPlanned,
+      seriesWritten: seriesOut.length + ' PARTS UP · ' + seriesPlanned.length + ' DRAFTED',
+      seriesPrev,
+      seriesNext,
+      hasSeriesPrev: !!seriesPrev,
+      hasSeriesNext: !!seriesNext,
+      related,
+      archiveCat,
+      archiveSiblings,
+      archived,
+      archiveTitle: TERM_NAMES[archiveCat] ?? archiveCat.charAt(0) + archiveCat.slice(1).toLowerCase(),
+      archiveTerm: TERMS[archiveCat] ?? 'Everything filed under this category.',
+      archiveCount: archived.length + (archived.length === 1 ? ' POST' : ' POSTS'),
+      archiveEmpty: archived.length === 0,
+      resumeRoles: LANES.slice().sort((a, b) => b.start - a.start).map(l => ({
+        key: l.org + l.title, org: l.org, title: l.title, range: l.range,
+        detail: l.detail, stack: l.stack,
+        ships: l.ships.map(s => ({ key: s.org, label: s.org, range: s.range })),
+        hasShips: l.ships.length > 0,
+        rowStyle: {
+          display: 'grid',
+          gridTemplateColumns: narrow ? 'minmax(0, 1fr)' : '150px minmax(0, 1fr)',
+          gap: narrow ? '10px' : '32px',
+          padding: '26px 0',
+          borderTop: '1px solid var(--border-subtle)',
+        },
+      })),
+      resetFilters: () => this.setState({ cat: 'ALL', page: 1 }),
+      lostLink: {
+        cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        padding: 22,
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-subtle)',
+        background: 'var(--band)',
+        textWrap: 'pretty',
+        transition: 'transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)',
+      },
+      sent: sentState === 'sent',
+      failed: sentState === 'error',
+      showForm: !sentState,
+      onSubmit: this.submitContact('sent'),
+      retrySend: () => this.setState({ sent: null }),
+      prevPost,
+      nextPost,
+      hasPrev: !!prevPost,
+      hasNext: !!nextPost,
+      record: [
+        { org: 'Fanxie Lab', role: 'CTO & FOUNDER', years: '2016—NOW' },
+        { org: 'MonsterInsights', role: 'DEVELOPER TEAM LEAD', years: '2022—26' },
+        { org: 'Globant', role: 'DEVELOPER', years: '2020—22' },
+      ].map((r, i, a) => ({
+        ...r,
+        // Dividers follow the column position, not the array index, so the cell at the right
+        // edge of any row never dangles a border into the gutter.
+        cellStyle: {
+          paddingRight: 20,
+          borderRight: (i % recordCols === recordCols - 1) || i === a.length - 1
+            ? 'none' : '1px solid var(--border-subtle)',
+        },
+        // Min-heights keep org / role / years on shared baselines when a name wraps.
+        orgStyle: {
+          fontSize: 'var(--fs-sm)', fontWeight: 600, marginBottom: 8,
+          minHeight: 40, textWrap: 'pretty',
+        },
+        roleStyle: {
+          fontFamily: 'var(--font-mono)', fontSize: 'var(--fs-xs)',
+          letterSpacing: 'var(--ls-caps)', minHeight: 17,
+          color: r.org === 'Fanxie Lab' ? 'var(--hue-pink)' : 'var(--text-muted)',
+        },
+      })),
+      recordGridStyle: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(' + recordCols + ', minmax(0, 1fr))',
+        gap: '24px 20px',
+      },
+      chapters: [
+        { years: '2009 — 2013', title: 'Learning the hard way', note: 'school, detours' },
+        { years: '2014 — 2019', title: 'Agency years', note: 'shipping fast' },
+        { years: '2020 — 2022', title: 'Scale, and burnout', note: 'the change' },
+        { years: '2023 — now', title: 'Building my own', note: 'and writing it down' },
+      ],
+    };
+  }
+}
+
+</script>
+</body>
+</html>
+

@@ -1,0 +1,48 @@
+# Architecture decision records
+
+A decision that outlives the pull request that made it goes here. Everything else
+belongs in the commit message.
+
+## When to write one
+
+Write an ADR when a choice will still be shaping the code in six months and the
+reasoning would otherwise have to be reconstructed from the diff:
+
+- Adopting, replacing, or rejecting a dependency.
+- A structural rule (where a file lives, what may depend on what).
+- Deviating from `docs/plan.md` or from a rule in `CLAUDE.md`.
+- Anything `CLAUDE.md` explicitly says needs one — for example, registering a
+  third rewrite rule (§5.1), or changing `theme.json` after Phase 4 freezes it.
+
+Do **not** write one for a bug fix, a refactor with no external consequence, or a
+choice the plan already made. Record the decision, not the implementation.
+
+## Format
+
+One file per decision, never deleted and never rewritten. Numbered sequentially,
+four digits, kebab-case title:
+
+```
+docs/adr/0001-phase-0-toolchain.md
+docs/adr/0002-….md
+```
+
+Each file follows the same five headings:
+
+| Heading | What goes in it |
+|---|---|
+| **Status** | `Proposed`, `Accepted`, `Superseded by ADR-NNNN`, or `Rejected`. Plus the date. |
+| **Context** | The forces in play. What was true when the decision was made. |
+| **Decision** | What we are doing, in the active voice: "We use X." |
+| **Consequences** | What this makes easy, what it makes hard, and what it commits us to. Name the costs; an ADR that lists only benefits is marketing. |
+| **Alternatives considered** | What else was on the table and the specific reason it lost. |
+
+A decision that turns out to be wrong is **superseded**, not edited. Write the new
+ADR, set the old one's status to `Superseded by ADR-NNNN`, and leave the original
+reasoning intact — the record of why we believed something is the point.
+
+## Index
+
+| ADR | Title | Status |
+|---|---|---|
+| [0001](0001-phase-0-toolchain.md) | Phase 0 toolchain | Accepted — 2026-08-20 |

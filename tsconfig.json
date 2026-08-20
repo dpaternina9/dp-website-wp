@@ -1,0 +1,20 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "CommonJS",
+		"moduleResolution": "node",
+		"lib": [ "ES2022", "DOM", "DOM.Iterable" ],
+		"types": [ "node" ],
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"noEmit": true
+	},
+	"include": [ "playwright.config.ts", "tests/e2e/**/*.ts" ],
+	"exclude": [ "node_modules", "vendor", "build", "artifacts", "design-source" ]
+}

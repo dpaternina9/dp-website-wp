@@ -1,0 +1,53 @@
+/* dP spacing & sizing — 4px base grid.
+   Every value here is divisible by 4. If a layout needs something that isn't
+   on this scale, the layout is wrong, not the scale. */
+:root {
+  --space-0: 0;
+  --space-1: 0.25rem;  /* 4 */
+  --space-2: 0.5rem;   /* 8 */
+  --space-3: 0.75rem;  /* 12 */
+  --space-4: 1rem;     /* 16 */
+  --space-5: 1.5rem;   /* 24 */
+  --space-6: 2rem;     /* 32 */
+  --space-7: 3rem;     /* 48 */
+  --space-8: 4rem;     /* 64 */
+  --space-9: 6rem;     /* 96 */
+  --space-10: 8rem;    /* 128 */
+
+  /* Control sizing.
+     Button, IconButton and Input all resolve to --control-h-md, so they sit
+     flush when placed side by side. They previously differed by 2px. */
+  --control-h-sm: 36px; /* @kind spacing */
+  --control-h-md: 44px; /* @kind spacing */
+  --control-h-lg: 52px; /* @kind spacing */
+
+  /* Inline padding for pill controls */
+  --control-px-sm: var(--space-3); /* 12 */
+  --control-px-md: var(--space-5); /* 24 */
+  --control-px-lg: var(--space-6); /* 32 */
+
+  /* Gap between a control's icon and its label */
+  --control-gap-sm: var(--space-2); /* 8 */
+  --control-gap-md: var(--space-2); /* 8 */
+  --control-gap-lg: var(--space-3); /* 12 */
+
+  /* Fluid layout rhythm.
+     These interpolate with the viewport, so the kit is responsive without a single
+     media query. Inline-styled components cannot express breakpoints; clamp() gives
+     the same result and degrades predictably. */
+  --gutter: clamp(1rem, 5vw, 2rem);        /* 16 → 32  page side padding */
+  --section-y: clamp(3rem, 8vw, 6rem);     /* 48 → 96  hero / major section */
+  --section-y-sm: clamp(2rem, 6vw, 4rem);  /* 32 → 64  standard section */
+
+  --container-sm: 640px;
+  --container-md: 880px;
+  --container-lg: 1120px;
+  --container-xl: 1320px;
+
+  /* Touch targets.
+     WCAG 2.5.8 (AA) requires 24px minimum. 2.5.5 (AAA) asks for 44px.
+     Primary navigation and form controls meet 44; secondary controls such as
+     filter chips meet 36, comfortably above the AA floor. */
+  --target-min: 36px; /* @kind spacing */
+  --target-comfortable: 44px; /* @kind spacing */
+}

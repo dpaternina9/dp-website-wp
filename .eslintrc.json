@@ -1,0 +1,27 @@
+{
+	"root": true,
+	"extends": [ "plugin:@wordpress/eslint-plugin/recommended" ],
+	"env": {
+		"browser": true,
+		"node": true,
+		"es2023": true
+	},
+	"overrides": [
+		{
+			"files": [
+				"tests/js/**/*.[jt]s?(x)",
+				"**/*.test.[jt]s?(x)",
+				"**/__tests__/**/*.[jt]s?(x)"
+			],
+			"env": { "jest": true }
+		},
+		{
+			"files": [ "tests/e2e/**/*.ts", "playwright.config.ts" ],
+			"env": { "node": true }
+		},
+		{
+			"files": [ "*.config.js", ".*.js", "bin/**/*.js" ],
+			"env": { "node": true }
+		}
+	]
+}

@@ -1,0 +1,7 @@
+<x-dc>
+<a href="{{ href }}" style="display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; min-height: var(--target-comfortable); box-sizing: border-box; padding: 16px 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); background: var(--bg-surface); color: var(--text-primary); text-decoration: none; transition: border-color var(--dur-base) var(--ease-standard)" style-hover="border-color: var(--accent-text)">
+  <span style="font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted)">{{ label }}</span>
+  <span style="font-size: var(--fs-sm); overflow-wrap: anywhere">{{ value }}</span>
+</a>
+</x-dc>
+<!-- props: label (mono caps, e.g. EMAIL), value (e.g. hello@dpaternina.com), href -->

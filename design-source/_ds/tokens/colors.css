@@ -1,0 +1,97 @@
+/* dP color system — bold, modern, clean.
+   Base palette from brand spec, plus semantic aliases. */
+:root {
+  /* ---- Brand core ---- */
+  --dp-teal: #08d9d6;      /* primary signature */
+  --dp-pink: #ff2e63;      /* hot accent */
+  --dp-gold: #ffb84c;      /* warm accent */
+  --dp-coral: #f4795e;     /* warm accent */
+  --dp-purple: #6b479c;    /* deep accent */
+
+  /* ---- Tints / shades (derived, oklch-harmonized) ---- */
+  --dp-teal-600: #06b3b0;
+  --dp-teal-100: #d6f7f6;
+  --dp-pink-600: #e01450;
+  --dp-pink-100: #ffdae4;
+  --dp-gold-600: #f0a02e;
+  --dp-gold-100: #fff0d6;
+  --dp-coral-600: #e15c40;
+  --dp-coral-100: #ffe3db;
+  --dp-purple-600: #55367f;
+  --dp-purple-100: #e7ddf3;
+
+  /* ---- Neutrals ---- */
+  --dp-black: #000000;
+  --dp-ink: #0c0c0e;       /* near-black surface */
+  --dp-graphite: #17171b;  /* raised dark surface */
+  --dp-slate: #2a2a31;     /* borders on dark */
+  /* Muted text on dark surfaces. Was #6b6b73, which measured 3.70:1 on --bg-page
+     and failed WCAG AA everywhere it was used. Every consumer of this token reads
+     as text, so correcting it here fixes the specimen cards and slides too. */
+  --dp-gray: #9095a0;
+  --dp-mist: #e8e8e8;      /* light divider / bg */
+  --dp-cloud: #f4f4f5;     /* light surface */
+  --dp-white: #ffffff;
+
+  /* ---- Signature gradients ---- */
+  --dp-gradient-warm: linear-gradient(120deg, var(--dp-pink) 0%, var(--dp-coral) 50%, var(--dp-gold) 100%);
+  --dp-gradient-spectrum: linear-gradient(120deg, var(--dp-pink) 0%, var(--dp-purple) 35%, var(--dp-teal) 70%, var(--dp-gold) 100%);
+  --dp-gradient-cool: linear-gradient(120deg, var(--dp-teal) 0%, var(--dp-purple) 100%);
+
+  /* ============ SEMANTIC ALIASES ============ */
+  /* Default (dark-first) surfaces */
+  --bg-page: var(--dp-ink);
+  --bg-surface: var(--dp-graphite);
+  --bg-raised: #1f1f25;
+  --border-subtle: var(--dp-slate);
+  --border-strong: #3a3a44;
+
+  --text-primary: var(--dp-white);
+  --text-secondary: #b4b4bd;
+  --text-muted: var(--dp-gray);
+  --text-inverse: var(--dp-ink);
+
+  --accent: var(--dp-teal);
+  --accent-hover: var(--dp-teal-600);
+  --accent-contrast: var(--dp-ink);
+
+  --focus-ring: var(--dp-teal);
+
+  --state-danger: var(--dp-pink);
+  --state-warning: var(--dp-gold);
+  --state-success: var(--dp-teal);
+
+  /* Tone mixing.
+     A brand hue used as text on its own tinted background does not clear AA on its
+     own (purple measures 2.80:1 on ink). Components mix the hue toward the current
+     theme's text color instead. Both values flip with the theme, so one expression
+     works on dark and light.
+     Dark: 75% hue toward white  -> worst case 4.59 (purple)
+     Light: 50% hue toward ink   -> worst case 5.03 (gold) */
+  --tone-mix: 75%; /* @kind other */
+  --tone-toward: var(--dp-white);
+}
+
+/* Light scope — apply .dp-light to any container for light surfaces */
+.dp-light {
+  --bg-page: var(--dp-white);
+  --bg-surface: var(--dp-white);
+  --bg-raised: var(--dp-cloud);
+  --border-subtle: var(--dp-mist);
+  --border-strong: #d4d4d8;
+
+  --text-primary: var(--dp-ink);
+  --text-secondary: #46464e;
+  /* --dp-gray is tuned for dark surfaces and is too light on white (2.83:1).
+     Light mode needs its own muted value: 6.31 on white, 5.74 on cloud. */
+  --text-muted: #5f5f69;
+  --text-inverse: var(--dp-white);
+
+  --accent: var(--dp-teal-600);
+  --accent-hover: var(--dp-teal);
+  /* White on teal-600 measures 2.60:1 and fails at every size. Ink clears AA at 7.52. */
+  --accent-contrast: var(--dp-ink);
+
+  --tone-mix: 50%; /* @kind other */
+  --tone-toward: var(--dp-ink);
+}

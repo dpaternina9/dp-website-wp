@@ -1,0 +1,24 @@
+/*
+Theme Name: dPaternina
+Theme URI: https://dpaternina.com
+Author: David Paternina
+Author URI: https://dpaternina.com
+Description: The hand-written block theme behind dpaternina.com. Dark ground, one gradient per view, no page builder.
+Requires at least: 6.6
+Tested up to: 6.9
+Requires PHP: 8.4
+Version: 0.1.0
+License: Proprietary
+License URI: https://dpaternina.com
+Update URI: https://updates.dpaternina.com/theme
+Text Domain: dpaternina
+Tags: block-theme, one-column, full-site-editing, accessibility-ready, blog, portfolio
+*/
+
+/*
+ * Intentionally empty.
+ *
+ * WordPress reads this file for the headers above; it is not enqueued as the
+ * theme's stylesheet. Design tokens land in theme.json and the class-based
+ * stylesheet in Phase 1 — see docs/plan.md.
+ */

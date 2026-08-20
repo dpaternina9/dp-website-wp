@@ -1,0 +1,52 @@
+/* dP typography — Bricolage Grotesque (display) · Manrope (body) · JetBrains Mono (code) */
+:root {
+  --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Weights */
+  --fw-regular: 400; /* @kind font */
+  --fw-medium: 500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+  --fw-extrabold: 800; /* @kind font */
+
+  /* Type scale.
+     Two bands, on purpose:
+       xs · sm · base   a tight UI cluster (12 / 14 / 16). Interface text needs
+                        steps closer than a modular ratio allows.
+       md and above     a ~1.25 modular ramp, rounded to whole pixels.
+     Steps: 20 · 24 · 30 · 38 · 48 · 60 · 76
+     Ratios: 1.20 1.25 1.27 1.26 1.25 1.27 */
+  --fs-xs: 0.75rem;     /* 12 */
+  --fs-sm: 0.875rem;    /* 14 */
+  --fs-base: 1rem;      /* 16 */
+  --fs-md: 1.25rem;     /* 20 */
+  --fs-lg: 1.5rem;      /* 24 */
+  --fs-xl: 1.875rem;    /* 30 */
+  --fs-2xl: 2.375rem;   /* 38 */
+  --fs-3xl: 3rem;       /* 48 */
+  --fs-4xl: 3.75rem;    /* 60 */
+  --fs-5xl: 4.75rem;    /* 76 */
+
+  /* Fluid pairs — use these instead of hand-rolled clamp() */
+  --fs-display: clamp(2.375rem, 6vw, 4.75rem);  /* 38 → 76, page hero */
+  --fs-section: clamp(1.875rem, 4vw, 2.375rem); /* 30 → 38, section heading */
+
+  /* Line heights */
+  --lh-tight: 1.05; /* @kind font */
+  --lh-snug: 1.2; /* @kind font */
+  --lh-normal: 1.5; /* @kind font */
+  --lh-relaxed: 1.65; /* @kind font */
+
+  /* Letter spacing. Display never goes tighter than -0.03em; below that
+     the counters close up and it reads as cramped rather than designed. */
+  --ls-tight: -0.02em; /* @kind font */
+  --ls-display: -0.03em; /* @kind font */
+  --ls-normal: 0; /* @kind font */
+  --ls-wide: 0.04em; /* @kind font */
+  --ls-caps: 0.14em; /* @kind font */
+
+  /* Measure — cap body copy so lines stay readable */
+  --measure: 68ch; /* @kind other */
+}

@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<ruleset name="dpaternina.com">
+	<description>WordPress Coding Standards + PHP 8.4 compatibility for the dpaternina.com monorepo.</description>
+
+	<!-- What to scan. -->
+	<file>plugins/dp-core</file>
+	<file>themes/dpaternina</file>
+	<file>tests</file>
+	<file>bin</file>
+
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/build/*</exclude-pattern>
+	<exclude-pattern>design-source/*</exclude-pattern>
+
+	<!-- How to run. -->
+	<arg name="basepath" value="."/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg name="cache" value=".phpcs-cache"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<!-- Fail the build on warnings too. A warning we tolerate is a warning we suppress explicitly. -->
+	<config name="ignore_warnings_on_exit" value="0"/>
+	<config name="ignore_errors_on_exit" value="0"/>
+
+	<!-- Targets. -->
+	<config name="minimum_wp_version" value="6.6"/>
+	<config name="testVersion" value="8.4-"/>
+
+	<rule ref="WordPress">
+		<!--
+		PSR-4 autoloading is a project rule (CLAUDE.md §1.3). The WordPress
+		class-{name}.php convention is incompatible with it, so this one sniff
+		goes and nothing else does.
+		-->
+		<exclude name="WordPress.Files.FileName"/>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<!-- WPCS rejects prefixes of three characters or fewer, so "dp" alone is not enough. -->
+				<element value="dpaternina"/>
+				<element value="dp_core"/>
+				<element value="dp_site"/>
+				<element value="dp_theme"/>
+				<element value="DP\Core"/>
+				<element value="DP\Theme"/>
+				<element value="DP\Tests"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="dp-core"/>
+				<element value="dpaternina"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- PHP 8.4 target, WordPress-aware (skips polyfilled functions). -->
+	<rule ref="PHPCompatibilityWP"/>
+
+	<!--
+	Tests are not shipped code: they may use PHPUnit's naming and do not carry
+	the same global-prefix or i18n obligations.
+	-->
+	<rule ref="WordPress.NamingConventions.ValidVariableName">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DevelopmentFunctions">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+</ruleset>

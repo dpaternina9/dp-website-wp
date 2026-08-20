@@ -1,0 +1,70 @@
+/* Theme scopes for the dP site.
+   Loaded after the design system's colors.css so these win at equal specificity.
+
+   Two things the system does not ship:
+   1. --band, the deeper-than-page section band (ink-black on dark, cloud on light).
+   2. Text-safe versions of the brand hues. --accent is correct as a FILL in both
+      themes (teal-600 with ink text clears AA), but teal-600 as text on white is
+      2.60:1 and fails. So hue-as-text goes through --accent-text / --hue-*, which
+      use the system's tone-mix rule under .dp-light and the raw hue on dark. */
+:root {
+  --band: var(--dp-black);
+  /* Glow strengths. Ink swallows a wash; white shows every bit of it, so the
+     same percentages that read as atmosphere on dark read as a blob on light. */
+  --glow-soft: 12%;
+  --glow-core: 34%;
+  --glow-mid: 8%;
+  --glow-ring: 30%;
+  --accent-text: var(--dp-teal);
+  --hue-teal: var(--dp-teal);
+  --hue-gold: var(--dp-gold);
+  --hue-pink: var(--dp-pink);
+  --hue-purple: var(--dp-purple);
+}
+
+.dp-light {
+  --band: var(--dp-cloud);
+  --glow-soft: 5%;
+  --glow-core: 14%;
+  --glow-mid: 4%;
+  --glow-ring: 22%;
+  --accent-text: color-mix(in srgb, var(--dp-teal) 50%, var(--dp-ink));
+  --hue-teal: color-mix(in srgb, var(--dp-teal) 50%, var(--dp-ink));
+  --hue-gold: color-mix(in srgb, var(--dp-gold) 50%, var(--dp-ink));
+  --hue-pink: color-mix(in srgb, var(--dp-pink) 50%, var(--dp-ink));
+  --hue-purple: color-mix(in srgb, var(--dp-purple) 50%, var(--dp-ink));
+}
+
+/* Forced-dark island — the footer and code blocks stay dark in light mode.
+   Restates the dark scope so it works nested inside .dp-light. */
+.dp-dark {
+  --bg-page: var(--dp-ink);
+  --glow-soft: 12%;
+  --glow-core: 34%;
+  --glow-mid: 8%;
+  --glow-ring: 30%;
+  --bg-surface: var(--dp-graphite);
+  --bg-raised: #1f1f25;
+  --border-subtle: var(--dp-slate);
+  --border-strong: #3a3a44;
+  --text-primary: var(--dp-white);
+  --text-secondary: #b4b4bd;
+  --text-muted: var(--dp-gray);
+  --text-inverse: var(--dp-ink);
+  --accent: var(--dp-teal);
+  --accent-hover: var(--dp-teal-600);
+  --accent-contrast: var(--dp-ink);
+  --tone-mix: 75%;
+  --tone-toward: var(--dp-white);
+  --band: var(--dp-black);
+  --accent-text: var(--dp-teal);
+  --hue-teal: var(--dp-teal);
+  --hue-gold: var(--dp-gold);
+  --hue-pink: var(--dp-pink);
+  --hue-purple: var(--dp-purple);
+  color: var(--text-primary);
+}
+
+html, body { background: var(--bg-page); }
+html { transition: background-color var(--dur-slow) var(--ease-out); }
+@media (prefers-reduced-motion: reduce) { html { transition: none; } }

@@ -1,0 +1,17 @@
+<x-dc>
+<div role="tablist" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+  <sc-for list="{{ pills }}" as="p">
+    <button type="button" role="tab" aria-selected="{{ p.on }}" onClick="{{ p.onClick }}" style="{{ p.style }}">{{ p.label }}</button>
+  </sc-for>
+  <sc-if value="{{ hasExtra }}">
+    <button type="button" onClick="{{ onExtra }}" style="cursor: pointer; min-height: var(--target-min); padding: 8px 20px; border-radius: var(--radius-pill); border: 1px dashed var(--border-subtle); background: transparent; font-family: var(--font-mono); font-size: var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--text-muted); transition: color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard)" style-hover="color: var(--text-primary); border-color: var(--text-muted)">{{ extraLabel }}</button>
+  </sc-if>
+</div>
+</x-dc>
+<!-- Pill style:
+       min-height var(--target-min) (36px); padding 8px 20px; radius pill;
+       mono, --fs-xs, --ls-caps;
+       OFF: border 1px var(--border-subtle); background transparent; color var(--text-secondary)
+       ON : border 1px var(--dp-teal);      background color-mix(in srgb, var(--dp-teal) 14%, transparent); color var(--dp-teal)
+     The trailing "extra" button (EXPAND ALL / COLLAPSE ALL) uses a DASHED border.
+     WP note: these are real links to filtered archive URLs, not JS tabs. -->
