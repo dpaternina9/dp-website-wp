@@ -64,4 +64,36 @@ tests_add_filter(
 	}
 );
 
+/*
+ * Make `dpaternina` the active theme for the whole run.
+ *
+ * The WordPress test suite installs with its own `default` theme and never
+ * activates anything else, so without this every assertion about theme.json,
+ * editor styles, fonts or custom templates would be made against a theme we did
+ * not write — and would fail for the wrong reason, or worse, pass. This is the
+ * same lesson the e2e global setup learned in Phase 0 (docs/adr/0001): a suite
+ * establishes what it asserts on.
+ *
+ * `wp_tests_options` is the suite's own mechanism: each key becomes a
+ * `pre_option_` filter, so the theme is active from the first query onwards
+ * rather than being switched into place afterwards.
+ */
+$GLOBALS['wp_tests_options'] = array(
+	'stylesheet' => 'dpaternina',
+	'template'   => 'dpaternina',
+);
+
+/*
+ * The suite resets `$wp_theme_directories` to its own fixture directory.
+ * `wp-settings.php` adds `wp-content/themes` back on every load, which is where
+ * wp-env mounts the theme; registering it here as well costs nothing and means
+ * the bootstrap does not depend on that ordering staying true.
+ */
+tests_add_filter(
+	'muplugins_loaded',
+	static function (): void {
+		register_theme_directory( WP_CONTENT_DIR . '/themes' );
+	}
+);
+
 require $dp_site_tests_dir . '/includes/bootstrap.php';

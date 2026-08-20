@@ -6,6 +6,9 @@
  * wp-env `tests` environment. They assert that the harness itself is live — a
  * broken bootstrap fails here instead of silently reporting an empty pass.
  *
+ * The §5.1 rewrite check that used to live here moved to NoHardcodedRoutesTest,
+ * where it sits next to the static scan that covers what a runtime check cannot.
+ *
  * @package DP\Tests
  */
 
@@ -99,35 +102,5 @@ final class BootstrapTest extends WP_UnitTestCase {
 			file_exists( $theme->get_stylesheet_directory() . '/templates/index.html' ),
 			'templates/index.html is what makes this a block theme.'
 		);
-	}
-
-	/**
-	 * Nothing here registers a rewrite rule. CLAUDE.md §5.1, enforced.
-	 *
-	 * Pretty permalinks are switched on for the duration so the rule set is
-	 * actually generated — asserting against an empty rule set would prove
-	 * nothing.
-	 *
-	 * @return void
-	 */
-	public function test_no_custom_rewrite_rules_are_registered(): void {
-		$this->set_permalink_structure( '/%postname%/' );
-
-		$rules = get_option( 'rewrite_rules' );
-
-		$this->assertIsArray( $rules );
-		$this->assertNotEmpty( $rules, 'Core generated its own rules, so the check below is meaningful.' );
-
-		$ours = array_values(
-			array_filter(
-				array_keys( $rules ),
-				static fn ( string $pattern ): bool => str_contains( $pattern, 'dp_' )
-					|| str_contains( $pattern, 'dp-' )
-			)
-		);
-
-		$this->assertSame( array(), $ours, 'Pages belong to David. The only rewrites we may ever add arrive in Phase 3.' );
-
-		$this->set_permalink_structure( '' );
 	}
 }
