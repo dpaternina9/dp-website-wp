@@ -62,6 +62,9 @@ final class Theme {
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
 		( new ExternalRequests() )->register();
+		( new Blocks\AllowedBlocks() )->register();
+		( new Blocks\CoreStyles() )->register();
+		( new Blocks\Markup() )->register();
 	}
 
 	/**

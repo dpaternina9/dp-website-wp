@@ -121,6 +121,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # dp-core's editor bundle is compiled, not committed. The integration
+      # suite registers dp/callout from plugins/dp-core/build/callout, and the
+      # e2e suite opens the editor, so both need the build to exist first.
+      - name: npm run build
+        run: npm run build
+
       - name: Start wp-env
         run: npm run env:start
 

@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/callout",
+	"version": "0.1.0",
+	"title": "Callout",
+	"category": "dp",
+	"icon": "info-outline",
+	"description": "A caveat the reader will hit in practice, not emphasis you failed to write into the sentence. One per post.",
+	"keywords": [ "note", "aside", "caveat", "callout" ],
+	"textdomain": "dp-core",
+	"attributes": {
+		"label": {
+			"type": "string",
+			"default": "NOTE"
+		},
+		"content": {
+			"type": "string",
+			"source": "html",
+			"selector": ".dp-callout-text",
+			"default": ""
+		}
+	},
+	"supports": {
+		"anchor": true,
+		"html": false,
+		"multiple": true,
+		"reusable": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	},
+	"editorScript": "file:./index.js"
+}

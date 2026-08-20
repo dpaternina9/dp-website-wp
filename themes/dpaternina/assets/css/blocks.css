@@ -1,0 +1,394 @@
+/*
+ * dP house style — the block vocabulary.
+ *
+ * A transcription of design-source/components/PostBlocks.dc.html, which is the
+ * authoritative spec for every block this blog is allowed to render. The design
+ * expresses it as inline styles because the design tool has no stylesheet; the
+ * values here are those values, and only the delivery mechanism differs
+ * (CLAUDE.md §5).
+ *
+ * The division of labour with theme.json is deliberate and worth stating once:
+ *
+ *   theme.json  what a block is made of — font, size, line height, letter
+ *               spacing, text colour.
+ *   this file   how it is put together — margins, padding, borders, radii,
+ *               backgrounds, layout, and the markers and label bars the design
+ *               draws itself.
+ *
+ * The split is not aesthetic. `styles.blocks` in theme.json cannot express a
+ * max-width, a ::before, a counter, or a grid column, and its output sits at
+ * the same specificity as core's own layout rules — which is why every margin
+ * in the design lives here, on a selector that reliably wins. See
+ * docs/adr/0005-house-style-blocks.md.
+ *
+ * Loaded by DP\Theme\Assets in both the editor and the front end, from one
+ * list, so the canvas and the page cannot drift.
+ *
+ * Written against the design's token names. A --wp--preset--* name in this file
+ * would be a bug: assets/css/tokens.css exists to make that unnecessary.
+ */
+
+/* -------------------------------------------------------------------------
+ * Rhythm
+ *
+ * The design puts 24px between paragraphs, which is exactly the root blockGap
+ * theme.json already sets (--space-5). So a paragraph needs no margin rule at
+ * all, and only the blocks whose spacing differs from 24px appear below.
+ *
+ * Every one of those uses `margin-block`, on a selector carrying an element
+ * name as well as a class. Core's flow-layout rule
+ * (`:where(.is-layout-flow) > :where(* + *)`) is a single class of specificity;
+ * matching it and relying on source order would work until it didn't.
+ * ---------------------------------------------------------------------- */
+
+/* p → core/paragraph. */
+:where(p) {
+	text-wrap: pretty;
+}
+
+/* --measure is 68ch: the line length the design sets body copy at, narrower
+   than the column the headings and the block chrome span. Getting it applied is
+   a specificity problem in two places at once. Core's constrained layout caps
+   every direct child of the content area at one class; the editor canvas adds a
+   second rule of two classes on top. The selector list below clears the first
+   on the page and the second in the canvas, which is what keeps the two
+   looking the same.
+
+   The pair also spans WordPress versions: `wp-block-paragraph` only reaches the
+   front end from 7.1, and the plain selector covers everything older.
+
+   Scoped to post content on purpose. The measure is a rule about body copy in
+   an article, not about every paragraph on the site; a paragraph in a template
+   part spans its own column, which is what the patterns in Phase 5 expect. */
+.wp-block-post-content p,
+.wp-block-post-content p.wp-block-paragraph {
+
+	/*
+	 * Core's constrained layout centres anything it narrows, with `!important`
+	 * on both auto margins. The design does not centre body copy — it caps the
+	 * line length and leaves the text where it started — so the start margin is
+	 * taken back at the only weight that can take it back.
+	 */
+	margin-inline: 0 !important;
+	max-width: var(--measure);
+}
+
+/* h2, h3 → core/heading. The type is in theme.json under elements.h2/h3/h4;
+   what is here is the space above them and the balanced wrap. */
+h2.wp-block-heading,
+h3.wp-block-heading {
+	text-wrap: balance;
+}
+
+h2.wp-block-heading {
+	margin-block: 48px 0;
+}
+
+h3.wp-block-heading {
+	margin-block: 36px 0;
+}
+
+/* h4 is mono caps in the accent colour, not the display face — see theme.json
+   styles.elements.h4. This is the one heading level that is a label. */
+h4.wp-block-heading {
+	margin-block: 32px 0;
+}
+
+/* -------------------------------------------------------------------------
+ * quote → core/quote
+ * ---------------------------------------------------------------------- */
+
+.wp-block-quote {
+	margin-block: 32px;
+	padding: clamp(20px, 4vw, 24px) clamp(20px, 5vw, 32px);
+	border: 0;
+	border-left: var(--border-width-strong) solid var(--dp-teal);
+	border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+	background: var(--bg-surface);
+}
+
+.wp-block-quote > p {
+	max-width: none;
+	margin: 0;
+	color: var(--text-primary);
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-tight);
+}
+
+.wp-block-quote > p + p {
+	margin-top: 16px;
+}
+
+/* The design's attribution is a <footer>; core/quote saves a <cite>. Same role,
+   same treatment, quiet either way. */
+.wp-block-quote > cite,
+.wp-block-quote > footer {
+	display: block;
+	margin-top: 12px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-style: normal;
+	letter-spacing: var(--ls-caps);
+}
+
+/* -------------------------------------------------------------------------
+ * ul / ol → core/list
+ *
+ * Markers are rendered, not native: an em dash for ul, a zero-padded index for
+ * ol, both mono at --fs-xs in --accent-text, in a 28px grid column.
+ * `list-style: none` is what makes that possible and is also what stops Safari
+ * announcing a list as a list, so DP\Theme\Blocks\Markup puts `role="list"`
+ * back on the rendered element.
+ * ---------------------------------------------------------------------- */
+
+.wp-block-list {
+	margin-block: 20px 0;
+	padding-left: 0;
+	list-style: none;
+}
+
+.wp-block-list > li {
+	display: grid;
+	grid-template-columns: 28px minmax(0, 1fr);
+	gap: 12px;
+	align-items: baseline;
+	max-width: var(--measure);
+}
+
+.wp-block-list > li + li {
+	margin-top: 12px;
+}
+
+.wp-block-list > li::before {
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+}
+
+ul.wp-block-list > li::before {
+	content: "—";
+}
+
+ol.wp-block-list {
+	counter-reset: dp-list-item;
+}
+
+ol.wp-block-list > li {
+	counter-increment: dp-list-item;
+}
+
+ol.wp-block-list > li::before {
+	content: counter(dp-list-item, decimal-leading-zero);
+}
+
+/* A nested list belongs in the text column, not in the marker column. */
+.wp-block-list > li > .wp-block-list {
+	grid-column: 2;
+	margin-block: 12px 0;
+}
+
+/* -------------------------------------------------------------------------
+ * code → core/code
+ *
+ * A labelled, forced-dark surface. The label is an attribute rather than
+ * decoration — DP\Core\Blocks\CodeLabel puts it on the <pre> as data-dp-label
+ * at render time. The literal below is the fallback for when that plugin is
+ * not there at all: the block still gets its bar, reading SHELL, which is the
+ * design's own default. An empty attribute means David cleared the field, and
+ * turns the bar off.
+ * ---------------------------------------------------------------------- */
+
+pre.wp-block-code {
+	overflow: hidden;
+	margin-block: 28px;
+	padding: 0;
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--band);
+}
+
+pre.wp-block-code::before {
+	display: block;
+	padding: 10px 20px;
+	border-bottom: 1px solid var(--border-subtle);
+	color: var(--text-muted);
+	content: "SHELL";
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+}
+
+pre.wp-block-code[data-dp-label]::before {
+	content: attr(data-dp-label);
+}
+
+pre.wp-block-code[data-dp-label=""]::before {
+	display: none;
+}
+
+pre.wp-block-code > code {
+	display: block;
+	overflow-x: auto;
+	padding: 20px;
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+/* -------------------------------------------------------------------------
+ * note → dp/callout
+ *
+ * The block is registered by dp-core so a post survives a theme switch; how it
+ * looks is this theme's business and lives here.
+ * ---------------------------------------------------------------------- */
+
+.wp-block-dp-callout {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-block: 28px;
+	padding: clamp(20px, 4vw, 24px);
+	border: 1px solid color-mix(in srgb, var(--dp-teal) 30%, transparent);
+	border-radius: var(--radius-lg);
+	background: color-mix(in srgb, var(--dp-teal) 8%, var(--bg-surface));
+}
+
+.wp-block-dp-callout > .dp-callout-label {
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+}
+
+.wp-block-dp-callout > .dp-callout-text {
+	max-width: none;
+	margin: 0;
+	color: var(--text-primary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+/* -------------------------------------------------------------------------
+ * image → core/image
+ * ---------------------------------------------------------------------- */
+
+figure.wp-block-image {
+	margin-block: 32px;
+}
+
+figure.wp-block-image img {
+	width: 100%;
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-md);
+	background: var(--bg-surface);
+	aspect-ratio: 3 / 2;
+	object-fit: cover;
+}
+
+/* Captions are mono caps and left aligned; core centres them and greys them
+   with a literal. */
+figure.wp-block-image > figcaption,
+figure.wp-block-table > figcaption {
+	margin-block: 12px 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-align: left;
+}
+
+/* -------------------------------------------------------------------------
+ * table → core/table
+ * ---------------------------------------------------------------------- */
+
+figure.wp-block-table {
+	overflow-x: auto;
+	margin-block: 28px;
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+}
+
+figure.wp-block-table > table {
+	width: 100%;
+	min-width: 420px;
+	border-collapse: collapse;
+}
+
+figure.wp-block-table thead {
+	border-bottom: 1px solid var(--border-subtle);
+	background: var(--bg-surface);
+}
+
+figure.wp-block-table th {
+	padding: 14px 20px;
+	border: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-regular);
+	letter-spacing: var(--ls-caps);
+	text-align: left;
+}
+
+figure.wp-block-table td {
+	padding: 14px 20px;
+	border: 0;
+	border-top: 1px solid color-mix(in srgb, var(--border-subtle) 60%, transparent);
+	text-align: left;
+}
+
+/* -------------------------------------------------------------------------
+ * rule → core/separator
+ *
+ * A 1px spectrum-gradient line at 60%. Core clamps an unstyled separator to
+ * 100px through a three-class selector, and restores full opacity through a
+ * two-class one, so both are met on their own terms rather than by source
+ * order.
+ * ---------------------------------------------------------------------- */
+
+hr.wp-block-separator,
+hr.wp-block-separator.has-alpha-channel-opacity {
+	height: 1px;
+	margin-block: 44px;
+	border: 0;
+	opacity: 0.6;
+	background: var(--dp-gradient-spectrum);
+}
+
+hr.wp-block-separator:not(.is-style-dots):not(.is-style-wide) {
+	width: 100%;
+	max-width: none;
+}
+
+/* -------------------------------------------------------------------------
+ * The editor canvas
+ *
+ * One difference between the canvas and the page is core's, not ours: the
+ * front end puts the content inside a column of `contentSize` and lets the
+ * blocks fill it, while the canvas leaves the container the full width of the
+ * writing area and gives every block that width as a max-width with automatic
+ * margins. Blocks that are exactly `contentSize` wide look the same either way,
+ * which is why nobody notices — until one block is narrower, as body copy is,
+ * and it centres itself against everything above it.
+ *
+ * These two rules give the canvas the same column the page has. Both selectors
+ * exist only inside the editor, so neither reaches a published page.
+ * ---------------------------------------------------------------------- */
+
+.editor-styles-wrapper .is-root-container.is-layout-constrained {
+	max-width: var(--container-md);
+	margin-inline: auto;
+}
+
+.editor-styles-wrapper
+	.is-root-container.is-layout-constrained
+	> :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+	margin-inline: 0 !important;
+}

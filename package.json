@@ -10,6 +10,8 @@
   },
   "scripts": {
     "prepare": "husky",
+    "build": "wp-scripts build --webpack-src-dir=plugins/dp-core/src/Blocks/js --output-path=plugins/dp-core/build",
+    "start": "wp-scripts start --webpack-src-dir=plugins/dp-core/src/Blocks/js --output-path=plugins/dp-core/build",
     "env:start": "wp-env start",
     "env:stop": "wp-env stop",
     "env:cli": "wp-env run cli wp",

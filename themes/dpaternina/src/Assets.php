@@ -26,10 +26,17 @@ final class Assets {
 	 * `tokens.css` is generated from `design-source/` and gives every design token
 	 * back its own name; `base.css` is the design system's base layer verbatim.
 	 * Both are enforced by DP\Tests\Integration\TokenParityTest.
+	 *
+	 * `blocks.css` is the house style: the part of
+	 * design-source/components/PostBlocks.dc.html that theme.json has no way to
+	 * say. It comes last because it overrides global styles, and it is in this
+	 * list — rather than attached to a block — precisely so the editor cannot
+	 * end up with a different version of it.
 	 */
 	private const STYLESHEETS = array(
 		'dpaternina-tokens' => 'assets/css/tokens.css',
 		'dpaternina-base'   => 'assets/css/base.css',
+		'dpaternina-blocks' => 'assets/css/blocks.css',
 	);
 
 	/**
