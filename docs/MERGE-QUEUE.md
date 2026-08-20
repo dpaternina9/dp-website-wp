@@ -7,8 +7,9 @@ Branch: `worktree-agent-ad398f43ea81af990`
 Blocked on: Phases 3 and 4 finishing in the main checkout.
 
 ### Merge chores
-- [ ] Add to `DP\Core\Plugin::register()`:  `Update\UpdateClient::register();`
-      (Phase 4 will want a second line here for `dp/callout` — expect two.)
+- [x] **DONE.** `Plugin::register()` now wires all four collaborators (content, cli,
+      Blocks, Timeline, UpdateClient). Verified on `main`. Later phases: add a line, do not
+      restructure the method.
 - [ ] `docs/adr/README.md` index needs rows for **0003** and **0004**; Phase 2 deliberately
       did not edit it to avoid colliding with Phase 3.
 - [x] `phpcs.xml.dist`: excluded the PHPCompatibility enum false positive (done in main).
@@ -46,8 +47,7 @@ Chores it could not do from its lane:
       `dp_series_rewrite_slug` no longer needs a line-level ignore. Delete that ignore at merge.
 - [x] `docs/adr/README.md` index rows for **0003** and **0004** (and 0005 if Phase 4 writes one).
 - [ ] `docs/plan.md`: tick Phases 2, 3, 4.
-- [ ] `Plugin::register()` is now a **three-way merge point**. It currently has Phase 3's two
-      lines; it needs Phase 2's `Update\UpdateClient::register();` and Phase 4's blocks line.
+- [x] **DONE.** All registration lines landed.
 
 Facts later phases inherit (from ADR-0003):
 - `WP_UnitTestCase::tear_down()` calls `unregister_all_meta_keys()`. **From the second test
