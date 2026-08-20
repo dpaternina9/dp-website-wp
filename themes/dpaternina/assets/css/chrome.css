@@ -1,0 +1,556 @@
+/*
+ * dP site chrome — the header, the mobile panel and the footer.
+ *
+ * A transcription of design-source/components/SiteHeader.dc.html and
+ * SiteFooter.dc.html. As everywhere in this theme, the values are the design's
+ * and only the delivery mechanism differs (CLAUDE.md §5); the file is written
+ * against the design's own token names, and a --wp--preset--* name in here would
+ * be a bug that assets/css/tokens.css exists to prevent.
+ *
+ * Two rules govern the whole file.
+ *
+ * **There is not one media query in it.** The design's Ledger rules them out and
+ * digest §5.2 says where the thresholds actually are: they are component widths,
+ * not viewport widths. `SiteHeader` switches at 720px of its own width, so
+ * `.dp-header` is a container and everything that switches is a descendant of
+ * it. A container cannot query itself, which is why the switch is always
+ * expressed on children.
+ *
+ * **The mobile panel works with JavaScript switched off.** CLAUDE.md §1.7: every
+ * page must be readable and navigable without it. A `<dialog>` that only opens
+ * from `showModal()` fails that outright, so the panel opens from `:target` —
+ * the hamburger is a real link to the panel's id, and the rule below overrides
+ * the UA stylesheet's `display: none` on a closed dialog. assets/js/nav-panel.js
+ * then upgrades it to a real modal, where the top layer gives Escape and the
+ * focus trap for nothing. Both states are styled here; neither is the fallback
+ * for the other's failure.
+ */
+
+/* -------------------------------------------------------------------------
+ * Full-bleed chrome
+ *
+ * theme.json puts the gutter on the root, so `.wp-site-blocks` carries it and
+ * `alignfull` is core's way back out to the viewport edge — which the header's
+ * and the footer's rules need, since both draw a border across the whole
+ * window. The block markup asks for `alignfull`; what is left here is the top
+ * margin the root's blockGap would otherwise put above the footer. Two classes,
+ * so it beats `.wp-site-blocks > *` on specificity rather than on load order.
+ * ---------------------------------------------------------------------- */
+
+.wp-site-blocks > .dp-footer,
+.wp-site-blocks > .dp-header {
+	margin-block-start: 0;
+}
+
+/* -------------------------------------------------------------------------
+ * The brand mark
+ *
+ * `core/site-title` rather than `core/site-logo`: the mark ships with the theme
+ * and does not depend on David having uploaded anything, and the site's name is
+ * still the link's accessible name. The text is replaced rather than removed,
+ * so the link is never nameless.
+ * ---------------------------------------------------------------------- */
+
+.dp-brand {
+	margin: 0;
+	flex: none;
+	line-height: 0;
+}
+
+.dp-brand a {
+	display: block;
+	overflow: hidden;
+	width: 34px;
+	height: 34px;
+	background: url("../img/dp-mark-gradient-128.png") no-repeat center / contain;
+	color: transparent;
+	text-decoration: none;
+	text-indent: -100vw;
+	white-space: nowrap;
+}
+
+.dp-brand--sm a {
+	width: 30px;
+	height: 30px;
+	opacity: 0.85;
+}
+
+/* -------------------------------------------------------------------------
+ * Buttons
+ *
+ * The design's Button primitive. theme.json deliberately carries no button
+ * styles — digest §5 says the primitives "become block styles and small
+ * patterns" — so the appearance is here, on core's own `wp-element-button`
+ * class, which every button block and every button-shaped link already has.
+ * ---------------------------------------------------------------------- */
+
+.wp-element-button,
+.wp-block-button__link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--control-gap-md);
+	height: var(--control-h-md);
+	padding: 0 20px;
+	border: var(--border-width) solid transparent;
+	border-radius: var(--radius-pill);
+	background: var(--accent);
+	box-shadow: var(--shadow-sm);
+	color: var(--accent-contrast);
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	font-weight: var(--fw-semibold);
+	line-height: 1;
+	letter-spacing: var(--ls-tight);
+	text-decoration: none;
+	white-space: nowrap;
+	transition:
+		transform var(--dur-fast) var(--ease-standard),
+		background var(--dur-base) var(--ease-standard),
+		box-shadow var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard);
+}
+
+.wp-element-button:hover,
+.wp-block-button__link:hover {
+	background: var(--accent-hover);
+	box-shadow: var(--shadow-glow-teal);
+	color: var(--accent-contrast);
+}
+
+.wp-element-button:active,
+.wp-block-button__link:active {
+	transform: scale(0.97);
+}
+
+.dp-button--secondary .wp-block-button__link {
+	border-color: var(--border-strong);
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-primary);
+}
+
+.dp-button--secondary .wp-block-button__link:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	box-shadow: none;
+	color: var(--text-primary);
+}
+
+.dp-button--lg .wp-block-button__link {
+	height: var(--control-h-lg);
+	padding: 0 28px;
+	font-size: var(--fs-md);
+}
+
+.dp-button--sm .wp-block-button__link {
+	height: var(--target-min);
+	padding: 0 14px;
+	font-size: var(--fs-sm);
+}
+
+/* A link that is a link, not a button: the footer's columns and the design's
+   mono caps "→" affordances. Same block, no chrome. */
+.dp-button--quiet .wp-block-button__link {
+	height: auto;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	box-shadow: none;
+	color: var(--text-secondary);
+	font-family: var(--font-body);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-regular);
+	letter-spacing: var(--ls-normal);
+	white-space: normal;
+}
+
+.dp-button--quiet .wp-block-button__link:hover {
+	background: none;
+	box-shadow: none;
+	color: var(--text-primary);
+}
+
+/* A destination with nowhere to point renders as nothing (see
+   DP\Theme\Chrome\Navigation). Its wrapper must not leave a gap behind. */
+.wp-block-buttons:not(:has(.wp-block-button)) {
+	display: none;
+}
+
+/* -------------------------------------------------------------------------
+ * The mono caps label, used everywhere the design sets one
+ * ---------------------------------------------------------------------- */
+
+.dp-label {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+ * Header
+ * ---------------------------------------------------------------------- */
+
+.dp-header {
+	position: sticky;
+	z-index: 30;
+	top: 0;
+	container: dp-header / inline-size;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	background: var(--bg-page);
+}
+
+.dp-header__bar {
+	gap: var(--space-6);
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: 12px;
+	padding-inline: var(--gutter);
+}
+
+.dp-header__wide {
+	gap: 12px;
+	flex: 1 1 auto;
+	justify-content: flex-end;
+}
+
+.dp-header__toggle {
+	display: none;
+}
+
+.dp-nav {
+	flex: 0 1 auto;
+	gap: 0;
+	font-size: var(--fs-sm);
+}
+
+.dp-nav .wp-block-navigation-item__content {
+	position: relative;
+	padding: 12px 16px;
+	color: var(--text-secondary);
+	font-weight: var(--fw-semibold);
+	text-decoration: none;
+	transition: color var(--dur-base) var(--ease-standard);
+}
+
+.dp-nav .wp-block-navigation-item__content:hover {
+	color: var(--text-primary);
+}
+
+/* The active rule is derived in DP\Theme\Chrome\Navigation from the queried
+   object — which is what makes Blog light up on a post, a category and a
+   series as well as on the index itself (digest §2.1). Everything here reads
+   the `aria-current` that derivation sets, so the marker and the underline
+   cannot disagree with what a screen reader is told. */
+.dp-nav .wp-block-navigation-item__content[aria-current] {
+	color: var(--text-primary);
+}
+
+.dp-nav .wp-block-navigation-item__content[aria-current]::after {
+	position: absolute;
+	right: 16px;
+	bottom: 4px;
+	left: 16px;
+	height: 2px;
+	background: var(--dp-teal);
+	content: "";
+}
+
+/* The hamburger. A link, because without JavaScript it navigates to the panel
+   and that is how the panel opens; the icon is drawn rather than shipped so
+   there is no second request for 20 pixels of chrome. */
+.dp-menu-open .wp-block-button__link,
+.dp-menu-close .wp-block-button__link {
+	overflow: hidden;
+	width: var(--target-comfortable);
+	height: var(--target-comfortable);
+	padding: 0;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-circle);
+
+	/*
+	 * The glyph is a mask rather than an image, so the stroke is
+	 * `currentColor` and the icon's colour stays a token. A data URI cannot
+	 * read a custom property, and hardcoding the hex here would put a colour
+	 * outside design-source/ (CLAUDE.md §5).
+	 */
+	background-color: currentcolor;
+	box-shadow: none;
+	color: var(--text-primary);
+	mask-position: center;
+	mask-repeat: no-repeat;
+	mask-size: 20px 20px;
+	text-indent: -100vw;
+	transition: border-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
+}
+
+.dp-menu-open .wp-block-button__link {
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h16'/%3E%3Cpath d='M4 12h16'/%3E%3Cpath d='M4 17h16'/%3E%3C/svg%3E");
+}
+
+.dp-menu-close .wp-block-button__link {
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E");
+}
+
+.dp-menu-open .wp-block-button__link:hover,
+.dp-menu-close .wp-block-button__link:hover {
+	border-color: var(--accent-text);
+	background-color: currentcolor;
+	box-shadow: none;
+	color: var(--accent-text);
+}
+
+/* -------------------------------------------------------------------------
+ * The 720px switch
+ *
+ * digest §5.2: `SiteHeader` — 720px — hamburger to full-screen panel. The
+ * container is `.dp-header`; every rule below styles one of its descendants,
+ * because an element cannot answer a query about itself.
+ * ---------------------------------------------------------------------- */
+
+@container dp-header (width < 720px) {
+
+	.dp-header__wide {
+		display: none;
+	}
+
+	.dp-header__toggle {
+		display: flex;
+	}
+
+	/* Only inside the narrow container. Without this bound, landing on the
+	   panel's URL fragment at 1400px would open a full-screen menu over a page
+	   that already has a nav bar. The `[open]` state below needs no such guard:
+	   nothing opens it but the hamburger, and the hamburger is not here. */
+	.dp-panel:target {
+		display: flex;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * The panel
+ * ---------------------------------------------------------------------- */
+
+.dp-panel {
+	position: fixed;
+	z-index: 40;
+	inset: 0;
+	display: none;
+	overflow: hidden;
+	width: 100%;
+	max-width: none;
+	height: 100%;
+	max-height: none;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: var(--bg-page);
+	color: var(--text-primary);
+}
+
+.dp-panel[open] {
+	display: flex;
+	animation: dp-panel-in var(--dur-base) var(--ease-out) both;
+}
+
+.dp-panel::backdrop {
+	background: var(--bg-page);
+}
+
+@keyframes dp-panel-in {
+
+	from {
+		opacity: 0;
+		transform: translateY(-8px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+.dp-panel__head {
+	flex: none;
+	padding-block: 12px;
+	padding-inline: var(--gutter);
+	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-panel__nav {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	padding-block: 8px 24px;
+	padding-inline: var(--gutter);
+	gap: 0;
+}
+
+.dp-panel__nav .wp-block-navigation__container {
+	width: 100%;
+	gap: 0;
+}
+
+.dp-panel__nav .wp-block-navigation-item {
+	width: 100%;
+}
+
+.dp-panel__nav .wp-block-navigation-item__content {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	min-height: var(--target-comfortable);
+	padding-block: 16px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	color: var(--text-primary);
+	font-family: var(--font-display);
+	font-size: var(--fs-xl);
+	font-weight: var(--fw-bold);
+	letter-spacing: var(--ls-tight);
+	text-decoration: none;
+}
+
+.dp-panel__nav .wp-block-navigation-item__content[aria-current] {
+	color: var(--accent);
+}
+
+/* The design's HERE marker. It is decoration, deliberately: `aria-current`
+   already tells assistive technology which item this is, so drawing the word
+   from CSS says the same thing to the eye without saying it twice to a screen
+   reader. */
+.dp-panel__nav .wp-block-navigation-item__content[aria-current]::after {
+	color: var(--accent-text);
+	content: "HERE";
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-regular);
+	letter-spacing: var(--ls-caps);
+}
+
+.dp-panel__foot {
+	display: flex;
+	flex: none;
+	flex-direction: column;
+	gap: 16px;
+	padding-block: 20px calc(24px + env(safe-area-inset-bottom, 0px));
+	padding-inline: var(--gutter);
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-panel__foot .wp-block-button__link {
+	height: var(--control-h-lg);
+	font-size: var(--fs-md);
+}
+
+.dp-panel__wordmark {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* Scroll lock. The class is set by assets/js/nav-panel.js; without JavaScript
+   the panel covers the page instead, which is the same outcome by a cruder
+   route. */
+.dp-panel-open {
+	overflow: hidden;
+}
+
+/* -------------------------------------------------------------------------
+ * Footer
+ * ---------------------------------------------------------------------- */
+
+.dp-footer {
+	border-top: var(--border-width) solid var(--border-subtle);
+	background: var(--band);
+}
+
+.dp-footer__grid {
+	display: grid;
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: 56px 32px;
+	padding-inline: var(--gutter);
+	gap: 40px 32px;
+	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+
+.dp-footer__brand,
+.dp-footer__group {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.dp-footer__brand {
+	gap: 16px;
+}
+
+.dp-footer__line {
+	max-width: 26ch;
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-footer__nav .wp-block-navigation__container {
+	gap: 12px;
+}
+
+.dp-footer__nav .wp-block-navigation-item__content,
+.dp-footer__cats a {
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	text-decoration: none;
+	transition: color var(--dur-base) var(--ease-standard);
+}
+
+.dp-footer__nav .wp-block-navigation-item__content:hover,
+.dp-footer__cats a:hover {
+	color: var(--text-primary);
+}
+
+.dp-footer__cats {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-footer__links {
+	gap: 12px;
+}
+
+.dp-footer__bar {
+	gap: 12px 24px;
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: 20px 40px;
+	padding-inline: var(--gutter);
+	border-top: var(--border-width) solid var(--border-subtle);
+	align-items: center;
+}
+
+.dp-footer__meta .wp-block-button__link {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-footer__meta .wp-block-button__link:hover {
+	color: var(--text-secondary);
+}

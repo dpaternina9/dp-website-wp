@@ -59,12 +59,21 @@ final class Theme {
 	 * @return void
 	 */
 	private function register(): void {
+		$destinations = new Chrome\Destinations();
+
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
+		( new Patterns() )->register();
 		( new ExternalRequests() )->register();
 		( new Blocks\AllowedBlocks() )->register();
 		( new Blocks\CoreStyles() )->register();
 		( new Blocks\Markup() )->register();
+		( new Blocks\SeriesPlanned() )->register();
+		$destinations->register();
+		( new Chrome\Navigation( $destinations ) )->register();
+		( new Chrome\FilterPills( $destinations ) )->register();
+		( new Chrome\PostPresentation() )->register();
+		( new Query\QueryLoops() )->register();
 	}
 
 	/**

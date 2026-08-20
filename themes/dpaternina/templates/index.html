@@ -1,14 +1,13 @@
-<!-- wp:group {"tagName":"main","layout":{"type":"constrained"}} -->
-<main class="wp-block-group"><!-- wp:query {"queryId":0,"query":{"inherit":true}} -->
-<div class="wp-block-query"><!-- wp:post-template -->
-<!-- wp:post-title {"isLink":true,"level":2} /-->
-<!-- wp:post-excerpt /-->
-<!-- /wp:post-template -->
+<!-- wp:template-part {"slug":"header"} /-->
 
-<!-- wp:query-pagination -->
-<!-- wp:query-pagination-previous /-->
-<!-- wp:query-pagination-numbers /-->
-<!-- wp:query-pagination-next /-->
-<!-- /wp:query-pagination --></div>
-<!-- /wp:query --></main>
+<!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
+<main class="wp-block-group"><!-- wp:group {"className":"dp-section dp-section--reading dp-page","layout":{"type":"constrained"}} -->
+<div class="wp-block-group dp-section dp-section--reading dp-page"><!-- wp:post-title {"level":1,"className":"dp-post__title"} /-->
+
+<!-- wp:post-content {"layout":{"type":"constrained"}} /--></div>
+<!-- /wp:group --></main>
 <!-- /wp:group -->
+
+<!-- wp:pattern {"slug":"dpaternina/cta-band"} /-->
+
+<!-- wp:template-part {"slug":"footer"} /-->

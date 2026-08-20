@@ -34,9 +34,22 @@ final class Assets {
 	 * end up with a different version of it.
 	 */
 	private const STYLESHEETS = array(
-		'dpaternina-tokens' => 'assets/css/tokens.css',
-		'dpaternina-base'   => 'assets/css/base.css',
-		'dpaternina-blocks' => 'assets/css/blocks.css',
+		'dpaternina-tokens'     => 'assets/css/tokens.css',
+		'dpaternina-base'       => 'assets/css/base.css',
+		'dpaternina-blocks'     => 'assets/css/blocks.css',
+		'dpaternina-chrome'     => 'assets/css/chrome.css',
+		'dpaternina-components' => 'assets/css/components.css',
+	);
+
+	/**
+	 * The theme's front-end scripts, as paths relative to the theme root.
+	 *
+	 * There is one, it is small, and everything it does is an upgrade to
+	 * behaviour that already works without it (CLAUDE.md section 1.7). It is not
+	 * given to the editor: the canvas has no site chrome to enhance.
+	 */
+	private const SCRIPTS = array(
+		'dpaternina-nav-panel' => 'assets/js/nav-panel.js',
 	);
 
 	/**
@@ -114,6 +127,25 @@ final class Assets {
 				$this->theme->asset_version( $relative )
 			);
 		}
+
+		foreach ( self::SCRIPTS as $handle => $relative ) {
+			wp_enqueue_script(
+				$handle,
+				$this->theme->url( $relative ),
+				array(),
+				$this->theme->asset_version( $relative ),
+				array(
+					/*
+					 * Deferred, not async: the panel controller has to find the
+					 * markup it upgrades, and `in_footer` alone would still put
+					 * a parser stop in the document. CLAUDE.md section 1.7:
+					 * no render-blocking JS.
+					 */
+					'strategy'  => 'defer',
+					'in_footer' => true,
+				)
+			);
+		}
 	}
 
 	/**
@@ -152,5 +184,14 @@ final class Assets {
 	 */
 	public static function preloaded_fonts(): array {
 		return self::PRELOADED_FONTS;
+	}
+
+	/**
+	 * The front-end scripts this theme loads, keyed by handle.
+	 *
+	 * @return array<string, string> Handle to path relative to the theme root.
+	 */
+	public static function scripts(): array {
+		return self::SCRIPTS;
 	}
 }

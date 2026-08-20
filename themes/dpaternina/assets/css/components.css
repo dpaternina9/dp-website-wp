@@ -1,0 +1,1410 @@
+/*
+ * dP components — the parts of the design that repeat.
+ *
+ * Transcribed from design-source/components/{PageHero,SectionHead,FilterPills,
+ * PostRow,WorkCard,CtaBanner,ContactMethod}.dc.html and from the compositions
+ * in dpaternina.dc.html. Each section names the file it comes from.
+ *
+ * Two inherited facts shape most of this file, and both come from ADR-0005.
+ *
+ * **The house style is global.** `:root :where(p)` and a bare `h2` reach every
+ * paragraph and heading on the site, not only the ones inside a post. That is
+ * what makes the editor canvas match the page, and it is the right way round —
+ * but it means a hero heading and a section head, which are not body copy, have
+ * to say so. Every such override is on a selector carrying an element name as
+ * well as a class, so it beats both the element rule and core's layout rules on
+ * specificity rather than on load order.
+ *
+ * **`--measure` is scoped to post content on purpose.** A paragraph inside a
+ * template part or a pattern spans its own column; the ones here that want the
+ * measure ask for it by name.
+ *
+ * No media queries: digest §5.2 puts every threshold on a component's own
+ * width, so `PostRow`'s 560px is a container query against the list that holds
+ * the rows.
+ */
+
+/* -------------------------------------------------------------------------
+ * Shared shells
+ * ---------------------------------------------------------------------- */
+
+.dp-section {
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-inline: var(--gutter);
+}
+
+.dp-section--reading {
+	max-width: var(--container-md);
+}
+
+.dp-band {
+	border-top: var(--border-width) solid var(--border-subtle);
+	background: var(--band);
+}
+
+.dp-band--closed {
+	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-band > .dp-section {
+	padding-block: var(--section-y);
+}
+
+/* -------------------------------------------------------------------------
+ * PageHero
+ * ---------------------------------------------------------------------- */
+
+.dp-hero {
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: clamp(48px, 8vw, 80px) 40px;
+	padding-inline: var(--gutter);
+}
+
+.dp-hero--reading {
+	max-width: var(--container-md);
+}
+
+.dp-hero--tight {
+	padding-bottom: 24px;
+}
+
+h1.dp-hero__title {
+	max-width: 20ch;
+	margin-block: 0 16px;
+	font-family: var(--font-display);
+	font-size: clamp(2.25rem, 5.5vw, 3.75rem);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+	text-wrap: balance;
+}
+
+p.dp-hero__deck {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+p.dp-hero__meta {
+	margin-block: 24px 0;
+	padding-bottom: 24px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+ * The homepage hero
+ *
+ * One gradient per view (digest §1); on the homepage it is spent on the orb
+ * behind the heading, so nothing else on this page carries one.
+ * ---------------------------------------------------------------------- */
+
+.dp-home-hero {
+	position: relative;
+	isolation: isolate;
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: var(--section-y) 64px;
+	padding-inline: var(--gutter);
+}
+
+.dp-home-hero::before {
+	position: absolute;
+	z-index: -1;
+	top: -120px;
+	left: 50%;
+	width: min(760px, 120vw);
+	height: 620px;
+	border-radius: var(--radius-circle);
+	background: radial-gradient(circle, color-mix(in srgb, var(--dp-teal) var(--glow-soft), transparent) 0%, transparent 62%);
+	content: "";
+	pointer-events: none;
+	transform: translateX(-50%);
+}
+
+h1.dp-home-hero__title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-display);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+	text-wrap: balance;
+}
+
+.dp-accent {
+	color: var(--accent-text);
+}
+
+p.dp-home-hero__lead {
+	max-width: var(--measure);
+	margin-block: 40px 0;
+	color: var(--text-primary);
+	font-size: var(--fs-lg);
+	line-height: var(--lh-relaxed);
+}
+
+p.dp-home-hero__note {
+	max-width: var(--measure);
+	margin-block: 24px 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-home-hero__actions {
+	margin-block-start: 40px;
+	gap: 12px;
+}
+
+/* -------------------------------------------------------------------------
+ * SectionHead
+ *
+ * `label` is either a kicker or a heading, never both, and the trailing slot is
+ * either `meta` or an `action`, never both — the component's own note says so.
+ * Two patterns ship those two shapes; the five tones are classes because the
+ * hues are text-contrast corrections in settings.custom rather than palette
+ * entries, so there is no `has-…-color` class to reach for and there should not
+ * be one (ADR-0002 §2: a corrected text hue must not be offered as a fill).
+ * ---------------------------------------------------------------------- */
+
+.dp-section-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px 24px;
+	flex-wrap: wrap;
+	padding-bottom: 16px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+h2.dp-section-head__heading {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-xl);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: balance;
+}
+
+p.dp-section-head__kicker,
+p.dp-section-head__meta,
+p.dp-section-head__action {
+	margin: 0;
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-section-head__kicker {
+	color: var(--hue-teal);
+}
+
+.is-tone-pink p.dp-section-head__kicker,
+p.dp-section-head__kicker.is-tone-pink {
+	color: var(--hue-pink);
+}
+
+.is-tone-gold p.dp-section-head__kicker,
+p.dp-section-head__kicker.is-tone-gold {
+	color: var(--hue-gold);
+}
+
+.is-tone-purple p.dp-section-head__kicker,
+p.dp-section-head__kicker.is-tone-purple {
+	color: var(--hue-purple);
+}
+
+.is-tone-muted p.dp-section-head__kicker,
+p.dp-section-head__kicker.is-tone-muted {
+	color: var(--text-muted);
+}
+
+p.dp-section-head__meta {
+	color: var(--text-muted);
+	text-wrap: balance;
+}
+
+p.dp-section-head__action a,
+.dp-section-head__action .wp-block-button__link {
+	color: var(--accent-text);
+	transition: color var(--dur-base) var(--ease-standard);
+}
+
+p.dp-section-head__action a:hover,
+.dp-section-head__action .wp-block-button__link:hover {
+	color: var(--dp-teal-600);
+}
+
+.dp-section-head__action .wp-block-button__link {
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+ * Badge — the coloured token above a title
+ *
+ * The tone class is added at render time by DP\Theme\Chrome\PostPresentation,
+ * from `dp_tone` or, failing that, from whether the post is part of a series —
+ * which is the derivation the design itself uses.
+ * ---------------------------------------------------------------------- */
+
+p.dp-badge {
+	display: inline-flex;
+	align-items: center;
+	margin: 0;
+	padding: 4px 12px;
+	border: var(--border-width) solid color-mix(in srgb, var(--hue-teal) 32%, transparent);
+	border-radius: var(--radius-pill);
+	background: color-mix(in srgb, var(--hue-teal) 18%, transparent);
+	color: var(--hue-teal);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-badge:empty {
+	display: none;
+}
+
+p.dp-badge.is-tone-pink {
+	border-color: color-mix(in srgb, var(--hue-pink) 32%, transparent);
+	background: color-mix(in srgb, var(--hue-pink) 18%, transparent);
+	color: var(--hue-pink);
+}
+
+p.dp-badge.is-tone-gold {
+	border-color: color-mix(in srgb, var(--hue-gold) 32%, transparent);
+	background: color-mix(in srgb, var(--hue-gold) 18%, transparent);
+	color: var(--hue-gold);
+}
+
+p.dp-badge.is-tone-purple {
+	border-color: color-mix(in srgb, var(--hue-purple) 32%, transparent);
+	background: color-mix(in srgb, var(--hue-purple) 18%, transparent);
+	color: var(--hue-purple);
+}
+
+/* -------------------------------------------------------------------------
+ * FilterPills
+ *
+ * `core/categories` with the design's pill drawn over it. Real links to real
+ * archives, which is the component's own instruction and what keeps filtering
+ * working with JavaScript off (CLAUDE.md §1.7). The leading All pill is spliced
+ * in by DP\Theme\Chrome\FilterPills; `current-cat` is `wp_list_categories`'s own
+ * class, set from the queried object.
+ * ---------------------------------------------------------------------- */
+
+ul.dp-filter-pills {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+ul.dp-filter-pills > li {
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+
+ul.dp-filter-pills > li::before {
+	content: none;
+}
+
+ul.dp-filter-pills a {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--target-min);
+	padding: 8px 20px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-pill);
+	background: transparent;
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-decoration: none;
+	text-transform: uppercase;
+	transition:
+		color var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard),
+		background var(--dur-base) var(--ease-standard);
+}
+
+ul.dp-filter-pills a:hover {
+	border-color: var(--text-muted);
+	color: var(--text-primary);
+}
+
+ul.dp-filter-pills > li.current-cat a {
+	border-color: var(--dp-teal);
+	background: color-mix(in srgb, var(--dp-teal) 14%, transparent);
+	color: var(--hue-teal);
+}
+
+/* -------------------------------------------------------------------------
+ * PostRow
+ *
+ * digest §5.2: the breakpoint is the row's own width, 560px. A container cannot
+ * query itself, so the list is the container and the rows answer.
+ * ---------------------------------------------------------------------- */
+
+.dp-rows {
+	container: dp-rows / inline-size;
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-rows > li {
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+
+.dp-rows > li::before {
+	content: none;
+}
+
+.dp-row {
+	display: grid;
+	align-items: baseline;
+	gap: 28px;
+	grid-template-columns: 130px minmax(0, 1fr) 130px;
+	padding: 18px 8px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	transition: background var(--dur-base) var(--ease-standard), padding var(--dur-base) var(--ease-standard);
+}
+
+.dp-rows > li:hover .dp-row {
+	background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+}
+
+.dp-row--compact {
+	gap: 24px;
+	grid-template-columns: minmax(0, 1fr) auto;
+	padding: 18px 0;
+	border-top: var(--border-width) solid var(--border-subtle);
+	border-bottom: 0;
+}
+
+.dp-rows > li:hover .dp-row--compact {
+	background: none;
+	padding-left: 10px;
+}
+
+.dp-row__date,
+.dp-row__cat {
+	margin: 0;
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-row__date {
+	color: var(--text-muted);
+}
+
+/* "Category token is always --hue-pink; date is always --text-muted." */
+.dp-row__cat,
+.dp-row__cat a {
+	color: var(--hue-pink);
+	text-decoration: none;
+}
+
+.dp-row__body {
+	min-width: 0;
+}
+
+h3.dp-row__title {
+	margin-block: 0 6px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+h3.dp-row__title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+p.dp-row__excerpt {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-row--compact p.dp-row__excerpt {
+	font-size: var(--fs-base);
+}
+
+/* The trailing column of the list variant is the category alone; of the compact
+   variant it is the category over the date. Both are the same two blocks. */
+.dp-row__aside {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.dp-row:not(.dp-row--compact) .dp-row__aside .dp-row__date {
+	display: none;
+}
+
+@container dp-rows (width < 560px) {
+
+	.dp-row,
+	.dp-row--compact {
+		gap: 10px;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* Below the threshold the date and the category share one mono bar above
+	   the title, which is the whole point of the switch. */
+	.dp-row__aside {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 16px;
+		flex-direction: row-reverse;
+		order: -1;
+		text-align: left;
+	}
+
+	.dp-row:not(.dp-row--compact) .dp-row__aside .dp-row__date {
+		display: block;
+	}
+
+	.dp-row > .dp-row__date {
+		display: none;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * WorkCard
+ * ---------------------------------------------------------------------- */
+
+.dp-cards {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-cards > li {
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+
+.dp-cards > li::before {
+	content: none;
+}
+
+.dp-card {
+	display: flex;
+	overflow: hidden;
+	box-sizing: border-box;
+	height: 100%;
+	flex-direction: column;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	transition: transform var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+}
+
+.dp-card:hover {
+	border-color: var(--accent-text);
+	transform: translateY(-3px);
+}
+
+.dp-card__shot {
+	margin: 0;
+	background: var(--band);
+}
+
+.dp-card__shot img {
+	display: block;
+	width: 100%;
+	border: 0;
+	border-radius: 0;
+	aspect-ratio: 16 / 10;
+	object-fit: cover;
+}
+
+.dp-card__body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 10px;
+	padding: 24px;
+}
+
+.dp-card__meta {
+	display: flex;
+	gap: 4px 12px;
+	flex-wrap: wrap;
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-card__year {
+	color: var(--hue-gold);
+}
+
+h3.dp-card__title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-md);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+h3.dp-card__title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+p.dp-card__line {
+	flex: 1;
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+}
+
+/* -------------------------------------------------------------------------
+ * CtaBanner and ContactMethod
+ * ---------------------------------------------------------------------- */
+
+.dp-cta-banner {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	flex-wrap: wrap;
+	padding: clamp(24px, 4vw, 32px);
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: transparent;
+}
+
+.dp-cta-banner--filled {
+	background: var(--bg-surface);
+}
+
+.dp-cta-banner__body {
+	flex: 1 1 260px;
+	min-width: 0;
+}
+
+p.dp-cta-banner__title {
+	margin-block: 0 8px;
+	color: var(--text-primary);
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+p.dp-cta-banner__line {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-contact-method .wp-block-button__link {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+	flex-wrap: wrap;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: var(--target-comfortable);
+	height: auto;
+	padding: 16px 24px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	box-shadow: none;
+	color: var(--text-primary);
+	font-family: var(--font-body);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-regular);
+	letter-spacing: var(--ls-normal);
+	white-space: normal;
+	overflow-wrap: anywhere;
+	transition: border-color var(--dur-base) var(--ease-standard);
+}
+
+.dp-contact-method .wp-block-button__link:hover {
+	border-color: var(--accent-text);
+	background: var(--bg-surface);
+	box-shadow: none;
+}
+
+/* -------------------------------------------------------------------------
+ * The closing CTA band
+ *
+ * One gradient per view is already spent on most pages, so this orb is a glow
+ * rather than a gradient fill: two radial stops of one hue, which the design's
+ * own tokens (--glow-core, --glow-mid, --glow-ring) exist for.
+ * ---------------------------------------------------------------------- */
+
+.dp-cta-band {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	max-width: none;
+	padding-block: clamp(96px, 14vw, 160px) clamp(104px, 15vw, 168px);
+	padding-inline: var(--gutter);
+	text-align: center;
+}
+
+.dp-cta-band::before,
+.dp-cta-band::after {
+	position: absolute;
+	z-index: -1;
+	top: 52%;
+	left: 50%;
+	border-radius: var(--radius-circle);
+	content: "";
+	pointer-events: none;
+	transform: translate(-50%, -50%);
+}
+
+.dp-cta-band::before {
+	width: min(760px, 120vw);
+	aspect-ratio: 1;
+	background: radial-gradient(
+		circle at 50% 50%,
+		color-mix(in srgb, var(--dp-teal) var(--glow-core), transparent) 0%,
+		color-mix(in srgb, var(--dp-teal) var(--glow-mid), transparent) 45%,
+		transparent 70%
+	);
+	filter: blur(30px);
+	animation: dp-orb 14s var(--ease-standard) infinite;
+}
+
+.dp-cta-band::after {
+	width: min(300px, 62vw);
+	aspect-ratio: 1;
+	border: var(--border-width) solid color-mix(in srgb, var(--dp-teal) var(--glow-ring), transparent);
+}
+
+@keyframes dp-orb {
+
+	0%,
+	100% {
+		transform: translate(-50%, -50%) scale(1);
+	}
+
+	50% {
+		transform: translate(-50%, -50%) scale(1.08);
+	}
+}
+
+h2.dp-cta-band__title {
+	margin-block: 0 16px;
+	font-family: var(--font-display);
+	font-size: clamp(2.25rem, 6vw, 3.75rem);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+}
+
+p.dp-cta-band__line {
+	max-width: var(--measure);
+	margin-block: 0 36px;
+	margin-inline: auto;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+/* -------------------------------------------------------------------------
+ * The homepage bands
+ * ---------------------------------------------------------------------- */
+
+.dp-bento {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+	margin-block: 24px 40px;
+}
+
+.dp-tile {
+	display: flex;
+	flex-direction: column;
+	padding: 24px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--band);
+}
+
+.dp-tile--wide {
+	padding: 32px;
+	background: var(--bg-surface);
+	grid-column: 1 / -1;
+	transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.dp-tile--wide:hover {
+	box-shadow: var(--shadow-lg);
+	transform: translateY(-3px);
+}
+
+.dp-tile p {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-tile p + p {
+	margin-block-start: 12px;
+}
+
+.dp-tile p.dp-label {
+	margin-block-end: 16px;
+}
+
+.dp-tile p.dp-tile__quiet {
+	color: var(--text-muted);
+	font-size: var(--fs-sm);
+}
+
+h3.dp-tile__title {
+	margin-block: 0 8px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	letter-spacing: var(--ls-tight);
+}
+
+.dp-tile--wide h3.dp-tile__title {
+	font-size: var(--fs-xl);
+	margin-block-end: 12px;
+}
+
+.dp-tile .wp-block-buttons {
+	margin-block-start: 20px;
+}
+
+.dp-tone-teal {
+	color: var(--hue-teal);
+}
+
+.dp-tone-pink {
+	color: var(--hue-pink);
+}
+
+.dp-tone-gold {
+	color: var(--hue-gold);
+}
+
+.dp-tone-purple {
+	color: var(--hue-purple);
+}
+
+.dp-tone-accent {
+	color: var(--accent-text);
+}
+
+/* The quiet strip of past roles. */
+.dp-record {
+	display: grid;
+	gap: 24px 20px;
+	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+	margin: 0;
+	padding: 0;
+	margin-block-start: 20px;
+	list-style: none;
+}
+
+.dp-record > li {
+	display: block;
+	margin: 0;
+	padding-right: 20px;
+	border-right: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-record > li:last-child {
+	border-right: 0;
+}
+
+.dp-record > li::before {
+	content: none;
+}
+
+h3.dp-record__org {
+	margin-block: 0 8px;
+	min-height: 40px;
+	color: var(--text-primary);
+	font-family: var(--font-body);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	line-height: var(--lh-normal);
+	letter-spacing: var(--ls-normal);
+	text-wrap: pretty;
+}
+
+.dp-record p {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-record__role {
+	min-height: 17px;
+}
+
+.dp-record__years {
+	margin-block-start: 4px;
+}
+
+.dp-shipped h2 {
+	margin-block: 0 16px;
+	font-size: clamp(2rem, 4.5vw, 3rem);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+}
+
+.dp-shipped > p {
+	max-width: var(--measure);
+	margin-block: 0 48px;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-shipped__item {
+	padding-block: 32px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-shipped__item:last-child {
+	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-shipped__item h3 {
+	margin-block: 0 16px;
+	font-family: var(--font-display);
+	font-size: var(--fs-xl);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-display);
+}
+
+.dp-shipped__item p {
+	max-width: var(--measure);
+	margin-block: 0 16px;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-shipped__item .dp-label {
+	margin-block-end: 0;
+}
+
+.dp-badges {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	margin-block-end: 16px;
+}
+
+.dp-latest {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px 24px;
+	flex-wrap: wrap;
+	margin-block-end: 40px;
+}
+
+.dp-latest h2 {
+	margin: 0;
+	font-size: clamp(2rem, 4.5vw, 3rem);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+}
+
+/* -------------------------------------------------------------------------
+ * The post
+ * ---------------------------------------------------------------------- */
+
+.dp-post {
+	max-width: var(--container-md);
+	margin-inline: auto;
+	padding-block: 72px 48px;
+	padding-inline: var(--gutter);
+}
+
+.dp-post__back .wp-block-button__link {
+	margin-block-end: 32px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+h1.dp-post__title {
+	margin-block: 24px 16px;
+	font-family: var(--font-display);
+	font-size: clamp(2rem, 4.5vw, 3rem);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-display);
+}
+
+.dp-post__byline {
+	display: flex;
+	align-items: center;
+	gap: 8px 16px;
+	flex-wrap: wrap;
+	padding-bottom: 32px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-post__byline p,
+.dp-post__byline .wp-block-post-date,
+.dp-post__byline .wp-block-post-author-name {
+	margin: 0;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	letter-spacing: inherit;
+}
+
+.dp-post__byline a {
+	color: inherit;
+	text-decoration: none;
+}
+
+figure.dp-post__lead-image {
+	margin-block: 32px 0;
+}
+
+figure.dp-post__lead-image img {
+	border-radius: var(--radius-md);
+	aspect-ratio: 16 / 9;
+}
+
+p.dp-post__standfirst {
+	max-width: var(--measure);
+	margin-block: 32px 0;
+	color: var(--text-primary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+p.dp-post__standfirst:empty {
+	display: none;
+}
+
+.dp-post__after {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	max-width: var(--container-md);
+	margin-inline: auto;
+	padding-block: 24px 120px;
+	padding-inline: var(--gutter);
+}
+
+/* The series footer. One gradient per view, and on a post this is where it is
+   spent. `:has()` keeps the frame off a post that is in no series: the two
+   navigation links and the term list all render as nothing, and an empty
+   gradient box would be the only thing left. */
+.dp-series-footer {
+	padding: 2px;
+	border-radius: var(--radius-lg);
+	background: var(--dp-gradient-warm);
+}
+
+.dp-series-footer:not(:has(.wp-block-post-terms a)) {
+	display: none;
+}
+
+.dp-series-footer__inner {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	padding: 28px;
+	border-radius: var(--radius-md);
+	background: var(--bg-surface);
+}
+
+.dp-series-footer .wp-block-post-terms {
+	margin: 0;
+	color: var(--hue-pink);
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	letter-spacing: var(--ls-tight);
+}
+
+.dp-series-footer .wp-block-post-terms a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.dp-part-nav {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.dp-part-nav .wp-block-post-navigation-link,
+.dp-post-nav .wp-block-post-navigation-link {
+	margin: 0;
+	padding: 20px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-md);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+	transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard);
+}
+
+.dp-part-nav .wp-block-post-navigation-link:hover {
+	border-color: var(--dp-pink);
+}
+
+.dp-post-nav {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+
+.dp-post-nav .wp-block-post-navigation-link {
+	padding: 24px;
+	border-radius: var(--radius-lg);
+}
+
+.dp-post-nav .wp-block-post-navigation-link:hover {
+	border-color: var(--accent-text);
+	transform: translateY(-3px);
+}
+
+.dp-part-nav .post-navigation-link-next,
+.dp-post-nav .post-navigation-link-next {
+	text-align: right;
+}
+
+.dp-part-nav a,
+.dp-post-nav a {
+	color: var(--text-primary);
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-decoration: none;
+	text-transform: none;
+}
+
+/* -------------------------------------------------------------------------
+ * Archives
+ * ---------------------------------------------------------------------- */
+
+.dp-archive-head {
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: 72px 32px;
+	padding-inline: var(--gutter);
+}
+
+.dp-crumbs {
+	display: flex;
+	align-items: center;
+	gap: 8px 12px;
+	flex-wrap: wrap;
+	margin-block-end: 24px;
+}
+
+.dp-crumbs .wp-block-button__link {
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+h1.dp-archive-title {
+	max-width: 24ch;
+	margin-block: 0 20px;
+	font-family: var(--font-display);
+	font-size: clamp(2.25rem, 6vw, 3.75rem);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+	text-wrap: balance;
+}
+
+p.dp-archive-deck,
+.dp-archive-head .wp-block-term-description p {
+	max-width: var(--measure);
+	margin-block: 0 20px;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+/* "Other categories" — the current one is the page you are already on, so it is
+   taken out of the band rather than listed as somewhere to go. */
+.dp-category-band .current-cat {
+	display: none;
+}
+
+.dp-category-band ul {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-category-band li::before {
+	content: none;
+}
+
+.dp-category-band a {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	min-height: var(--target-min);
+	padding: 8px 16px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-pill);
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	text-decoration: none;
+	transition: border-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
+}
+
+.dp-category-band a:hover {
+	border-color: var(--text-muted);
+	color: var(--text-primary);
+}
+
+.dp-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px 24px;
+	flex-wrap: wrap;
+	margin-block-start: 40px;
+	padding-block-start: 24px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-pagination .wp-block-query-pagination-numbers,
+.dp-pagination .wp-block-query-pagination-previous,
+.dp-pagination .wp-block-query-pagination-next {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-pagination a {
+	color: var(--text-secondary);
+	text-decoration: none;
+}
+
+.dp-pagination a:hover {
+	color: var(--text-primary);
+}
+
+.dp-pagination .current {
+	color: var(--hue-teal);
+}
+
+.dp-empty {
+	display: flex;
+	align-items: flex-start;
+	flex-direction: column;
+	gap: 20px;
+	padding-block: 72px;
+	border-block: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-empty h3 {
+	max-width: 28ch;
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-xl);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: balance;
+}
+
+.dp-empty p {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+/* -------------------------------------------------------------------------
+ * The series archive
+ * ---------------------------------------------------------------------- */
+
+.dp-series-hero {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	max-width: var(--container-lg);
+	margin-inline: auto;
+	padding-block: 80px 48px;
+	padding-inline: var(--gutter);
+}
+
+.dp-series-hero::before {
+	position: absolute;
+	z-index: -1;
+	top: -160px;
+	left: 12%;
+	width: min(620px, 110vw);
+	height: 520px;
+	border-radius: var(--radius-circle);
+	background: radial-gradient(circle, color-mix(in srgb, var(--dp-pink) 12%, transparent) 0%, transparent 62%);
+	content: "";
+	pointer-events: none;
+}
+
+.dp-series-hero__inner {
+	max-width: var(--container-md);
+}
+
+h1.dp-series-hero__title {
+	margin-block: 0 24px;
+	font-family: var(--font-display);
+	font-size: clamp(2.25rem, 6vw, 4rem);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-tight);
+	letter-spacing: var(--ls-display);
+	text-wrap: balance;
+}
+
+.dp-series-hero .wp-block-term-description p {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-series-section h2 {
+	margin-block: 0 8px;
+	font-family: var(--font-display);
+	font-size: var(--fs-xl);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+}
+
+.dp-series-section > p {
+	max-width: var(--measure);
+	margin-block: 0 20px;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+/* Still to come — rendered by DP\Theme\Blocks\SeriesPlanned, which carries no
+   post ID and so has nothing to link. */
+.dp-planned__row {
+	display: flex;
+	align-items: baseline;
+	gap: 6px 24px;
+	flex-wrap: wrap;
+	padding-block: 18px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-planned__part,
+.dp-planned__years {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-planned__part {
+	min-width: 60px;
+}
+
+.dp-planned__body {
+	flex: 1 1 280px;
+}
+
+h3.dp-planned__title {
+	margin-block: 0 6px;
+	color: var(--text-secondary);
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+p.dp-planned__note {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-muted);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+}
