@@ -57,6 +57,14 @@
  * and does not depend on David having uploaded anything, and the site's name is
  * still the link's accessible name. The text is replaced rather than removed,
  * so the link is never nameless.
+ *
+ * The design's chrome uses the *gradient* mark. That asset is broken on
+ * arrival: `design-source/assets/dp-mark-gradient.png` and its 128px sibling
+ * both carry only the top arc of the monogram and part of one letter, at 2000px
+ * as well as at 128px, so neither can be scaled out of the problem. The white
+ * mark — the design system's own `Logo variant="white"` — is intact and is what
+ * ships until the gradient one is re-exported. Flagged for David; the swap is
+ * one URL when a good file arrives.
  * ---------------------------------------------------------------------- */
 
 .dp-brand {
@@ -70,7 +78,7 @@
 	overflow: hidden;
 	width: 34px;
 	height: 34px;
-	background: url(../img/dp-mark-gradient-128.png) no-repeat center / contain;
+	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
 	color: transparent;
 	text-decoration: none;
 	text-indent: -100vw;
@@ -221,13 +229,21 @@
 	padding-inline: var(--gutter);
 }
 
-.dp-header-wide {
+/*
+ * The two selectors below are doubled deliberately. Core emits its own layout
+ * rule for every flex group — `.wp-block-group-is-layout-flex { display: flex }`
+ * and `.wp-block-buttons-is-layout-flex` likewise — at one class of
+ * specificity, so a single-class rule here ties with it and loses or wins by
+ * whichever stylesheet the page happened to print last. The header is the
+ * container either way, so naming it costs nothing and settles it.
+ */
+.dp-header .dp-header-wide {
 	gap: 12px;
 	flex: 1 1 auto;
 	justify-content: flex-end;
 }
 
-.dp-header-toggle {
+.dp-header .dp-header-toggle {
 	display: none;
 }
 
@@ -323,11 +339,11 @@
 
 @container dp-header (width < 720px) {
 
-	.dp-header-wide {
+	.dp-header .dp-header-wide {
 		display: none;
 	}
 
-	.dp-header-toggle {
+	.dp-header .dp-header-toggle {
 		display: flex;
 	}
 

@@ -69,6 +69,7 @@ final class Theme {
 		( new Blocks\CoreStyles() )->register();
 		( new Blocks\Markup() )->register();
 		( new Blocks\SeriesPlanned() )->register();
+		( new Blocks\TemplateHierarchy() )->register();
 		$destinations->register();
 		( new Chrome\Navigation( $destinations ) )->register();
 		( new Chrome\FilterPills( $destinations ) )->register();

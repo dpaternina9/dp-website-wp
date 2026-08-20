@@ -771,11 +771,61 @@ p.dp-cta-band-line {
  * The homepage bands
  * ---------------------------------------------------------------------- */
 
+/*
+ * The design lays the bento out on six columns and gives each tile a span —
+ * 6 for the agency, 3 and 3, then 4 and 2 — collapsing to one column when the
+ * strip is narrow. Six named spans need a real grid rather than `auto-fit`, and
+ * the collapse is a container query on the section, so the section declares
+ * itself a container and the tiles answer.
+ */
+.dp-right-now {
+	container: dp-strip / inline-size;
+}
+
 .dp-bento {
 	display: grid;
 	gap: 16px;
-	grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+	grid-template-columns: repeat(6, minmax(0, 1fr));
 	margin-block: 24px 40px;
+}
+
+.dp-bento > .dp-tile {
+	grid-column: span 3;
+}
+
+.dp-bento > .dp-tile-wide {
+	grid-column: span 6;
+}
+
+.dp-bento > .dp-tile-cloud {
+	grid-column: span 4;
+}
+
+.dp-bento > .dp-tile-aside {
+	grid-column: span 2;
+}
+
+@container dp-strip (width < 720px) {
+
+	.dp-bento {
+		gap: 12px;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.dp-bento > .dp-tile,
+	.dp-bento > .dp-tile-wide,
+	.dp-bento > .dp-tile-cloud,
+	.dp-bento > .dp-tile-aside {
+		grid-column: auto;
+	}
+
+	.dp-bento > .dp-tile {
+		padding: 20px;
+	}
+
+	.dp-bento > .dp-tile-wide {
+		padding: 24px;
+	}
 }
 
 .dp-tile {
@@ -790,7 +840,6 @@ p.dp-cta-band-line {
 .dp-tile-wide {
 	padding: 32px;
 	background: var(--bg-surface);
-	grid-column: 1 / -1;
 	transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard);
 }
 
