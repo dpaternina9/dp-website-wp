@@ -54,7 +54,7 @@ final class Navigation {
 	 *
 	 * @var array<string, string>
 	 */
-	private const TEMPLATES = array(
+	public const TEMPLATES = array(
 		'contact' => 'dp-contact.html',
 		'work'    => 'dp-work.html',
 		'about'   => 'dp-about.html',
