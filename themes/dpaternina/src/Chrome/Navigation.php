@@ -95,6 +95,36 @@ final class Navigation {
 	public function register(): void {
 		add_filter( 'render_block_core/navigation', $this->mark_writing_active( ... ), 10, 2 );
 		add_filter( 'render_block_core/button', $this->resolve_destination( ... ), 10, 2 );
+		add_filter( 'dp_destination_url', $this->answer_destination( ... ), 10, 2 );
+	}
+
+	/**
+	 * Answer `dp-core` when it asks where a named destination is.
+	 *
+	 * `dp-core` renders two links this theme cannot reach into — the contact
+	 * panel's "read something" after a message has been sent, and the résumé's
+	 * PDF link — and CLAUDE.md section 5.1 forbids the plugin from knowing which
+	 * page is which. This filter is the seam: the plugin asks for a destination
+	 * by name, the theme answers from the same Reading setting and the same
+	 * assigned templates the chrome uses, and neither side names a class in the
+	 * other. With the theme switched off nothing answers and the plugin renders
+	 * no link, which is the treatment an unresolved destination gets everywhere
+	 * else in this theme.
+	 *
+	 * @param mixed $url         Whatever an earlier filter decided.
+	 * @param mixed $destination The destination's name.
+	 * @return string|null
+	 */
+	public function answer_destination( mixed $url, mixed $destination ): ?string {
+		if ( is_string( $url ) && '' !== $url ) {
+			return $url;
+		}
+
+		if ( ! is_string( $destination ) || ! in_array( $destination, self::DESTINATIONS, true ) ) {
+			return null;
+		}
+
+		return $this->url_for( $destination );
 	}
 
 	/**

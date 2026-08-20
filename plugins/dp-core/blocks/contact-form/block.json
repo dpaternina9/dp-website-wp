@@ -1,0 +1,24 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/contact-form",
+	"version": "0.1.0",
+	"title": "Contact form",
+	"category": "dp",
+	"icon": "email-alt",
+	"description": "The form, the thank-you and the failure, as one panel. Posts to the page it is on; there is no endpoint.",
+	"keywords": [ "contact", "form", "email", "message" ],
+	"textdomain": "dp-core",
+	"attributes": {},
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}

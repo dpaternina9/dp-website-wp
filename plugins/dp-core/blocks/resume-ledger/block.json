@@ -1,0 +1,33 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/resume-ledger",
+	"version": "0.1.0",
+	"title": "Résumé ledger",
+	"category": "dp",
+	"icon": "list-view",
+	"description": "Experience, newest first: every role with the things that shipped out of it. The same Roles and Shipped the timeline draws.",
+	"keywords": [ "resume", "cv", "experience", "roles" ],
+	"textdomain": "dp-core",
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": "Experience"
+		},
+		"meta": {
+			"type": "string",
+			"default": "2014 — now"
+		}
+	},
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}
