@@ -58,13 +58,20 @@
  * still the link's accessible name. The text is replaced rather than removed,
  * so the link is never nameless.
  *
- * The design's chrome uses the *gradient* mark. That asset is broken on
- * arrival: `design-source/assets/dp-mark-gradient.png` and its 128px sibling
- * both carry only the top arc of the monogram and part of one letter, at 2000px
- * as well as at 128px, so neither can be scaled out of the problem. The white
- * mark — the design system's own `Logo variant="white"` — is intact and is what
- * ships until the gradient one is re-exported. Flagged for David; the swap is
- * one URL when a good file arrives.
+ * The design's chrome uses the *gradient* mark, at 34px in the header and in
+ * the mobile panel's head and at 30px, 0.85 opacity, in the footer — which is
+ * what the three rules below set.
+ *
+ * `design-source/assets/dp-mark-gradient*.png` is a broken export and stays
+ * broken: both sizes carry only the top arc of the monogram. David supplied the
+ * real file instead. It lives beside this stylesheet as
+ * `assets/img/dp-mark-gradient.src.png` at 2000px, which is a master and not a
+ * served asset; `dp-mark-gradient-128.png` is generated from it and is the one
+ * the chrome loads. See assets/img/README.md.
+ *
+ * The white mark has not gone anywhere — `.dp-featured-art` still draws it over
+ * the spectrum gradient, where a gradient mark on a gradient ground would not
+ * read.
  * ---------------------------------------------------------------------- */
 
 .dp-brand {
@@ -78,7 +85,7 @@
 	overflow: hidden;
 	width: 34px;
 	height: 34px;
-	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
+	background: url(../img/dp-mark-gradient-128.png) no-repeat center / contain;
 	color: transparent;
 	text-decoration: none;
 	text-indent: -100vw;
@@ -202,9 +209,25 @@
 
 /* -------------------------------------------------------------------------
  * The mono caps label, used everywhere the design sets one
+ *
+ * `font-mono / fs-xs / ls-caps`, which is the triple the design repeats on
+ * every label it draws. Only the colour varies by role, and it varies through
+ * the tone classes in components.css rather than here: --text-muted is the
+ * quiet-metadata default, and a label that carries meaning gets --hue-* or
+ * --accent-text on top of it.
+ *
+ * Named by element as well as by class, which is not decoration. WordPress
+ * emits `:root :where(p) { font-size: … }` for the global styles, and that is
+ * one class of specificity — the same as a bare `.dp-label`, so which one wins
+ * is decided by stylesheet order. The front end prints global styles first and
+ * the block editor injects them last, so a single-class rule here is correct on
+ * the site and silently overridden in the canvas. Every other component in this
+ * theme is already written `p.dp-badge`, `h3.dp-tile-title`, `ul.dp-filter-pills`
+ * for the same reason; this one was the exception.
  * ---------------------------------------------------------------------- */
 
-.dp-label {
+p.dp-label,
+span.dp-label {
 	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);

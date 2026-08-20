@@ -36,6 +36,35 @@
  * Shared shells
  * ---------------------------------------------------------------------- */
 
+/*
+ * Full-bleed sections butt against each other.
+ *
+ * Core gives every child of a flow container a `margin-block-start` of the
+ * block gap (--space-5, 24px). Between two paragraphs that is right; between
+ * two full-width bands it is 24px of --bg-page showing through the join. It
+ * read as a seam between the shipped band and Latest writing — both --band,
+ * both black, with a lighter strip between them — and as an unexplained gap
+ * above and below the closing CTA, which is the last thing before the footer.
+ *
+ * The design has no margins anywhere in this stack: every section carries its
+ * own vertical padding and its neighbours' edges touch. Zeroed at the two
+ * levels where a full-bleed section can sit — a direct child of
+ * `.wp-site-blocks` (the chrome, the CTA band, `<main>` itself) and a band
+ * inside `<main>`. Everything below that keeps its block gap.
+ *
+ * Each selector names an element or a second class deliberately: core's rule is
+ * `:root :where(.is-layout-flow) > *`, which is one class, so a one-class rule
+ * here would only win by loading later — true on the front end and false in the
+ * block editor, which injects the global styles last.
+ */
+.wp-site-blocks > main,
+.wp-site-blocks > .wp-block-template-part,
+.wp-site-blocks > .dp-cta-band,
+.wp-site-blocks main > .dp-band,
+.wp-site-blocks main > .dp-cta-band {
+	margin-block-start: 0;
+}
+
 .dp-section {
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -274,6 +303,23 @@ p.dp-section-head-action a:hover,
 /* -------------------------------------------------------------------------
  * Badge — the coloured token above a title
  *
+ * Every value below is the design system's own, from the compiled `Badge`
+ * component in design-source/_ds/_ds_bundle.js — the `soft` variant, which is
+ * its default and the only one the pages use:
+ *
+ *   padding 3px 10px · radius-pill · font-mono · fs-xs · fw-medium
+ *   ls-wide · line-height 1.4 · gap 5px · nowrap
+ *   background  color-mix(in srgb, <tone> 18%, transparent)
+ *   border      1px solid color-mix(in srgb, <tone> 32%, transparent)
+ *   color       <tone>
+ *
+ * Two deliberate differences from that source. The line height is the literal
+ * 1.4 the component sets and there is no token for it, so it is written out
+ * rather than rounded to --lh-normal. And the component's `<tone>` is the raw
+ * brand hue used as text, which CLAUDE.md §5 forbids; the fills keep the raw
+ * hue and the text side goes through --hue-*, which resolves to the same value
+ * on the dark ground the site actually ships on.
+ *
  * The tone class is added at render time by DP\Theme\Chrome\PostPresentation,
  * from `dp_tone` or, failing that, from whether the post is part of a series —
  * which is the derivation the design itself uses.
@@ -281,17 +327,20 @@ p.dp-section-head-action a:hover,
 
 p.dp-badge {
 	display: inline-flex;
+	gap: 5px;
 	align-items: center;
 	margin: 0;
-	padding: 4px 12px;
+	padding: 3px 10px;
 	border: var(--border-width) solid color-mix(in srgb, var(--hue-teal) 32%, transparent);
 	border-radius: var(--radius-pill);
 	background: color-mix(in srgb, var(--hue-teal) 18%, transparent);
 	color: var(--hue-teal);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
-	line-height: var(--lh-normal);
-	letter-spacing: var(--ls-caps);
+	font-weight: var(--fw-medium);
+	line-height: 1.4;
+	letter-spacing: var(--ls-wide);
+	white-space: nowrap;
 	text-transform: uppercase;
 }
 
@@ -875,7 +924,18 @@ p.dp-cta-band-line {
 	transform: translateY(-3px);
 }
 
-.dp-tile p {
+/*
+ * Body copy in a tile, and only body copy. `.dp-tile p` used to catch the
+ * mono caps labels too: at one class and one element it outranks `.dp-label`,
+ * so every label in the RIGHT NOW bento came out at 16px in --text-secondary
+ * instead of 12px in its own tone. The exclusions are what keep a named
+ * component's own type from being overwritten by the box it happens to sit in.
+ *
+ * `:where()` wraps the `:not()` so the rule keeps the specificity it had. A
+ * bare `:not(.a):not(.b)` counts both classes and would start outranking
+ * `.dp-tile p.dp-tile-quiet` below, which is the same bug one level down.
+ */
+.dp-tile p:where(:not(.dp-label, .dp-badge)) {
 	margin: 0;
 	color: var(--text-secondary);
 	font-size: var(--fs-base);
@@ -888,6 +948,12 @@ p.dp-cta-band-line {
 
 .dp-tile p.dp-label {
 	margin-block-end: 16px;
+}
+
+/* A label that closes a tile — the Fanxie Cloud stack line — sets `margin: 0`
+   in the design. Without this it leaves 16px of dead space under the card. */
+.dp-tile p.dp-label:last-child {
+	margin-block-end: 0;
 }
 
 .dp-tile p.dp-tile-quiet {
@@ -911,23 +977,33 @@ h3.dp-tile-title {
 	margin-block-start: 20px;
 }
 
-.dp-tone-teal {
+/*
+ * A label's colour is its role. The design sets --text-muted for quiet
+ * metadata and one of --hue-* / --accent-text where the label means something
+ * — "LIVE ON THE APP STORE" is gold, "WAITLIST OPEN" is the accent, the Fanxie
+ * Cloud stack line is purple — so the tone rides on the label rather than
+ * standing alone. Scoping it to `.dp-label` is also what puts it at two classes,
+ * which is what it takes to beat `:root :where(p) { color: … }` in the block
+ * editor, where the global styles are injected after the theme's (see the
+ * `.dp-label` comment in chrome.css).
+ */
+.dp-label.dp-tone-teal {
 	color: var(--hue-teal);
 }
 
-.dp-tone-pink {
+.dp-label.dp-tone-pink {
 	color: var(--hue-pink);
 }
 
-.dp-tone-gold {
+.dp-label.dp-tone-gold {
 	color: var(--hue-gold);
 }
 
-.dp-tone-purple {
+.dp-label.dp-tone-purple {
 	color: var(--hue-purple);
 }
 
-.dp-tone-accent {
+.dp-label.dp-tone-accent {
 	color: var(--accent-text);
 }
 
@@ -1018,7 +1094,14 @@ h3.dp-record-org {
 	letter-spacing: var(--ls-display);
 }
 
-.dp-shipped-item p {
+/*
+ * As with `.dp-tile p` above: the badges and the trailing stack label are
+ * paragraphs, they carry their own type, and a container rule at the same
+ * specificity was quietly replacing it. The badges came out 16px and grey; the
+ * stack line came out 16px sentence-case instead of 12px mono caps. `:where()`
+ * keeps the rule at the specificity it had, for the reason given above.
+ */
+.dp-shipped-item p:where(:not(.dp-label, .dp-badge)) {
 	max-width: var(--measure);
 	margin-block: 0 16px;
 	color: var(--text-secondary);

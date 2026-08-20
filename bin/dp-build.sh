@@ -173,12 +173,16 @@ fi
 
 # Everything here is either a developer's tooling or a build input. None of it
 # is needed to run the package, and every file that ships is a file that has to
-# be reviewed one day.
+# be reviewed one day. `*.src.*` is the convention for the second kind: an
+# asset master that something else is generated from and that nothing links to
+# — themes/dpaternina/assets/img/dp-mark-gradient.src.png is 928 KB of monogram
+# nobody downloads.
 while IFS= read -r -d '' path; do
 	rm -rf "$path"
 done < <(find "$STAGE_DIR" \( \
 	-name '.git*' -o \
 	-name '.DS_Store' -o \
+	-name '*.src.*' -o \
 	-name 'node_modules' -o \
 	-name 'composer.lock' -o \
 	-name 'package.json' -o \
