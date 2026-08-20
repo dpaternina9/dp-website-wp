@@ -18,7 +18,9 @@ Tags: block-theme, one-column, full-site-editing, accessibility-ready, blog, por
 /*
  * Intentionally empty.
  *
- * WordPress reads this file for the headers above; it is not enqueued as the
- * theme's stylesheet. Design tokens land in theme.json and the class-based
- * stylesheet in Phase 1 — see docs/plan.md.
+ * WordPress reads this file for the headers above and does not enqueue it for a
+ * block theme. The theme's CSS is assets/css/tokens.css (generated from
+ * design-source/) and assets/css/base.css, both enqueued by DP\Theme\Assets and
+ * both handed to the editor by the same class. Everything with a value in it
+ * lives in theme.json. See docs/adr/0002-design-token-naming.md.
  */
