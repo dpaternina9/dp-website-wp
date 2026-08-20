@@ -35,8 +35,22 @@ final class Destinations {
 
 	/**
 	 * Transient holding the template-to-page map.
+	 *
+	 * The `_2` is a shape version, and it is here because of a real bug. The
+	 * map used to be keyed by whatever `_wp_page_template` happened to hold —
+	 * `dp-work.html` on a seeded site, `dp-work` on one assigned from the
+	 * admin — and when `template_pages()` started normalising the two spellings
+	 * to one, every install already holding the old map went on answering
+	 * "no such page" for up to a day. Nothing on the read side could tell the
+	 * two shapes apart, so nothing did.
+	 *
+	 * A change to what this transient holds now takes the suffix with it, and
+	 * the old value is left to expire rather than being read as the new one.
+	 * `only_int_map()` normalises on the way out as well: between them a map
+	 * written by any past version of this class either resolves correctly or is
+	 * ignored, and neither outcome is a silent wrong answer.
 	 */
-	private const CACHE_KEY = 'dpaternina_template_pages';
+	public const CACHE_KEY = 'dpaternina_template_pages_2';
 
 	/**
 	 * The map, once resolved, for the rest of the request. Keyed by slug.
@@ -222,6 +236,12 @@ final class Destinations {
 	/**
 	 * Narrow an array read back out of the cache to the shape this class promises.
 	 *
+	 * The keys go through `slug()` on the way out for the same reason they go
+	 * through it on the way in: a stored map is not necessarily one this
+	 * version of the class wrote, and a key it cannot match is indistinguishable
+	 * from a page that does not exist. Normalising here is what stops a cached
+	 * `dp-work.html` from reading as "David has no work page".
+	 *
 	 * @param array<mixed> $stored What the transient held.
 	 * @return array<string, int>
 	 */
@@ -230,7 +250,7 @@ final class Destinations {
 
 		foreach ( $stored as $template => $id ) {
 			if ( is_string( $template ) && is_int( $id ) ) {
-				$map[ $template ] = $id;
+				$map[ $this->slug( $template ) ] = $id;
 			}
 		}
 

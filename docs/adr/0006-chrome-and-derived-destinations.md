@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted — 2026-08-20.
+Accepted — 2026-08-20. Section 2's last paragraph — "a destination with nothing
+behind it renders as nothing" — is superseded by
+[ADR-0008](0008-unresolved-destinations-degrade-visibly.md). The rest stands.
 
 ## Context
 

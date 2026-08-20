@@ -20,7 +20,8 @@ use DP\Theme\Chrome\Navigation;
  * given a URL at render time, from a Reading setting, from core's feed link, or
  * from the page carrying a template David assigned. The tests below check both
  * halves of that: that a destination which exists resolves, and that one which
- * does not renders as nothing at all rather than as a link to a 404.
+ * does not leaves a visible, inert control rather than a link to a 404 or a
+ * hole in the page (ADR-0008).
  */
 final class ChromeTest extends TemplateTestCase {
 
@@ -126,16 +127,94 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
-	 * With no contact page, the button is absent rather than broken.
+	 * With no page behind it, the button stays put and stops being a link.
+	 *
+	 * ADR-0008. The previous behaviour dropped the whole block, and this test
+	 * used to assert that. It was wrong in the way that matters: the site
+	 * editor draws the same button from the same saved markup and cannot know
+	 * the front end threw it away, so "it is there when I edit it and gone when
+	 * I look at the site" was the only symptom of a resolver returning nothing
+	 * — whether because David had not made the page or because the resolver was
+	 * broken. Both now look the same, and both look like something.
 	 *
 	 * @return void
 	 */
-	public function test_a_destination_with_no_page_renders_nothing(): void {
+	public function test_a_destination_with_no_page_stays_visible_and_inert(): void {
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertStringNotContainsString( 'Get in touch', $html );
-		$this->assertStringNotContainsString( 'Say hi', $html );
-		$this->assertStringNotContainsString( 'dp-to-contact', $html );
+		$this->assertStringContainsString( 'Get in touch', $html );
+		$this->assertStringContainsString( 'Say hi', $html );
+		$this->assertStringContainsString( Navigation::UNRESOLVED_CLASS, $html );
+		$this->assertStringContainsString( 'data-dp-destination="contact"', $html );
+		$this->assertStringContainsString( 'aria-disabled="true"', $html );
+	}
+
+	/**
+	 * The "Full timeline" link is on the page whether or not it can point anywhere.
+	 *
+	 * This is the bug David reported, from both ends. The button is in
+	 * `front-page.html`, it renders in the site editor because the editor draws
+	 * the saved markup, and on the front end it was being removed entirely by
+	 * `Navigation::resolve_destination()`. Two separate causes could produce
+	 * that — no page carrying `dp-work`, or a resolver that could not find the
+	 * page that does — and neither left a trace. The first case is asserted
+	 * here; `test_a_cached_map_from_an_older_release_still_resolves` covers the
+	 * second.
+	 *
+	 * @return void
+	 */
+	public function test_the_full_timeline_link_survives_an_unresolved_work_page(): void {
+		$without = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'Full timeline', $without );
+		$this->assertStringContainsString( 'data-dp-destination="work"', $without );
+		$this->assertMatchesRegularExpression(
+			'~<a[^>]*data-dp-destination="work"[^>]*>~',
+			$without
+		);
+		$this->assertDoesNotMatchRegularExpression(
+			'~<a[^>]*data-dp-destination="work"[^>]*href=~',
+			$without,
+			'An unresolved destination must not invent an href.'
+		);
+
+		$work = $this->seed_page( 'What I have built', Navigation::TEMPLATES['work'] );
+
+		$with = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $work ) ) . '"', $with );
+		$this->assertDoesNotMatchRegularExpression(
+			'~<a[^>]*data-dp-destination="work"[^>]*' . preg_quote( Navigation::UNRESOLVED_CLASS, '~' ) . '~',
+			$with,
+			'A destination that resolves must not also be marked unset.'
+		);
+	}
+
+	/**
+	 * A map cached by an older release resolves instead of reading as "no page".
+	 *
+	 * The transient used to be keyed by whatever `_wp_page_template` held, and
+	 * `dp-work.html` and `dp-work` are the same template under two spellings.
+	 * When the write side started normalising them, every install already
+	 * holding the old map answered "no such page" for four destinations at once
+	 * until something happened to save a page — which is exactly what David saw
+	 * on :8888, and exactly the kind of failure a cache should not be able to
+	 * cause.
+	 *
+	 * @return void
+	 */
+	public function test_a_cached_map_from_an_older_release_still_resolves(): void {
+		$work = $this->seed_page( 'What I have built', Navigation::TEMPLATES['work'] );
+
+		set_transient(
+			Destinations::CACHE_KEY,
+			array( Navigation::TEMPLATES['work'] . '.html' => $work ),
+			DAY_IN_SECONDS
+		);
+
+		$navigation = new Navigation( new Destinations() );
+
+		$this->assertSame( $this->permalink( $work ), $navigation->url_for( 'work' ) );
 	}
 
 	/**
@@ -241,7 +320,7 @@ final class ChromeTest extends TemplateTestCase {
 		$this->assertIsInt( $updated );
 		$this->assertSame( Navigation::TEMPLATES['contact'], get_page_template_slug( $contact ) );
 
-		delete_transient( 'dpaternina_template_pages' );
+		delete_transient( Destinations::CACHE_KEY );
 
 		$navigation = new Navigation( new Destinations() );
 
@@ -258,7 +337,7 @@ final class ChromeTest extends TemplateTestCase {
 
 		$this->seed_page( 'Say hello', Navigation::TEMPLATES['contact'] );
 
-		delete_transient( 'dpaternina_template_pages' );
+		delete_transient( Destinations::CACHE_KEY );
 
 		foreach ( Navigation::DESTINATIONS as $destination ) {
 			$url = $navigation->url_for( $destination );

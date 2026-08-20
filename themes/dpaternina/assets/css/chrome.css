@@ -188,10 +188,16 @@
 	color: var(--text-primary);
 }
 
-/* A destination with nowhere to point renders as nothing (see
-   DP\Theme\Chrome\Navigation). Its wrapper must not leave a gap behind. */
-.wp-block-buttons:not(:has(.wp-block-button)) {
-	display: none;
+/* A destination David has not created yet keeps its button and loses its href
+   (DP\Theme\Chrome\Navigation, ADR-0008). Dimmed and unclickable, so it reads
+   as "not wired up" rather than as a link that does nothing — and so the front
+   end shows what the site editor shows instead of quietly showing less. */
+.dp-destination-unset {
+	cursor: default;
+
+	/* The design system's own disabled opacity — Button.jsx, `opacity: 0.45`. */
+	opacity: 0.45;
+	pointer-events: none;
 }
 
 /* -------------------------------------------------------------------------

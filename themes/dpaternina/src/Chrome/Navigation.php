@@ -31,10 +31,17 @@ use WP_Term;
  *
  * **The contact button has no href in the markup.** CLAUDE.md section 5.1 forbids
  * one, and the same section names the legal alternative: the page David assigned
- * the `dp-contact` template to. A button carrying `dp-cta-contact` gets that URL
- * at render time, and renders as nothing at all when no page claims the template
- * — which is the honest outcome, and the same treatment digest section 2.1 gives
- * Watch.
+ * the `dp-contact` template to. A button carrying `dp-to-contact` gets that URL
+ * at render time.
+ *
+ * **A destination that does not resolve leaves the button in place, inert.**
+ * ADR-0006 originally dropped the whole block, and ADR-0008 reverses that: a
+ * button that renders in the site editor and is absent from the front end is
+ * indistinguishable from a bug, and it hid one — a stale cache in
+ * `Destinations` silently removed four buttons from the home page for a day.
+ * The link now loses its `href`, gains `aria-disabled` and a class, and names
+ * the destination it wanted in `data-dp-destination`, so the editor and the
+ * front end show the same thing and the failure says what it is.
  */
 final class Navigation {
 
@@ -42,6 +49,15 @@ final class Navigation {
 	 * The prefix on a class that asks for a destination.
 	 */
 	public const DESTINATION_PREFIX = 'dp-to-';
+
+	/**
+	 * The class a link gets when the destination it asked for does not exist yet.
+	 *
+	 * The stylesheet dims it and takes the pointer away. It is also the hook
+	 * David has for finding every one of them at once, and the thing the
+	 * integration suite asserts on.
+	 */
+	public const UNRESOLVED_CLASS = 'dp-destination-unset';
 
 	/**
 	 * The destinations that resolve through an assigned custom template.
@@ -108,8 +124,8 @@ final class Navigation {
 	 * by name, the theme answers from the same Reading setting and the same
 	 * assigned templates the chrome uses, and neither side names a class in the
 	 * other. With the theme switched off nothing answers and the plugin renders
-	 * no link, which is the treatment an unresolved destination gets everywhere
-	 * else in this theme.
+	 * no link — which is the plugin's own decision about its own markup, and is
+	 * not the treatment this theme's buttons get (see `resolve_destination()`).
 	 *
 	 * @param mixed $url         Whatever an earlier filter decided.
 	 * @param mixed $destination The destination's name.
@@ -173,10 +189,15 @@ final class Navigation {
 	 *
 	 * The block markup carries no href at all, which is the point: CLAUDE.md
 	 * section 5.1 forbids one, so the template says *what* it is linking to and
-	 * this says where that is today. A destination that does not exist yet —
-	 * no contact page, because David has not made one — renders as nothing
-	 * rather than as a link to a 404, which is the treatment digest section 2.1
-	 * gives Watch for the same reason.
+	 * this says where that is today.
+	 *
+	 * A destination that does not exist yet — no contact page, because David
+	 * has not made one — leaves the button where it is and takes its `href`
+	 * away. It is still not a link to a 404, which was ADR-0006's whole point,
+	 * but it is also no longer invisible: the site editor draws this block from
+	 * the saved markup, which has no href either, so the two contexts now agree
+	 * exactly, and "the button is missing on the front end" stops being a thing
+	 * that can happen without anything saying so. ADR-0008 has the rest.
 	 *
 	 * @param string               $content The rendered button.
 	 * @param array<string, mixed> $block   The parsed block.
@@ -204,17 +225,31 @@ final class Navigation {
 			return $content;
 		}
 
-		$url = $this->url_for( $wanted );
-
-		if ( null === $url ) {
-			return '';
-		}
-
+		$url       = $this->url_for( $wanted );
 		$processor = new WP_HTML_Tag_Processor( $content );
 
-		if ( $processor->next_tag( array( 'tag_name' => 'A' ) ) ) {
-			$processor->set_attribute( 'href', $url );
+		if ( ! $processor->next_tag( array( 'tag_name' => 'A' ) ) ) {
+			return $content;
 		}
+
+		$processor->set_attribute( 'data-dp-destination', $wanted );
+
+		if ( null === $url ) {
+			/*
+			 * An <a> with no href has no implicit role and is not focusable, so
+			 * it is already inert to the keyboard. `role` and `aria-disabled`
+			 * are what make it announce as an unavailable link rather than as
+			 * a stray run of text.
+			 */
+			$processor->remove_attribute( 'href' );
+			$processor->set_attribute( 'role', 'link' );
+			$processor->set_attribute( 'aria-disabled', 'true' );
+			$processor->add_class( self::UNRESOLVED_CLASS );
+
+			return $processor->get_updated_html();
+		}
+
+		$processor->set_attribute( 'href', $url );
 
 		return $processor->get_updated_html();
 	}

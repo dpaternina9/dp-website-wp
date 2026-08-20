@@ -11,6 +11,7 @@ namespace DP\Tests\Integration\Templates;
 
 use DP\Core\Content\ContentModel;
 use DP\Core\Content\Taxonomies;
+use DP\Theme\Chrome\Destinations;
 use WP_Post;
 use WP_Term;
 use WP_UnitTestCase;
@@ -73,7 +74,7 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 
 		ContentModel::create()->register();
 
-		delete_transient( 'dpaternina_template_pages' );
+		delete_transient( Destinations::CACHE_KEY );
 	}
 
 	/**
@@ -229,7 +230,7 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 			update_post_meta( $page_id, '_wp_page_template', $template );
 		}
 
-		delete_transient( 'dpaternina_template_pages' );
+		delete_transient( Destinations::CACHE_KEY );
 
 		return $page_id;
 	}

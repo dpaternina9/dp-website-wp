@@ -52,3 +52,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0005](0005-house-style-blocks.md) | The house style: where a block's appearance is written down | Accepted — 2026-08-20 |
 | [0006](0006-chrome-and-derived-destinations.md) | The chrome: two lines of `theme.json`, and where a link's URL comes from | Accepted — 2026-08-20 |
 | [0007](0007-timeline-modes-and-url-state.md) | The timeline: three modes in one render, and its state in the URL | Accepted — 2026-08-20 |
+| [0008](0008-unresolved-destinations-degrade-visibly.md) | An unresolved destination degrades visibly, not silently | Accepted — 2026-08-20 |
