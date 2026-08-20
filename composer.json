@@ -28,7 +28,8 @@
   "autoload-dev": {
     "psr-4": {
       "DP\\Tests\\Unit\\": "tests/Unit/",
-      "DP\\Tests\\Integration\\": "tests/Integration/"
+      "DP\\Tests\\Integration\\": "tests/Integration/",
+      "DP\\Tests\\Support\\": "tests/Support/"
     }
   },
   "minimum-stability": "dev",
@@ -42,12 +43,17 @@
   },
   "scripts": {
     "post-install-cmd": [
-      "@dump-core-autoload"
+      "@dump-core-autoload",
+      "@dump-theme-autoload"
     ],
     "post-update-cmd": [
-      "@dump-core-autoload"
+      "@dump-core-autoload",
+      "@dump-theme-autoload"
     ],
     "dump-core-autoload": "@composer dump-autoload --working-dir=plugins/dp-core --optimize --no-interaction",
+    "dump-theme-autoload": "@composer dump-autoload --working-dir=themes/dpaternina --optimize --no-interaction",
+    "tokens:build": "php bin/dp-tokens.php",
+    "tokens:check": "php bin/dp-tokens.php --check",
     "lint": "phpcs",
     "lint:fix": "phpcbf",
     "analyse": "phpstan analyse --memory-limit=1G",
@@ -62,6 +68,9 @@
     "lint": "PHPCS: WordPress-Coding-Standards + PHPCompatibilityWP (PHP 8.4).",
     "analyse": "PHPStan level 9 with szepeviktor/phpstan-wordpress.",
     "test": "PHPUnit: Unit on the host, Integration inside the wp-env tests container.",
-    "dump-core-autoload": "Regenerate plugins/dp-core/vendor/autoload.php so the mounted plugin can boot."
+    "dump-core-autoload": "Regenerate plugins/dp-core/vendor/autoload.php so the mounted plugin can boot.",
+    "dump-theme-autoload": "Regenerate themes/dpaternina/vendor/autoload.php so the mounted theme can boot.",
+    "tokens:build": "Regenerate the theme's token bridge from design-source/.",
+    "tokens:check": "Fail if the committed token bridge is not what design-source/ implies."
   }
 }

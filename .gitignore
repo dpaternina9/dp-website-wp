@@ -63,6 +63,17 @@ desktop.ini
 # the point of Phase 0: CI, David's machine, and the release workflow must all
 # resolve byte-identical dependency trees.
 #
-# plugins/dp-core/vendor/ is NOT committed. It holds only a generated Composer
-# autoloader; `composer install` at the root regenerates it, and the release
-# workflow regenerates it again when it builds the zip. See docs/adr/0001.
+# plugins/dp-core/vendor/ and themes/dpaternina/vendor/ are NOT committed. Each
+# holds only a generated Composer autoloader; `composer install` at the root
+# regenerates both, and the release workflow regenerates them again when it
+# builds the zips. See docs/adr/0001 §1 and docs/adr/0002.
+#
+# themes/dpaternina/assets/css/tokens.css IS committed even though it is
+# generated. It is a build artefact the theme cannot boot without, and the
+# release zip must not need design-source/ to exist. `composer tokens:check`
+# and the token-parity test both fail if it is stale. See docs/adr/0002.
+#
+# themes/dpaternina/assets/fonts/*.woff2 ARE committed. They are the theme's
+# only binary dependency, they are OFL-licensed with the licence beside them,
+# and re-downloading them at build time would put a Google request back into
+# the pipeline we just took it out of.

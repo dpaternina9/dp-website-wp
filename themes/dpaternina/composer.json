@@ -1,0 +1,18 @@
+{
+  "name": "dpaternina/dpaternina-theme",
+  "description": "dPaternina — the hand-written block theme for dpaternina.com.",
+  "type": "wordpress-theme",
+  "version": "0.1.0",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "DP\\Theme\\": "src/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true
+  }
+}
