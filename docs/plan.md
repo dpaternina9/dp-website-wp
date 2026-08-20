@@ -103,7 +103,7 @@ declared custom templates with minimal files behind them; Phase 5 fills them in.
 
 ---
 
-## Phase 2 — Release automation, proven end to end
+## Phase 2 ✅ — Release automation, proven end to end
 
 Deliberately early. A pipeline built at the end is a pipeline nobody trusts.
 
@@ -143,7 +143,7 @@ offering, and taking, the update — observed, not assumed.
 
 ---
 
-## Phase 3 — `dp-core`: the content model
+## Phase 3 ✅ — `dp-core`: the content model
 
 - CPTs `dp_role`, `dp_ship`, `dp_video` — `public => false`,
   `publicly_queryable => false`, `rewrite => false`, `has_archive => false`,
@@ -211,7 +211,7 @@ reconciles stubs against published posts and warns on duplicates.
 
 ---
 
-## Phase 4 — The house style: blocks and editor constraints
+## Phase 4 ✅ — The house style: blocks and editor constraints
 
 - `theme.json` `styles.blocks` for every block in digest §5.1. Note the two traps:
   `h4` is mono caps in the accent colour, and list markers are rendered, not native.
@@ -231,7 +231,7 @@ fatal or blank any template.
 
 ---
 
-## Phase 5 — Chrome, homepage, blog, archives
+## Phase 5 ✅ — Chrome, homepage, blog, archives
 
 - Template parts `header` / `footer`, built as `SiteHeader` / `SiteFooter`.
   Mobile panel via `<dialog>`: Escape, focus trap, scroll lock, `HERE` marker.
@@ -265,7 +265,7 @@ are named in the same ADR and in the phase report.
 
 ---
 
-## Phase 6 — The timeline
+## Phase 6 ✅ — The timeline
 
 The hard one. Budget accordingly.
 

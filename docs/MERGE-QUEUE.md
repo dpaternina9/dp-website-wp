@@ -106,6 +106,56 @@ Facts later phases inherit:
 - [ ] **Curate the navigation menu.** The theme ships core's fallback, which
       lists every published page. The design's header is five items.
 
+## Phase 6 — the timeline (committed to `main`, `cccab06`..)
+
+Chores it could not do from its lane:
+- [ ] `docs/plan.md`: Phases 2, 3, 4 and 5 are ticked in the working tree but not committed.
+      Phase 6 ticked its own.
+- [x] `Plugin::register()` — Phase 6 added its one line
+      (`( new Blocks\Timeline( plugin_dir_path( $this->file ) ) )->register();`) without
+      restructuring the method. It remains the merge point Phase 2 still has to land in.
+- [x] `tests/e2e/global-setup.ts` now activates **dp-core** as well as the theme. This is
+      shared infrastructure Phase 5 owns; the change is one call with a comment. Without it
+      a fresh `composer test:integration` leaves the plugin deactivated on :8889 and every
+      dynamic block is simply missing from the page.
+
+Facts later phases inherit:
+- **The theme fatals if it names a `dp-core` class unguarded.** `DP\Theme\Blocks\Timeline`
+  reads `DP\Core\Blocks\Timeline::BLOCK_NAME` to build a hook name and needed a
+  `class_exists()` guard around it. `composer test:integration` deactivates every plugin,
+  so this is not hypothetical — it shows up as a 500 on the tests site and an
+  "Unexpected end of JSON input" from `requestUtils.rest`, which names neither cause.
+  Any phase adding a cross-package reference in the theme needs the same guard.
+- **`prefers-reduced-motion` did not reach the document through Playwright's
+  `test.use({ reducedMotion: 'reduce' })`** under this project's fixtures. `viewport`,
+  `storageState` and `javaScriptEnabled` all do. `page.emulateMedia()` in a `beforeEach`
+  works; every reduced-motion assertion in `timeline.spec.ts` now asserts the media query
+  matches first, so it cannot become a test of nothing.
+- **:8889 has plain permalinks.** A page's `link` already carries `?page_id=N`, so
+  `` `${link}?dp-open=x` `` produces a second `?` WordPress never parses. One test passed
+  anyway — through the fragment, which the front-end controller acts on. Build URLs with
+  `new URL()`; `timeline.spec.ts` has a `workUrl()` helper.
+- **`WP_UnitTestCase::go_to()` empties `$_GET`** and rebuilds it from the URL's query
+  string. A test that sets `$_GET` and then calls a helper that calls `go_to()` is
+  asserting against an empty request. Put the arg in the URL.
+- **`wp_scripts()` outlives a test.** An "is this enqueued yet" assertion has to null
+  `$GLOBALS['wp_scripts']` first or it depends on which test ran before it.
+- **The chart's element id is the constant `dp-timeline`** and `dp/timeline` is
+  `multiple: false`. Anything linking into an entry uses
+  `DP\Core\Content\Timeline\Chart::entry_key()` — never a format string of its own.
+- **`dp-filter` and `dp-open` are the two query args the timeline reads.** A caching layer
+  has to vary on them. Core's `rel_canonical` already handles the SEO side.
+
+### For David
+- [ ] **Assign the Work template.** The chart only appears on a page carrying the `dp-work`
+      custom template. `/work` on :8888 already has it; a fresh site will not.
+- [ ] **Featured work is a flag, not an order.** A shipped thing shows as a card when
+      `dp_featured` is on. The seed marks three of the four.
+- [ ] **`design-source/assets/dp-mark-gradient*.png` is still the broken export** Phase 5
+      reported. Phase 6 did not touch it and used nothing from it.
+
+---
+
 ## Operational finding — do not run two agents' test suites at once
 Both wp-env `tests` environments share one database. Phase 3 hit
 `Record has changed since last read in table 'wp_options'` and a spurious failure when its
