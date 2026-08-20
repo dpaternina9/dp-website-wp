@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use WP_Post;
+use WP_Query;
+
 /**
  * The blog, wherever David decided it lives.
  *
@@ -128,9 +131,15 @@ final class HomeTest extends TemplateTestCase {
 
 		$this->assertTrue( is_feed() );
 
+		$query = $GLOBALS['wp_query'];
+
+		$this->assertInstanceOf( WP_Query::class, $query );
+
 		$titles = array();
 
-		foreach ( $GLOBALS['wp_query']->posts as $post ) {
+		foreach ( $query->posts as $post ) {
+			$this->assertInstanceOf( WP_Post::class, $post );
+
 			$titles[] = $post->post_title;
 		}
 
