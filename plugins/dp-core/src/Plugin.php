@@ -77,6 +77,8 @@ final class Plugin {
 	public function register(): void {
 		$this->content->register();
 		$this->cli->register();
+		( new Blocks\Blocks( plugin_dir_path( $this->file ) ) )->register();
+		Update\UpdateClient::register();
 	}
 
 	/**

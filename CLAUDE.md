@@ -186,6 +186,11 @@ there is no manual deploy path — building it is a phase, not an afterthought.
 - Fonts (Bricolage Grotesque, Manrope, JetBrains Mono) are self-hosted and registered in
   `theme.json` via `fontFace`. No Google Fonts requests at runtime.
 - The editor must look like the front end. Every block style is loaded in both contexts.
+- `themes/dpaternina/assets/css/tokens.css` is **generated** from `design-source/` and is
+  never hand-edited — it looks like an ordinary stylesheet, which is exactly why this is
+  written down. Change the design, re-import, then run `composer tokens:build`.
+- Hand-written CSS is authored against the design's names (`--dp-teal`, `--space-5`,
+  `--radius-lg`). A `--wp--preset--*` name in a hand-written file is a smell.
 
 ### 5.1 Pages belong to David, not to the theme
 - **Register no routes for pages.** No `add_rewrite_rule`, no `page_on_front` assumption,

@@ -36,6 +36,13 @@
 		goes and nothing else does.
 		-->
 		<exclude name="WordPress.Files.FileName"/>
+
+		<!--
+		PHPCompatibility 9.x predates enums and reports every $this inside an enum
+		method as a fatal-error risk. Phases 2 and 3 both hit this independently and
+		each had to write a file-level suppression; excluding it once here removes them.
+		-->
+		<exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext"/>
 	</rule>
 
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
@@ -46,6 +53,9 @@
 				<element value="dp_core"/>
 				<element value="dp_site"/>
 				<element value="dp_theme"/>
+				<!-- dp_series is specified by CLAUDE.md §5.1 and docs/plan.md as the one
+				     filterable taxonomy slug; without it the hook name needs a line-level ignore. -->
+				<element value="dp_series"/>
 				<element value="DP\Core"/>
 				<element value="DP\Theme"/>
 				<element value="DP\Tests"/>

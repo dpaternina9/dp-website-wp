@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   pull_request:
   workflow_dispatch:
+  # release.yml calls this workflow so that "the gates" and "the gates a release
+  # runs" cannot drift apart. The `commits` job below is already scoped to
+  # pull_request and stays skipped when it is called.
+  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

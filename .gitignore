@@ -77,3 +77,6 @@ desktop.ini
 # only binary dependency, they are OFL-licensed with the licence beside them,
 # and re-downloading them at build time would put a Google request back into
 # the pipeline we just took it out of.
+
+# Agent worktrees created by the harness inside the repo.
+.claude/
