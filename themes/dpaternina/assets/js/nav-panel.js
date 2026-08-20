@@ -29,12 +29,15 @@
 		return;
 	}
 
-	const opener = document.querySelector( '.dp-menu-open a[href$="#' + PANEL_ID + '"]' );
-	const closer = panel.querySelector( '.dp-menu-close a' );
+	const opener = document.querySelector(
+		'.dp-menu-open a[href$="#' + PANEL_ID + '"]'
+	);
 
 	if ( ! opener ) {
 		return;
 	}
+
+	const closer = panel.querySelector( '.dp-menu-close a' );
 
 	/*
 	 * The dialog has no heading of its own — the design's panel opens straight
@@ -94,7 +97,11 @@
 	panel.addEventListener( 'click', function ( event ) {
 		const link = event.target.closest( 'a' );
 
-		if ( link && link !== closer && ! link.hasAttribute( 'aria-disabled' ) ) {
+		if (
+			link &&
+			link !== closer &&
+			! link.hasAttribute( 'aria-disabled' )
+		) {
 			panel.close();
 		}
 	} );
@@ -111,4 +118,4 @@
 			panel.close();
 		}
 	} );
-}() );
+} )();

@@ -12,18 +12,18 @@
 <!-- wp:query {"queryId":0,"query":{"perPage":10,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","inherit":true},"className":"dp-query"} -->
 <div class="wp-block-query dp-query"><!-- wp:post-template {"className":"dp-rows"} -->
 <!-- wp:group {"className":"dp-row","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row"><!-- wp:post-date {"format":"M j, Y","className":"dp-row__date"} /-->
+<div class="wp-block-group dp-row"><!-- wp:post-date {"format":"M j, Y","className":"dp-row-date"} /-->
 
-<!-- wp:group {"className":"dp-row__body","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row__body"><!-- wp:post-title {"level":3,"isLink":true,"className":"dp-row__title"} /-->
+<!-- wp:group {"className":"dp-row-body","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-row-body"><!-- wp:post-title {"level":3,"isLink":true,"className":"dp-row-title"} /-->
 
-<!-- wp:post-excerpt {"moreText":"","showMoreOnNewLine":false,"excerptLength":24,"className":"dp-row__excerpt"} /--></div>
+<!-- wp:post-excerpt {"moreText":"","showMoreOnNewLine":false,"excerptLength":24,"className":"dp-row-excerpt"} /--></div>
 <!-- /wp:group -->
 
-<!-- wp:group {"className":"dp-row__aside","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row__aside"><!-- wp:post-terms {"term":"category","className":"dp-row__cat"} /-->
+<!-- wp:group {"className":"dp-row-aside","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-row-aside"><!-- wp:post-terms {"term":"category","className":"dp-row-cat"} /-->
 
-<!-- wp:post-date {"format":"M j, Y","className":"dp-row__date"} /--></div>
+<!-- wp:post-date {"format":"M j, Y","className":"dp-row-date"} /--></div>
 <!-- /wp:group --></div>
 <!-- /wp:group -->
 <!-- /wp:post-template -->
@@ -39,8 +39,8 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:buttons -->
-<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-posts dp-button--secondary"} -->
-<div class="wp-block-button dp-to-posts dp-button--secondary"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Show everything', 'dpaternina' ); ?></a></div>
+<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-posts dp-button-secondary"} -->
+<div class="wp-block-button dp-to-posts dp-button-secondary"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Show everything', 'dpaternina' ); ?></a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons --></div>
 <!-- /wp:group -->

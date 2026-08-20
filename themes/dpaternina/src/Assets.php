@@ -135,6 +135,7 @@ final class Assets {
 				array(),
 				$this->theme->asset_version( $relative ),
 				array(
+
 					/*
 					 * Deferred, not async: the panel controller has to find the
 					 * markup it upgrades, and `in_footer` alone would still put

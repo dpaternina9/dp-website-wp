@@ -25,6 +25,14 @@
  * focus trap for nothing. Both states are styled here; neither is the fallback
  * for the other's failure.
  */
+/* stylelint-disable no-descending-specificity -- the rule compares only the last
+   compound selector of a pair, so it reports every two unrelated components that
+   happen to end in `a`, `p`, `li` or one of core's class names. Every finding in
+   this file is a pair of that kind — a pagination link against a section head's
+   action, a post row's `li` against a filter pill's — and no two of them can
+   select the same element, so there is no cascade between them to get wrong.
+   The rule stays on in blocks.css, where a post's blocks really do nest. */
+
 
 /* -------------------------------------------------------------------------
  * Full-bleed chrome
@@ -62,14 +70,14 @@
 	overflow: hidden;
 	width: 34px;
 	height: 34px;
-	background: url("../img/dp-mark-gradient-128.png") no-repeat center / contain;
+	background: url(../img/dp-mark-gradient-128.png) no-repeat center / contain;
 	color: transparent;
 	text-decoration: none;
 	text-indent: -100vw;
 	white-space: nowrap;
 }
 
-.dp-brand--sm a {
+.dp-brand-sm a {
 	width: 30px;
 	height: 30px;
 	opacity: 0.85;
@@ -123,27 +131,27 @@
 	transform: scale(0.97);
 }
 
-.dp-button--secondary .wp-block-button__link {
+.dp-button-secondary .wp-block-button__link {
 	border-color: var(--border-strong);
 	background: transparent;
 	box-shadow: none;
 	color: var(--text-primary);
 }
 
-.dp-button--secondary .wp-block-button__link:hover {
+.dp-button-secondary .wp-block-button__link:hover {
 	border-color: var(--accent);
 	background: color-mix(in srgb, var(--accent) 12%, transparent);
 	box-shadow: none;
 	color: var(--text-primary);
 }
 
-.dp-button--lg .wp-block-button__link {
+.dp-button-lg .wp-block-button__link {
 	height: var(--control-h-lg);
 	padding: 0 28px;
 	font-size: var(--fs-md);
 }
 
-.dp-button--sm .wp-block-button__link {
+.dp-button-sm .wp-block-button__link {
 	height: var(--target-min);
 	padding: 0 14px;
 	font-size: var(--fs-sm);
@@ -151,7 +159,7 @@
 
 /* A link that is a link, not a button: the footer's columns and the design's
    mono caps "→" affordances. Same block, no chrome. */
-.dp-button--quiet .wp-block-button__link {
+.dp-button-quiet .wp-block-button__link {
 	height: auto;
 	padding: 0;
 	border: 0;
@@ -166,7 +174,7 @@
 	white-space: normal;
 }
 
-.dp-button--quiet .wp-block-button__link:hover {
+.dp-button-quiet .wp-block-button__link:hover {
 	background: none;
 	box-shadow: none;
 	color: var(--text-primary);
@@ -205,7 +213,7 @@
 	background: var(--bg-page);
 }
 
-.dp-header__bar {
+.dp-header-bar {
 	gap: var(--space-6);
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -213,13 +221,13 @@
 	padding-inline: var(--gutter);
 }
 
-.dp-header__wide {
+.dp-header-wide {
 	gap: 12px;
 	flex: 1 1 auto;
 	justify-content: flex-end;
 }
 
-.dp-header__toggle {
+.dp-header-toggle {
 	display: none;
 }
 
@@ -315,11 +323,11 @@
 
 @container dp-header (width < 720px) {
 
-	.dp-header__wide {
+	.dp-header-wide {
 		display: none;
 	}
 
-	.dp-header__toggle {
+	.dp-header-toggle {
 		display: flex;
 	}
 
@@ -376,14 +384,14 @@
 	}
 }
 
-.dp-panel__head {
+.dp-panel-head {
 	flex: none;
 	padding-block: 12px;
 	padding-inline: var(--gutter);
 	border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-panel__nav {
+.dp-panel-nav {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow-y: auto;
@@ -392,16 +400,16 @@
 	gap: 0;
 }
 
-.dp-panel__nav .wp-block-navigation__container {
+.dp-panel-nav .wp-block-navigation__container {
 	width: 100%;
 	gap: 0;
 }
 
-.dp-panel__nav .wp-block-navigation-item {
+.dp-panel-nav .wp-block-navigation-item {
 	width: 100%;
 }
 
-.dp-panel__nav .wp-block-navigation-item__content {
+.dp-panel-nav .wp-block-navigation-item__content {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -417,7 +425,7 @@
 	text-decoration: none;
 }
 
-.dp-panel__nav .wp-block-navigation-item__content[aria-current] {
+.dp-panel-nav .wp-block-navigation-item__content[aria-current] {
 	color: var(--accent);
 }
 
@@ -425,7 +433,7 @@
    already tells assistive technology which item this is, so drawing the word
    from CSS says the same thing to the eye without saying it twice to a screen
    reader. */
-.dp-panel__nav .wp-block-navigation-item__content[aria-current]::after {
+.dp-panel-nav .wp-block-navigation-item__content[aria-current]::after {
 	color: var(--accent-text);
 	content: "HERE";
 	font-family: var(--font-mono);
@@ -434,7 +442,7 @@
 	letter-spacing: var(--ls-caps);
 }
 
-.dp-panel__foot {
+.dp-panel-foot {
 	display: flex;
 	flex: none;
 	flex-direction: column;
@@ -444,12 +452,12 @@
 	border-top: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-panel__foot .wp-block-button__link {
+.dp-panel-foot .wp-block-button__link {
 	height: var(--control-h-lg);
 	font-size: var(--fs-md);
 }
 
-.dp-panel__wordmark {
+.dp-panel-wordmark {
 	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
@@ -474,7 +482,7 @@
 	background: var(--band);
 }
 
-.dp-footer__grid {
+.dp-footer-grid {
 	display: grid;
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -484,18 +492,18 @@
 	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
-.dp-footer__brand,
-.dp-footer__group {
+.dp-footer-brand,
+.dp-footer-group {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
 }
 
-.dp-footer__brand {
+.dp-footer-brand {
 	gap: 16px;
 }
 
-.dp-footer__line {
+.dp-footer-line {
 	max-width: 26ch;
 	margin: 0;
 	color: var(--text-secondary);
@@ -503,24 +511,24 @@
 	line-height: var(--lh-relaxed);
 }
 
-.dp-footer__nav .wp-block-navigation__container {
+.dp-footer-nav .wp-block-navigation__container {
 	gap: 12px;
 }
 
-.dp-footer__nav .wp-block-navigation-item__content,
-.dp-footer__cats a {
+.dp-footer-nav .wp-block-navigation-item__content,
+.dp-footer-cats a {
 	color: var(--text-secondary);
 	font-size: var(--fs-sm);
 	text-decoration: none;
 	transition: color var(--dur-base) var(--ease-standard);
 }
 
-.dp-footer__nav .wp-block-navigation-item__content:hover,
-.dp-footer__cats a:hover {
+.dp-footer-nav .wp-block-navigation-item__content:hover,
+.dp-footer-cats a:hover {
 	color: var(--text-primary);
 }
 
-.dp-footer__cats {
+.dp-footer-cats {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -529,11 +537,11 @@
 	list-style: none;
 }
 
-.dp-footer__links {
+.dp-footer-links {
 	gap: 12px;
 }
 
-.dp-footer__bar {
+.dp-footer-bar {
 	gap: 12px 24px;
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -543,7 +551,7 @@
 	align-items: center;
 }
 
-.dp-footer__meta .wp-block-button__link {
+.dp-footer-meta .wp-block-button__link {
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
@@ -551,6 +559,6 @@
 	text-transform: uppercase;
 }
 
-.dp-footer__meta .wp-block-button__link:hover {
+.dp-footer-meta .wp-block-button__link:hover {
 	color: var(--text-secondary);
 }

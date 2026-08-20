@@ -1,0 +1,17 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/series-planned",
+	"title": "Series — still to come",
+	"category": "theme",
+	"description": "The parts of the series being viewed that have not been published yet. Titles, years and notes only — never a draft's body or its link.",
+	"textdomain": "dpaternina",
+	"supports": {
+		"inserter": false,
+		"html": false,
+		"reusable": false,
+		"multiple": false,
+		"className": false,
+		"lock": false
+	}
+}

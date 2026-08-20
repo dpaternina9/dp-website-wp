@@ -1,3 +1,13 @@
 {
-	"extends": [ "@wordpress/stylelint-config/scss" ]
+	"extends": [
+		"@wordpress/stylelint-config/scss"
+	],
+	"rules": {
+		"selector-class-pattern": [
+			"^(?:wp-[a-z0-9-]+(?:__[a-z0-9-]+)?|[a-z][a-z0-9]*(?:-[a-z0-9]+)*)$",
+			{
+				"message": "Class names are kebab-case. The one exception is WordPress core's own BEM classes (wp-block-button__link), which we do not get to rename."
+			}
+		]
+	}
 }

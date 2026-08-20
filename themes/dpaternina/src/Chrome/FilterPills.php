@@ -49,7 +49,7 @@ final class FilterPills {
 	 * @return void
 	 */
 	public function register(): void {
-		add_filter( 'render_block_core_categories', $this->add_all_pill( ... ), 10, 2 );
+		add_filter( 'render_block_core/categories', $this->add_all_pill( ... ), 10, 2 );
 	}
 
 	/**

@@ -86,8 +86,8 @@ final class Navigation {
 	 * @return void
 	 */
 	public function register(): void {
-		add_filter( 'render_block_core_navigation', $this->mark_writing_active( ... ), 10, 2 );
-		add_filter( 'render_block_core_button', $this->resolve_destination( ... ), 10, 2 );
+		add_filter( 'render_block_core/navigation', $this->mark_writing_active( ... ), 10, 2 );
+		add_filter( 'render_block_core/button', $this->resolve_destination( ... ), 10, 2 );
 	}
 
 	/**

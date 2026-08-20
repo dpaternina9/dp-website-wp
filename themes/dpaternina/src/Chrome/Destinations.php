@@ -88,7 +88,8 @@ final class Destinations {
 	 * @return WP_Post|null
 	 */
 	public function posts_page(): ?WP_Post {
-		$id = (int) get_option( 'page_for_posts' );
+		$stored = get_option( 'page_for_posts' );
+		$id     = is_numeric( $stored ) ? (int) $stored : 0;
 
 		if ( $id <= 0 ) {
 			return null;
@@ -164,6 +165,7 @@ final class Destinations {
 				'order'                  => 'ASC',
 				'no_found_rows'          => true,
 				'update_post_term_cache' => false,
+
 				/*
 				 * The meta key alone is an EXISTS test, which is the whole
 				 * filter: a page with no template assigned is not interesting.

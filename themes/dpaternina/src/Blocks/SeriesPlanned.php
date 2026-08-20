@@ -58,25 +58,17 @@ final class SeriesPlanned {
 	/**
 	 * Register the block type.
 	 *
+	 * The definition is a `block.json` rather than an array, which is what makes
+	 * the site editor show a named block in the template instead of an
+	 * unrecognised one. `get_theme_file_path()` resolves through a child theme
+	 * first, at no cost, for the same reason `Theme::url()` does.
+	 *
 	 * @return void
 	 */
 	public function register_block(): void {
 		register_block_type(
-			self::NAME,
-			array(
-				'api_version'     => 3,
-				'title'           => __( 'Series — still to come', 'dpaternina' ),
-				'category'        => 'theme',
-				'description'     => __( "The parts of the series being viewed that have not been published yet. Titles, years and notes only — never a draft's body or its link.", 'dpaternina' ),
-				'supports'        => array(
-					'inserter'  => false,
-					'html'      => false,
-					'reusable'  => false,
-					'multiple'  => false,
-					'className' => false,
-				),
-				'render_callback' => $this->render( ... ),
-			)
+			get_theme_file_path( 'blocks/series-planned' ),
+			array( 'render_callback' => $this->render( ... ) )
 		);
 	}
 
@@ -115,15 +107,15 @@ final class SeriesPlanned {
 			: sprintf( __( 'Part %d', 'dpaternina' ), $part->part );
 
 		return sprintf(
-			'<div class="dp-planned__row">'
-				. '<p class="dp-planned__part">%1$s</p>'
-				. '<div class="dp-planned__body"><h3 class="dp-planned__title">%2$s</h3>%3$s</div>'
+			'<div class="dp-planned-row">'
+				. '<p class="dp-planned-part">%1$s</p>'
+				. '<div class="dp-planned-body"><h3 class="dp-planned-title">%2$s</h3>%3$s</div>'
 				. '%4$s'
 			. '</div>',
 			esc_html( $number ),
 			esc_html( $part->title ),
-			'' === trim( $part->note ) ? '' : '<p class="dp-planned__note">' . esc_html( $part->note ) . '</p>',
-			'' === trim( $part->years ) ? '' : '<p class="dp-planned__years">' . esc_html( $part->years ) . '</p>'
+			'' === trim( $part->note ) ? '' : '<p class="dp-planned-note">' . esc_html( $part->note ) . '</p>',
+			'' === trim( $part->years ) ? '' : '<p class="dp-planned-years">' . esc_html( $part->years ) . '</p>'
 		);
 	}
 
