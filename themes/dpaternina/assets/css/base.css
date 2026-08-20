@@ -1,0 +1,57 @@
+/*
+ * dP base layer.
+ *
+ * A verbatim copy of design-source/_ds/tokens/base.css. It was written to be a
+ * base layer, so it is transcribed rather than reinterpreted; the only thing
+ * this file adds is the comment you are reading.
+ *
+ * Enforced by DP\Tests\Integration\TokenParityTest::test_the_base_layer_is_carried_over_verbatim.
+ * Do not edit here — change the design, re-import design-source/, and copy again.
+ */
+
+/* stylelint-disable rule-empty-line-before -- reformatting would break the verbatim copy. */
+
+/* dP base layer — accessibility defaults.
+   Imported last so every token it references is already defined.
+
+   This file exists because inline-styled components cannot express :focus-visible,
+   ::placeholder, or prefers-reduced-motion. Those belong to the system, not to each
+   component, so they live here and apply everywhere by default. */
+
+/* Focus.
+   --focus-ring was defined from the very first version of this system and never
+   used anywhere. This is where it earns its place.
+   :where() holds specificity at 0, so any component can still override. */
+:where(a, button, input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: var(--border-width-strong) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Mouse clicks should not paint a ring, but keyboard focus always must.
+   Never remove a focus style without replacing it. */
+:where(a, button, input, textarea, select):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Placeholder text is body text and owes the same 4.5:1 as body text.
+   Browser defaults are far too light on dark surfaces. */
+:where(input, textarea)::placeholder {
+  color: var(--text-muted);
+  opacity: 1; /* Firefox dims placeholders on top of the color */
+}
+
+/* Media never overflows its column */
+:where(img, video) { max-width: 100%; height: auto; }
+:where(svg) { max-width: 100%; }
+
+/* Motion.
+   Every animation in this system is required to have a reduced alternative.
+   This is the backstop for anything that forgets one. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,240 @@
+/*
+ * dP token bridge — GENERATED FILE, DO NOT EDIT.
+ *
+ * Regenerate with:  composer tokens:build
+ * Verify with:      composer tokens:check
+ *
+ * theme.json holds every token's literal value under WordPress's generated
+ * names. This file gives each of them back the name the design uses, so a
+ * stylesheet in this theme is written against --dp-teal, --space-5 and
+ * --radius-lg exactly as design-source/_ds/tokens/*.css declares them.
+ *
+ * Below the aliases, the .dp-light and .dp-dark scopes are copied across
+ * from the design source unchanged. WordPress has no scoped presets, so
+ * these have no theme.json equivalent and never will. Light mode is ruled
+ * out (CLAUDE.md §5) — .dp-light is carried, not wired to anything.
+ *
+ * Source of truth: design-source/_ds/tokens/*.css and design-source/theme.css.
+ * Decision record:  docs/adr/0002-design-token-naming.md.
+ */
+
+:root {
+	--dp-teal: var(--wp--preset--color--dp-teal);
+	--dp-pink: var(--wp--preset--color--dp-pink);
+	--dp-gold: var(--wp--preset--color--dp-gold);
+	--dp-coral: var(--wp--preset--color--dp-coral);
+	--dp-purple: var(--wp--preset--color--dp-purple);
+	--dp-teal-600: var(--wp--preset--color--dp-teal-600);
+	--dp-teal-100: var(--wp--preset--color--dp-teal-100);
+	--dp-pink-600: var(--wp--preset--color--dp-pink-600);
+	--dp-pink-100: var(--wp--preset--color--dp-pink-100);
+	--dp-gold-600: var(--wp--preset--color--dp-gold-600);
+	--dp-gold-100: var(--wp--preset--color--dp-gold-100);
+	--dp-coral-600: var(--wp--preset--color--dp-coral-600);
+	--dp-coral-100: var(--wp--preset--color--dp-coral-100);
+	--dp-purple-600: var(--wp--preset--color--dp-purple-600);
+	--dp-purple-100: var(--wp--preset--color--dp-purple-100);
+	--dp-black: var(--wp--preset--color--dp-black);
+	--dp-ink: var(--wp--preset--color--dp-ink);
+	--dp-graphite: var(--wp--preset--color--dp-graphite);
+	--dp-slate: var(--wp--preset--color--dp-slate);
+	--dp-gray: var(--wp--preset--color--dp-gray);
+	--dp-mist: var(--wp--preset--color--dp-mist);
+	--dp-cloud: var(--wp--preset--color--dp-cloud);
+	--dp-white: var(--wp--preset--color--dp-white);
+	--dp-gradient-warm: var(--wp--preset--gradient--dp-gradient-warm);
+	--dp-gradient-spectrum: var(--wp--preset--gradient--dp-gradient-spectrum);
+	--dp-gradient-cool: var(--wp--preset--gradient--dp-gradient-cool);
+	--bg-page: var(--wp--preset--color--bg-page);
+	--bg-surface: var(--wp--preset--color--bg-surface);
+	--bg-raised: var(--wp--preset--color--bg-raised);
+	--border-subtle: var(--wp--preset--color--border-subtle);
+	--border-strong: var(--wp--preset--color--border-strong);
+	--text-primary: var(--wp--preset--color--text-primary);
+	--text-secondary: var(--wp--preset--color--text-secondary);
+	--text-muted: var(--wp--preset--color--text-muted);
+	--text-inverse: var(--wp--preset--color--text-inverse);
+	--accent: var(--wp--preset--color--accent);
+	--accent-hover: var(--wp--preset--color--accent-hover);
+	--accent-contrast: var(--wp--preset--color--accent-contrast);
+	--focus-ring: var(--wp--preset--color--focus-ring);
+	--state-danger: var(--wp--preset--color--state-danger);
+	--state-warning: var(--wp--preset--color--state-warning);
+	--state-success: var(--wp--preset--color--state-success);
+	--tone-mix: var(--wp--custom--tone-mix);
+	--tone-toward: var(--wp--custom--tone-toward);
+	--font-display: var(--wp--preset--font-family--font-display);
+	--font-body: var(--wp--preset--font-family--font-body);
+	--font-mono: var(--wp--preset--font-family--font-mono);
+	--fw-regular: var(--wp--custom--fw-regular);
+	--fw-medium: var(--wp--custom--fw-medium);
+	--fw-semibold: var(--wp--custom--fw-semibold);
+	--fw-bold: var(--wp--custom--fw-bold);
+	--fw-extrabold: var(--wp--custom--fw-extrabold);
+	--fs-xs: var(--wp--preset--font-size--fs-xs);
+	--fs-sm: var(--wp--preset--font-size--fs-sm);
+	--fs-base: var(--wp--preset--font-size--fs-base);
+	--fs-md: var(--wp--preset--font-size--fs-md);
+	--fs-lg: var(--wp--preset--font-size--fs-lg);
+	--fs-xl: var(--wp--preset--font-size--fs-xl);
+	--fs-2xl: var(--wp--preset--font-size--fs-2-xl);
+	--fs-3xl: var(--wp--preset--font-size--fs-3-xl);
+	--fs-4xl: var(--wp--preset--font-size--fs-4-xl);
+	--fs-5xl: var(--wp--preset--font-size--fs-5-xl);
+	--fs-display: var(--wp--preset--font-size--fs-display);
+	--fs-section: var(--wp--preset--font-size--fs-section);
+	--lh-tight: var(--wp--custom--lh-tight);
+	--lh-snug: var(--wp--custom--lh-snug);
+	--lh-normal: var(--wp--custom--lh-normal);
+	--lh-relaxed: var(--wp--custom--lh-relaxed);
+	--ls-tight: var(--wp--custom--ls-tight);
+	--ls-display: var(--wp--custom--ls-display);
+	--ls-normal: var(--wp--custom--ls-normal);
+	--ls-wide: var(--wp--custom--ls-wide);
+	--ls-caps: var(--wp--custom--ls-caps);
+	--measure: var(--wp--custom--measure);
+	--space-0: var(--wp--preset--spacing--space-0);
+	--space-1: var(--wp--preset--spacing--space-1);
+	--space-2: var(--wp--preset--spacing--space-2);
+	--space-3: var(--wp--preset--spacing--space-3);
+	--space-4: var(--wp--preset--spacing--space-4);
+	--space-5: var(--wp--preset--spacing--space-5);
+	--space-6: var(--wp--preset--spacing--space-6);
+	--space-7: var(--wp--preset--spacing--space-7);
+	--space-8: var(--wp--preset--spacing--space-8);
+	--space-9: var(--wp--preset--spacing--space-9);
+	--space-10: var(--wp--preset--spacing--space-10);
+	--control-h-sm: var(--wp--custom--control-h-sm);
+	--control-h-md: var(--wp--custom--control-h-md);
+	--control-h-lg: var(--wp--custom--control-h-lg);
+	--control-px-sm: var(--wp--custom--control-px-sm);
+	--control-px-md: var(--wp--custom--control-px-md);
+	--control-px-lg: var(--wp--custom--control-px-lg);
+	--control-gap-sm: var(--wp--custom--control-gap-sm);
+	--control-gap-md: var(--wp--custom--control-gap-md);
+	--control-gap-lg: var(--wp--custom--control-gap-lg);
+	--gutter: var(--wp--custom--gutter);
+	--section-y: var(--wp--custom--section-y);
+	--section-y-sm: var(--wp--custom--section-y-sm);
+	--container-sm: var(--wp--custom--container-sm);
+	--container-md: var(--wp--custom--container-md);
+	--container-lg: var(--wp--custom--container-lg);
+	--container-xl: var(--wp--custom--container-xl);
+	--target-min: var(--wp--custom--target-min);
+	--target-comfortable: var(--wp--custom--target-comfortable);
+	--radius-xs: var(--wp--custom--radius-xs);
+	--radius-sm: var(--wp--custom--radius-sm);
+	--radius-md: var(--wp--custom--radius-md);
+	--radius-lg: var(--wp--custom--radius-lg);
+	--radius-xl: var(--wp--custom--radius-xl);
+	--radius-pill: var(--wp--custom--radius-pill);
+	--radius-circle: var(--wp--custom--radius-circle);
+	--border-width: var(--wp--custom--border-width);
+	--border-width-strong: var(--wp--custom--border-width-strong);
+	--shadow-sm: var(--wp--custom--shadow-sm);
+	--shadow-md: var(--wp--custom--shadow-md);
+	--shadow-lg: var(--wp--custom--shadow-lg);
+	--shadow-glow-teal: var(--wp--custom--shadow-glow-teal);
+	--shadow-glow-pink: var(--wp--custom--shadow-glow-pink);
+	--ease-standard: var(--wp--custom--ease-standard);
+	--ease-out: var(--wp--custom--ease-out);
+	--ease-emphasis: var(--wp--custom--ease-emphasis);
+	--dur-fast: var(--wp--custom--dur-fast);
+	--dur-base: var(--wp--custom--dur-base);
+	--dur-slow: var(--wp--custom--dur-slow);
+	--band: var(--wp--custom--band);
+	--glow-soft: var(--wp--custom--glow-soft);
+	--glow-core: var(--wp--custom--glow-core);
+	--glow-mid: var(--wp--custom--glow-mid);
+	--glow-ring: var(--wp--custom--glow-ring);
+	--accent-text: var(--wp--custom--accent-text);
+	--hue-teal: var(--wp--custom--hue-teal);
+	--hue-gold: var(--wp--custom--hue-gold);
+	--hue-pink: var(--wp--custom--hue-pink);
+	--hue-purple: var(--wp--custom--hue-purple);
+}
+
+/* stylelint-disable comment-empty-line-before, no-duplicate-selectors, rule-empty-line-before -- verbatim from design-source/; see the header. */
+/* Light scope — apply .dp-light to any container for light surfaces */
+.dp-light {
+  --bg-page: var(--dp-white);
+  --bg-surface: var(--dp-white);
+  --bg-raised: var(--dp-cloud);
+  --border-subtle: var(--dp-mist);
+  --border-strong: #d4d4d8;
+
+  --text-primary: var(--dp-ink);
+  --text-secondary: #46464e;
+  /* --dp-gray is tuned for dark surfaces and is too light on white (2.83:1).
+     Light mode needs its own muted value: 6.31 on white, 5.74 on cloud. */
+  --text-muted: #5f5f69;
+  --text-inverse: var(--dp-white);
+
+  --accent: var(--dp-teal-600);
+  --accent-hover: var(--dp-teal);
+  /* White on teal-600 measures 2.60:1 and fails at every size. Ink clears AA at 7.52. */
+  --accent-contrast: var(--dp-ink);
+
+  --tone-mix: 50%; /* @kind other */
+  --tone-toward: var(--dp-ink);
+}
+
+/* Shadows above are tuned for dark surfaces, where a 35% black scrim reads as depth.
+   On white the same values read as dirt. Light mode gets its own, much lighter set,
+   tinted with ink rather than pure black so it stays in the palette. */
+.dp-light {
+  --shadow-sm: 0 1px 2px rgba(12,12,14,0.08);
+  --shadow-md: 0 6px 20px rgba(12,12,14,0.10);
+  --shadow-lg: 0 20px 48px rgba(12,12,14,0.14);
+  --shadow-glow-teal: 0 0 0 1px rgba(6,179,176,0.35), 0 6px 22px rgba(6,179,176,0.18);
+  --shadow-glow-pink: 0 0 0 1px rgba(224,20,80,0.35), 0 6px 22px rgba(224,20,80,0.18);
+}
+
+.dp-light {
+  --band: var(--dp-cloud);
+  --glow-soft: 5%;
+  --glow-core: 14%;
+  --glow-mid: 4%;
+  --glow-ring: 22%;
+  --accent-text: color-mix(in srgb, var(--dp-teal) 50%, var(--dp-ink));
+  --hue-teal: color-mix(in srgb, var(--dp-teal) 50%, var(--dp-ink));
+  --hue-gold: color-mix(in srgb, var(--dp-gold) 50%, var(--dp-ink));
+  --hue-pink: color-mix(in srgb, var(--dp-pink) 50%, var(--dp-ink));
+  --hue-purple: color-mix(in srgb, var(--dp-purple) 50%, var(--dp-ink));
+}
+
+/* Forced-dark island — the footer and code blocks stay dark in light mode.
+   Restates the dark scope so it works nested inside .dp-light. */
+.dp-dark {
+  --bg-page: var(--dp-ink);
+  --glow-soft: 12%;
+  --glow-core: 34%;
+  --glow-mid: 8%;
+  --glow-ring: 30%;
+  --bg-surface: var(--dp-graphite);
+  --bg-raised: #1f1f25;
+  --border-subtle: var(--dp-slate);
+  --border-strong: #3a3a44;
+  --text-primary: var(--dp-white);
+  --text-secondary: #b4b4bd;
+  --text-muted: var(--dp-gray);
+  --text-inverse: var(--dp-ink);
+  --accent: var(--dp-teal);
+  --accent-hover: var(--dp-teal-600);
+  --accent-contrast: var(--dp-ink);
+  --tone-mix: 75%;
+  --tone-toward: var(--dp-white);
+  --band: var(--dp-black);
+  --accent-text: var(--dp-teal);
+  --hue-teal: var(--dp-teal);
+  --hue-gold: var(--dp-gold);
+  --hue-pink: var(--dp-pink);
+  --hue-purple: var(--dp-purple);
+  color: var(--text-primary);
+}
+
+html, body { background: var(--bg-page); }
+
+html { transition: background-color var(--dur-slow) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) { html { transition: none; } }

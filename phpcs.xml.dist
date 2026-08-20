@@ -66,13 +66,32 @@
 	<rule ref="PHPCompatibilityWP"/>
 
 	<!--
-	Tests are not shipped code: they may use PHPUnit's naming and do not carry
-	the same global-prefix or i18n obligations.
+	Tests and build tools are not shipped code: they may use PHPUnit's naming and
+	do not carry the same global-prefix or i18n obligations.
 	-->
 	<rule ref="WordPress.NamingConventions.ValidVariableName">
 		<exclude-pattern>tests/*</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.PHP.DevelopmentFunctions">
 		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+
+	<!--
+	A test fires core's own hooks to exercise what the theme attached to them,
+	and the WordPress test suite's bootstrap reads $wp_tests_options by that
+	name. Neither is a global this project is introducing.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>tests/*</exclude-pattern>
+	</rule>
+
+	<!--
+	Exception messages in tests and in bin/ are read in a terminal, never in a
+	browser. Escaping them would make a failure harder to read and protect
+	nothing. Output escaping itself stays on everywhere.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput.ExceptionNotEscaped">
+		<exclude-pattern>tests/*</exclude-pattern>
+		<exclude-pattern>bin/*</exclude-pattern>
 	</rule>
 </ruleset>
