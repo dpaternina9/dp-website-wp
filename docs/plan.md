@@ -94,6 +94,13 @@ on anything not on a short allowlist. Cheap, and it holds the line in §5.1 perm
 **Done when:** the parity test passes, and a bare page renders on the right ground with
 the right type at every viewport.
 
+**Done — 2026-08-20.** All six gates green. 129 tokens carried, verified against the CSS
+WordPress actually emits rather than against `theme.json` read as a file; the naming
+decision and the generated token bridge are in `docs/adr/0002-design-token-naming.md`.
+Fonts are self-hosted variable woff2, `latin` + `latin-ext`, zero external requests
+confirmed in the browser. `dp-work`, `dp-about`, `dp-resume`, `dp-contact` ship as
+declared custom templates with minimal files behind them; Phase 5 fills them in.
+
 ---
 
 ## Phase 2 — Release automation, proven end to end

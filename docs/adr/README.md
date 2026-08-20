@@ -46,3 +46,4 @@ reasoning intact — the record of why we believed something is the point.
 | ADR | Title | Status |
 |---|---|---|
 | [0001](0001-phase-0-toolchain.md) | Phase 0 toolchain | Accepted — 2026-08-20 |
+| [0002](0002-design-token-naming.md) | One source of truth for design tokens, and the bridge that keeps their names | Accepted — 2026-08-20 |
