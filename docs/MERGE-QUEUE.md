@@ -95,11 +95,12 @@ Facts later phases inherit:
   the fixture out from under whichever other spec is mid-run.
 
 ### For David
-- [ ] **The gradient monogram is a broken export.** `design-source/assets/dp-mark-gradient.png`
-      and `dp-mark-gradient-128.png` both carry only the top arc of the mark and
-      part of one letter, at 2000px as well as at 128px. The chrome ships the
-      white mark instead. Re-export from Claude Design and re-import; the swap is
-      one URL in `chrome.css`.
+- [x] **The gradient monogram is a broken export.** Closed in Phase 5b. David
+      supplied a good 2000px file directly; it is the master at
+      `themes/dpaternina/assets/img/dp-mark-gradient.src.png` and the chrome now
+      draws `dp-mark-gradient-128.png` generated from it.
+      `design-source/assets/dp-mark-gradient*.png` is still broken and is still
+      not the source for anything.
 - [ ] **Set Settings → Reading.** Without a posts page there is no blog index,
       nothing in the navigation reads as the blog, and the All pill points at the
       site root. The site works; it just has no blog.
@@ -151,8 +152,60 @@ Facts later phases inherit:
       custom template. `/work` on :8888 already has it; a fresh site will not.
 - [ ] **Featured work is a flag, not an order.** A shipped thing shows as a card when
       `dp_featured` is on. The seed marks three of the four.
-- [ ] **`design-source/assets/dp-mark-gradient*.png` is still the broken export** Phase 5
-      reported. Phase 6 did not touch it and used nothing from it.
+- [x] **`design-source/assets/dp-mark-gradient*.png` is still the broken export** Phase 5
+      reported. Phase 6 did not touch it and used nothing from it. Closed in Phase 5b —
+      see the Phase 5 entry above.
+
+---
+
+## Phase 5b — design fidelity corrections (committed to `main`, `daf39dd`..)
+
+David reviewed the rendered home page against the design. What he found, and what
+it turned out to be:
+
+- **Tile labels and badges were 16px and grey.** `.dp-tile p` and
+  `.dp-shipped-item p` are one class and one element; `.dp-label` was one class.
+  The container won and the component lost. Container rules now exclude the
+  components they contain, through `:where()` so the exclusion costs no
+  specificity of its own.
+- **"Full timeline →" rendered in the site editor and not on the front end.** So
+  did three other buttons. The destination cache was keyed by whichever spelling
+  of the template `_wp_page_template` held, the write side started normalising
+  the two, and the stored map went on answering "no such page". ADR-0008 has the
+  fix and the reason the failure was invisible.
+- **24px of page background between full-bleed bands.** Core's block gap on the
+  top-level flow children, showing as a seam between two black bands and as a
+  gap above and below the closing CTA.
+
+Facts later phases inherit:
+
+- **The block editor injects WordPress's global styles *after* the theme's editor
+  styles; the front end prints them before.** So a hand-written rule at one class
+  — `.dp-label`, `.dp-tone-gold`, `.wp-site-blocks > *` — wins on the site and
+  loses in the canvas, against `:root :where(p)` and
+  `:root :where(.is-layout-flow) > *`. Every component rule in this theme has to
+  carry an element or a second class or it is not the same in both contexts. Most
+  already do (`p.dp-badge`, `h3.dp-tile-title`); the ones that did not are fixed.
+  **A style change is not verified until it has been looked at in the editor too.**
+- **`themes/dpaternina/templates/front-page.html` is not what :8888 renders.**
+  David has customised the template in the site editor, so `wp_template` post 65
+  is authoritative there: it detaches the `post-row-compact` and `cta-band`
+  patterns into inline copies, and it sets a `dp-pink` preset text colour on one
+  label. A pattern edit will not reach his home page; a CSS change will.
+- **`*.src.*` is the convention for an asset master.** Nothing links to it and
+  `bin/dp-build.sh` drops it before zipping a release.
+- **`data-dp-destination` is on every link the chrome derives**, resolved or not.
+  It is the fastest way to see what a page asked for and what it got.
+
+### For David
+- [ ] **Two labels in the RIGHT NOW bento are content, not theme.** The design puts
+      a pulsing pink dot before "MY AGENCY · TAKING PARTNERS" and a second muted
+      label, "NATIVE iOS", opposite "LIVE ON THE APP STORE" in the Kiveo tile.
+      Neither is in the template. Both are yours to add.
+- [ ] **The `dp-pink` text colour you set on the agency label is redundant** — the
+      `dp-tone-pink` class it already carries sets the same value through
+      `--hue-pink`, which is the token that stays legible if the ground ever
+      changes. Clearing the colour in the editor loses nothing.
 
 ---
 
