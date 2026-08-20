@@ -78,6 +78,7 @@ final class Plugin {
 		$this->content->register();
 		$this->cli->register();
 		( new Blocks\Blocks( plugin_dir_path( $this->file ) ) )->register();
+		( new Blocks\Timeline( plugin_dir_path( $this->file ) ) )->register();
 		Update\UpdateClient::register();
 	}
 

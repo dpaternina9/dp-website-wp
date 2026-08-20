@@ -372,7 +372,12 @@ ul.dp-filter-pills a:hover {
 	color: var(--text-primary);
 }
 
-ul.dp-filter-pills > li.current-cat a {
+/* The current pill. `current-cat` is wp_list_categories's own class, set from
+   the queried object; `aria-current` is what the All pill and the timeline's
+   three filters carry, because neither of those is a category. Same pill, same
+   state, two ways of saying which one you are looking at. */
+ul.dp-filter-pills > li.current-cat a,
+ul.dp-filter-pills a[aria-current="page"] {
 	border-color: var(--dp-teal);
 	background: color-mix(in srgb, var(--dp-teal) 14%, transparent);
 	color: var(--hue-teal);
@@ -549,6 +554,7 @@ p.dp-row-excerpt {
 }
 
 .dp-card {
+	position: relative;
 	display: flex;
 	overflow: hidden;
 	box-sizing: border-box;
@@ -615,6 +621,18 @@ h3.dp-card-title {
 h3.dp-card-title a {
 	color: inherit;
 	text-decoration: none;
+}
+
+/* "Clicking a card opens the matching entry on the timeline below" — the
+   design's own note on WorkCard, where the whole card is the control. Here the
+   title is the link and this pseudo-element is the rest of the card, which is
+   what gives a mouse the target the design draws and a keyboard exactly one tab
+   stop instead of a card's worth of them. The href is derived at render time by
+   DP\Theme\Blocks\Timeline. */
+h3.dp-card-title a.dp-card-open::after {
+	position: absolute;
+	inset: 0;
+	content: "";
 }
 
 p.dp-card-line {
@@ -1582,4 +1600,735 @@ h2.dp-featured-title a {
 	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
 	content: "";
 	opacity: 0.55;
+}
+
+/* -------------------------------------------------------------------------
+ * TimelineChart
+ *
+ * design-source/components/TimelineChart.dc.html, rendered by DP\Core\Blocks\Timeline.
+ *
+ * The design measures its own width with a ResizeObserver and switches between
+ * three modes. Its own closing note says why — "the design tool cannot express
+ * media queries" — and tells the theme to use container queries and
+ * `details`/`summary` instead. So this file is where the three modes actually
+ * live, and the server renders one markup for all of them.
+ *
+ * The thresholds and the numbers are the design's, not chosen here:
+ *
+ *   bars    >= 700px   label column 200px, year track, no chevrons
+ *   stack    < 700px   labels only, no track, chevrons        (the default)
+ *   scroll   < 700px   label column 128px, sticky, 720px inner, swipe hint
+ *
+ * Stack is what a phone gets. Scroll is implemented, styled and reachable —
+ * the block's `mobileMode` attribute picks it — but the Ledger chose stack and
+ * stack is what ships.
+ *
+ * Four custom properties carry every number that differs between modes, so a
+ * mode is a handful of declarations rather than a second copy of the component:
+ *
+ *   --dp-tl-label-base  the label column
+ *   --dp-tl-gap         between the label column and the track
+ *   --dp-tl-rail        how far a shipped thing hangs off its role's hairline
+ *   --dp-tl-bleed       how far an open row's tint bleeds into the card padding
+ *
+ * The ship label column subtracts the rail back out, which is what keeps a ship
+ * bar on the same year axis as the role bar above it. Rail minus bleed is 4px
+ * in both modes (16 - 12 and 20 - 16), so an open ship's tint stops the same
+ * distance from the hairline whichever mode is drawing it.
+ * ---------------------------------------------------------------------- */
+
+.dp-timeline {
+	container: dp-timeline / inline-size;
+
+	/* Stack is the default, so the stack numbers are the ones declared here. */
+	--dp-tl-label-base: 100%;
+	--dp-tl-rail: 16px;
+	--dp-tl-bleed: 12px;
+
+	/* The open-row tint, and the colour every bar in this subtree is drawn in.
+	   A lane with its own accent overrides the colour on the row; nothing else
+	   in the component names a hue. */
+	--dp-tl-tint: 4%;
+	--dp-tl-color: var(--dp-teal);
+
+	/* The gap belongs to a two-column grid and is declared once. In stack mode
+	   the grid has a single column, where a column gap has nothing to separate. */
+	--dp-tl-gap: 16px;
+}
+
+/* `hidden` is how a filtered-out row is removed — see DP\Core\Blocks\TimelineRows.
+   Every user agent's own stylesheet honours it, which is what makes the filter
+   work with the scripts off; this rule is only here because the component's own
+   display values would otherwise outrank the UA's. */
+.dp-timeline [hidden] {
+	display: none;
+}
+
+ul.dp-tl-pills {
+	margin-bottom: 28px;
+}
+
+.dp-tl-pill-extra a {
+	border-style: dashed;
+	color: var(--text-muted);
+}
+
+.dp-tl-card {
+	padding: 4px 16px 24px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+}
+
+.dp-tl-head {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding-top: 12px;
+}
+
+.dp-tl-legend {
+	display: flex;
+	gap: 8px 20px;
+	flex-wrap: wrap;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-tl-key {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.dp-tl-swatch {
+	width: 8px;
+	height: 8px;
+	flex: none;
+	border-radius: var(--radius-xs);
+	background: var(--dp-tl-color);
+}
+
+.dp-tl-swatch-ship {
+	width: 16px;
+	background: var(--dp-gold);
+}
+
+/* The axis. Hidden in stack mode, where there is no track for it to label, and
+   hidden from assistive technology always: every row prints its own range as
+   text, which is the same information said properly. */
+.dp-tl-years {
+	display: none;
+	justify-content: space-between;
+	padding-left: calc(var(--dp-tl-label-base) + var(--dp-tl-gap));
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-wide);
+}
+
+.dp-tl-lanes {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding-top: 18px;
+}
+
+.dp-tl-row {
+	--dp-tl-label: var(--dp-tl-label-base);
+
+	margin-inline: calc(var(--dp-tl-bleed) * -1);
+	padding-inline: var(--dp-tl-bleed);
+	border-radius: var(--radius-sm);
+	transition: background var(--dur-base) var(--ease-standard);
+}
+
+.dp-tl-row[open] {
+	background: color-mix(in srgb, var(--dp-white) var(--dp-tl-tint), transparent);
+}
+
+.dp-tl-row.is-accent-teal {
+	--dp-tl-color: var(--dp-teal);
+}
+
+.dp-tl-row.is-accent-pink,
+.dp-tl-swatch.is-accent-pink {
+	--dp-tl-color: var(--dp-pink);
+}
+
+.dp-tl-row.is-accent-gold,
+.dp-tl-swatch.is-accent-gold {
+	--dp-tl-color: var(--dp-gold);
+}
+
+.dp-tl-row.is-accent-purple,
+.dp-tl-swatch.is-accent-purple {
+	--dp-tl-color: var(--dp-purple);
+}
+
+.dp-tl-row.is-accent-muted,
+.dp-tl-swatch.is-accent-muted {
+	--dp-tl-color: var(--text-muted);
+}
+
+.dp-tl-row-ship {
+	--dp-tl-color: var(--dp-gold);
+}
+
+/* `list-style: none` removes the disclosure triangle in every engine that
+   follows the current spec; the vendor pseudo-element is what older WebKit
+   reads. The design draws its own chevron, and only in stack mode. */
+.dp-tl-summary {
+	display: block;
+	padding-block: 8px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.dp-tl-summary::-webkit-details-marker {
+	display: none;
+}
+
+.dp-tl-grid {
+	display: grid;
+	align-items: center;
+	gap: var(--dp-tl-gap);
+	grid-template-columns: var(--dp-tl-label);
+}
+
+.dp-tl-label {
+	position: relative;
+	display: block;
+	min-width: 0;
+	padding-right: 28px;
+}
+
+.dp-tl-org {
+	display: block;
+	color: var(--text-primary);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	line-height: var(--lh-snug);
+	text-wrap: pretty;
+}
+
+.dp-tl-role {
+	display: block;
+	color: var(--text-muted);
+	font-size: var(--fs-xs);
+}
+
+.dp-tl-range {
+	display: block;
+	margin-top: 4px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-wide);
+}
+
+.dp-tl-chevron {
+	position: absolute;
+	top: 50%;
+	right: 4px;
+	display: flex;
+	color: var(--text-muted);
+	transform: translateY(-50%);
+	transition:
+		color var(--dur-base) var(--ease-standard),
+		transform var(--dur-base) var(--ease-standard);
+}
+
+.dp-tl-row[open] .dp-tl-chevron {
+	color: var(--hue-teal);
+	transform: translateY(-50%) rotate(180deg);
+}
+
+.dp-tl-track {
+	position: relative;
+	display: none;
+	height: 40px;
+	border-radius: var(--radius-sm);
+	background: color-mix(in srgb, var(--text-primary) 3%, transparent);
+}
+
+.dp-tl-row-ship .dp-tl-track {
+	height: 32px;
+	border-radius: var(--radius-xs);
+	background: color-mix(in srgb, var(--text-primary) 2%, transparent);
+}
+
+/* left, width, max-width and min-width arrive as an inline style, because they
+   are per-row data and no stylesheet can hold thirteen years of arbitrary start
+   dates. DP\Core\Content\Timeline\Bar::style() writes them; everything else
+   about a bar is here. */
+.dp-tl-bar {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-radius: inherit;
+	background: color-mix(in srgb, var(--dp-tl-color) 38%, var(--bg-surface));
+	transition:
+		background var(--dur-base) var(--ease-standard),
+		box-shadow var(--dur-base) var(--ease-standard);
+}
+
+.dp-tl-row[open] .dp-tl-bar {
+	background: var(--dp-tl-color);
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--dp-tl-color) 16%, transparent);
+}
+
+/* The hairline every shipped thing hangs off. The label column inside it gives
+   the rail's width back, so a ship bar and its role's bar share one axis. */
+.dp-tl-ships {
+	padding-left: var(--dp-tl-rail);
+	border-left: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-tl-ships .dp-tl-row {
+	--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
+}
+
+.dp-tl-detail {
+	display: grid;
+	gap: 8px;
+	grid-template-columns: minmax(0, 1fr);
+	padding-bottom: 16px;
+}
+
+.dp-tl-kind {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-tl-prose {
+	max-width: var(--measure);
+	margin: 0 0 12px;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-tl-stack {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+ * The expanded panel behind a shipped thing
+ * ---------------------------------------------------------------------- */
+
+.dp-tl-panel {
+	margin-block: 4px 16px;
+	padding: 20px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-sm);
+	background: var(--band);
+	animation: dp-tl-up var(--dur-slow) var(--ease-out) both;
+}
+
+@keyframes dp-tl-up {
+
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* base.css already blunts every animation on the site to 0.01ms. This says the
+   quieter thing as well: the panel has no entrance, rather than an entrance
+   nobody can see. CLAUDE.md §1.7. */
+@media (prefers-reduced-motion: reduce) {
+
+	.dp-tl-panel {
+		animation: none;
+	}
+
+	.dp-tl-row,
+	.dp-tl-bar,
+	.dp-tl-chevron {
+		transition: none;
+	}
+}
+
+.dp-tl-panel-cols {
+	display: flex;
+	gap: 24px;
+	flex-wrap: wrap;
+}
+
+.dp-tl-panel-main {
+	min-width: 0;
+	flex: 1 1 320px;
+}
+
+.dp-tl-panel-aside {
+	display: flex;
+	min-width: 0;
+	flex: 1 1 260px;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.dp-tl-shipped {
+	margin-bottom: 12px;
+	color: var(--hue-gold);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+h3.dp-tl-headline {
+	max-width: var(--measure);
+	margin: 0 0 12px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+.dp-tl-bullets {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0 0 20px;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-tl-bullet {
+	display: grid;
+	align-items: baseline;
+	gap: 12px;
+	grid-template-columns: auto minmax(0, 1fr);
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-tl-bullet::before {
+	color: var(--hue-gold);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	content: "—";
+}
+
+.dp-tl-facts {
+	display: flex;
+	gap: 20px 24px;
+	flex-wrap: wrap;
+	padding-top: 16px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-tl-fact-label {
+	margin-bottom: 4px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-tl-fact-value {
+	font-size: var(--fs-sm);
+}
+
+.dp-tl-fact-stack {
+	color: var(--hue-gold);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+a.dp-tl-writeup {
+	color: var(--accent-text);
+	text-decoration: none;
+}
+
+a.dp-tl-writeup:hover {
+	color: var(--dp-teal-600);
+}
+
+.dp-tl-artifact {
+	overflow: hidden;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-sm);
+	background: var(--bg-page);
+}
+
+.dp-tl-artifact-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+	padding: 12px 16px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-tl-artifact-label {
+	color: var(--text-muted);
+}
+
+.dp-tl-artifact-tag {
+	color: var(--hue-gold);
+}
+
+pre.dp-tl-artifact-body {
+	overflow-x: auto;
+	margin: 0;
+	padding: 16px;
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-tl-stats {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.dp-tl-stat {
+	flex: 1 1 140px;
+	padding: 16px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-sm);
+	background: var(--bg-page);
+}
+
+.dp-tl-stat-value {
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	letter-spacing: var(--ls-display);
+}
+
+.dp-tl-stat-loud .dp-tl-stat-value {
+	color: var(--hue-gold);
+}
+
+.dp-tl-stat-quiet .dp-tl-stat-value {
+	color: var(--text-secondary);
+}
+
+.dp-tl-stat-label {
+	margin-top: 4px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* Scroll mode only, and the one instruction in the component that is addressed
+   to the reader rather than to the browser. */
+.dp-tl-swipe {
+	display: none;
+	margin-top: 4px;
+	padding-top: 14px;
+	border-top: var(--border-width) solid var(--border-subtle);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+ * Bars — the component is at least 700px wide
+ * ---------------------------------------------------------------------- */
+
+@container dp-timeline (width >= 700px) {
+
+	.dp-tl-card {
+		padding: clamp(20px, 3vw, 32px);
+	}
+
+	.dp-tl-inner {
+		--dp-tl-label-base: 200px;
+		--dp-tl-rail: 20px;
+		--dp-tl-bleed: 16px;
+	}
+
+	.dp-tl-head {
+		padding-top: 0;
+	}
+
+	.dp-tl-years {
+		display: flex;
+	}
+
+	.dp-tl-grid {
+		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
+	}
+
+	.dp-tl-track {
+		display: block;
+	}
+
+	.dp-tl-label {
+		padding-right: 12px;
+	}
+
+	.dp-tl-chevron {
+		display: none;
+	}
+
+	.dp-tl-detail {
+		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
+		gap: var(--dp-tl-gap);
+	}
+
+	.dp-tl-ships .dp-tl-detail,
+	.dp-tl-ships .dp-tl-panel {
+		grid-column: 1 / -1;
+	}
+
+	/* The design tints an open shipped thing more lightly than an open role,
+	   because in bars mode a ship sits inside a role that may itself be open. */
+	.dp-tl-row-ship {
+		--dp-tl-tint: 2.5%;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * Scroll — the variant, not the default
+ *
+ * The track keeps its full 720px and the component scrolls horizontally to it.
+ * Anything meant to be read is pinned to max(240px, hostWidth - 60px) and stuck
+ * to the left edge, so scrolling the axis never carries the words off-screen.
+ * `cqw` is the host width the design measured with JavaScript, said in CSS.
+ * ---------------------------------------------------------------------- */
+
+@container dp-timeline (width < 700px) {
+
+	.is-mobile-scroll .dp-tl-scroller {
+		overflow-x: auto;
+		overscroll-behavior-x: contain;
+	}
+
+	.is-mobile-scroll .dp-tl-inner {
+		--dp-tl-label-base: 128px;
+		--dp-tl-gap: 12px;
+
+		min-width: 720px;
+	}
+
+	.is-mobile-scroll .dp-tl-years {
+		display: flex;
+	}
+
+	.is-mobile-scroll .dp-tl-grid {
+		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
+	}
+
+	.is-mobile-scroll .dp-tl-track {
+		display: block;
+	}
+
+	.is-mobile-scroll .dp-tl-label {
+		position: sticky;
+		left: 0;
+		z-index: 1;
+		padding-right: 12px;
+		background: var(--bg-surface);
+	}
+
+	.is-mobile-scroll .dp-tl-chevron {
+		display: none;
+	}
+
+	.is-mobile-scroll .dp-tl-legend,
+	.is-mobile-scroll .dp-tl-detail,
+	.is-mobile-scroll .dp-tl-panel {
+		position: sticky;
+		left: 0;
+		width: max(240px, calc(100cqw - 60px));
+	}
+
+	.is-mobile-scroll .dp-tl-swipe {
+		display: block;
+	}
+}
+
+/* -------------------------------------------------------------------------
+ * The work page
+ *
+ * dpaternina.dc.html, the `isTimeline` composition: the hero, then the three
+ * cards, then the whole record. The section paddings are the design's own.
+ * ---------------------------------------------------------------------- */
+
+.dp-work-intro {
+	padding-bottom: 8px;
+}
+
+.dp-work-featured {
+	padding-block: 24px 64px;
+}
+
+.dp-work-featured .dp-section-head {
+	margin-bottom: 32px;
+}
+
+.dp-work-record {
+	padding-block: 20px 120px;
+}
+
+.dp-work-record .dp-section-head {
+	margin-bottom: 24px;
+}
+
+p.dp-work-lede {
+	max-width: var(--measure);
+	margin: 0 0 24px;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-work-outro {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px 24px;
+	flex-wrap: wrap;
+	margin-top: 40px;
+	padding-top: 24px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-work-outro p {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
 }

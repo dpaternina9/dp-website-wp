@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/timeline",
+	"version": "0.1.0",
+	"title": "Timeline",
+	"category": "dp",
+	"icon": "chart-bar",
+	"description": "Every role, with everything that shipped out of it hanging underneath. Rendered from Roles and Shipped, never written by hand.",
+	"keywords": [ "timeline", "roles", "work", "record" ],
+	"textdomain": "dp-core",
+	"attributes": {
+		"firstYear": {
+			"type": "number",
+			"default": 2014
+		},
+		"lastYear": {
+			"type": "number",
+			"default": 2026
+		},
+		"mobileMode": {
+			"type": "string",
+			"enum": [ "stack", "scroll" ],
+			"default": "stack"
+		}
+	},
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": true,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}

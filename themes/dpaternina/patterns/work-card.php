@@ -25,7 +25,7 @@
 <!-- /wp:paragraph --></div>
 <!-- /wp:group -->
 
-<!-- wp:post-title {"level":3,"isLink":false,"className":"dp-card-title"} /-->
+<!-- wp:post-title {"level":3,"isLink":false,"className":"dp-card-title dp-card-open"} /-->
 
 <!-- wp:paragraph {"className":"dp-card-line","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"dp_detail"}}}}} -->
 <p class="dp-card-line"></p>

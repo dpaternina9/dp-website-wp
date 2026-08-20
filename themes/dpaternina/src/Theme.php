@@ -70,6 +70,7 @@ final class Theme {
 		( new Blocks\Markup() )->register();
 		( new Blocks\SeriesPlanned() )->register();
 		( new Blocks\TemplateHierarchy() )->register();
+		( new Blocks\Timeline( $this ) )->register();
 		$destinations->register();
 		( new Chrome\Navigation( $destinations ) )->register();
 		( new Chrome\FilterPills( $destinations ) )->register();
