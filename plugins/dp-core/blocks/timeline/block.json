@@ -27,7 +27,7 @@
 	"supports": {
 		"anchor": false,
 		"html": false,
-		"multiple": true,
+		"multiple": false,
 		"reusable": false,
 		"align": false,
 		"color": false,

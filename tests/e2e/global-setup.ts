@@ -29,6 +29,15 @@ async function globalSetup( config: FullConfig ): Promise< void > {
 
 	await requestUtils.setupRest();
 	await requestUtils.activateTheme( 'dpaternina' );
+
+	/*
+	 * And the plugin, for the same reason. A re-install deactivates every
+	 * plugin, so without this the timeline — a dynamic block registered by
+	 * `dp-core` — is simply absent from the page, and the specs that read it
+	 * fail with a message about a missing element rather than about a missing
+	 * plugin.
+	 */
+	await requestUtils.activatePlugin( 'dp-core' );
 }
 
 export default globalSetup;

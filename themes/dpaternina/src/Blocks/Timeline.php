@@ -70,8 +70,18 @@ final class Timeline {
 	 * @return void
 	 */
 	public function register(): void {
-		add_filter( 'render_block_' . TimelineBlock::BLOCK_NAME, $this->enqueue_controller( ... ) );
-		add_filter( 'render_block_core/post-title', $this->link_the_card( ... ), 10, 2 );
+		/*
+		 * The hook is named after the plugin's block, so the constant is only
+		 * read once the class is there to read it from. Without the guard the
+		 * theme fatals on a site where `dp-core` is deactivated — which is not
+		 * hypothetical: it is what a fresh `composer test:integration` leaves
+		 * behind, and it is the promise ADR-0006 §5 already makes about the
+		 * theme's other cross-package block.
+		 */
+		if ( class_exists( TimelineBlock::class ) ) {
+			add_filter( 'render_block_' . TimelineBlock::BLOCK_NAME, $this->enqueue_controller( ... ) );
+			add_filter( 'render_block_core/post-title', $this->link_the_card( ... ), 10, 2 );
+		}
 	}
 
 	/**

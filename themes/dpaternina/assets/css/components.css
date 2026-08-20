@@ -2206,11 +2206,6 @@ pre.dp-tl-artifact-body {
 		gap: var(--dp-tl-gap);
 	}
 
-	.dp-tl-ships .dp-tl-detail,
-	.dp-tl-ships .dp-tl-panel {
-		grid-column: 1 / -1;
-	}
-
 	/* The design tints an open shipped thing more lightly than an open role,
 	   because in bars mode a ship sits inside a role that may itself be open. */
 	.dp-tl-row-ship {

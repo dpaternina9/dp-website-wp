@@ -80,7 +80,13 @@ final class Timeline {
 	public const OPEN_ALL = 'all';
 
 	/**
-	 * The id the first timeline on a page carries, and what links point at.
+	 * The id the chart carries, and what every link into it points at.
+	 *
+	 * A constant rather than a generated one, and `block.json` says
+	 * `multiple: false` so it stays unique. The design has one chart; a second
+	 * one would need a second id, and an id that changed with the number of
+	 * charts on a page is an id no link could be written against — including the
+	 * ones on the work cards above it.
 	 *
 	 * @var string
 	 */
@@ -96,16 +102,6 @@ final class Timeline {
 	 * @var string
 	 */
 	private const DEFINITION = '/blocks/timeline';
-
-	/**
-	 * How many timelines have rendered in this request.
-	 *
-	 * The first gets the documented id; a second, which the design never asks
-	 * for, gets a suffixed one rather than duplicating an id on the page.
-	 *
-	 * @var int
-	 */
-	private int $rendered = 0;
 
 	/**
 	 * Constructor.
@@ -140,9 +136,6 @@ final class Timeline {
 			return '';
 		}
 
-		++$this->rendered;
-
-		$root   = 1 === $this->rendered ? self::ROOT_ID : self::ROOT_ID . '-' . $this->rendered;
 		$filter = $this->requested_filter();
 		$open   = $this->requested_open();
 		$rows   = new TimelineRows( $open );
@@ -165,13 +158,13 @@ final class Timeline {
 
 		$wrapper = get_block_wrapper_attributes(
 			array(
-				'id'             => $root,
+				'id'             => self::ROOT_ID,
 				'class'          => 'dp-timeline ' . $this->mobile_class( $attributes ),
 				'data-dp-filter' => $filter->value,
 			)
 		);
 
-		return '<div ' . $wrapper . '>' . $this->pills( $root, $filter, $open ) . $card . '</div>';
+		return '<div ' . $wrapper . '>' . $this->pills( self::ROOT_ID, $filter, $open ) . $card . '</div>';
 	}
 
 	/**
