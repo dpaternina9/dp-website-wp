@@ -76,11 +76,65 @@ final class HomeTest extends TemplateTestCase {
 
 		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
 
-		$this->assertSame( 4, substr_count( $html, 'class="wp-block-post ' ) );
+		/*
+		 * Counted on the row's own class, not on `wp-block-post`: the featured
+		 * panel is a query loop too, so its single entry carries the same
+		 * wrapper and would be counted twice over.
+		 */
+		$this->assertSame( 3, substr_count( $html, 'dp-row-body' ), 'Three in the list, one in the panel above it.' );
 
 		foreach ( $this->posts as $post_id ) {
 			$this->assertStringContainsString( (string) get_the_title( $post_id ), $html );
 		}
+	}
+
+	/**
+	 * The newest post is featured once, and is not repeated in the list.
+	 *
+	 * @return void
+	 */
+	public function test_the_newest_post_is_featured_and_held_back_from_the_list(): void {
+		$this->seed_categories();
+		$this->seed_posts( 4 );
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$newest = (string) get_the_title( $this->posts[0] );
+
+		$this->assertStringContainsString( 'dp-featured-panel', $html );
+		$this->assertSame( 1, substr_count( $html, '>' . $newest . '</a>' ), 'The featured post appears once, in the panel.' );
+		$this->assertSame( 3, substr_count( $html, 'dp-row-body' ), 'The list holds back the post above it.' );
+
+		foreach ( array_slice( $this->posts, 1 ) as $post_id ) {
+			$this->assertStringContainsString( (string) get_the_title( $post_id ), $html );
+		}
+	}
+
+	/**
+	 * The exclusion never reaches the feed.
+	 *
+	 * A reader subscribing to the blog must not lose its newest entry because a
+	 * panel on a web page happens to be showing it.
+	 *
+	 * @return void
+	 */
+	public function test_the_feed_still_carries_the_featured_post(): void {
+		$this->seed_categories();
+		$this->seed_posts( 3 );
+		$this->seed_posts_page();
+
+		$this->go_to( get_feed_link() );
+
+		$this->assertTrue( is_feed() );
+
+		$titles = array();
+
+		foreach ( $GLOBALS['wp_query']->posts as $post ) {
+			$titles[] = $post->post_title;
+		}
+
+		$this->assertContains( (string) get_the_title( $this->posts[0] ), $titles );
 	}
 
 	/**

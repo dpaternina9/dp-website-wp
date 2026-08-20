@@ -60,6 +60,52 @@ Facts later phases inherit (from ADR-0003):
 - Seeded block markup is coupled to Phase 4's `dp/callout` and `dpLabel` saved shapes. If
   either changes, re-run `wp dp seed` — never hand-edit content.
 
+## Phase 5 — chrome, homepage, blog, archives (committed to `main`, `dfd09d5`..)
+
+Chores it could not do from its lane:
+- [ ] `docs/plan.md`: Phases 2, 3 and 4 are still unticked. Phase 5 ticked its own.
+- [ ] `Plugin::register()` is still the three-way merge point Phase 3 described.
+      Phase 5 did not touch `dp-core` at all.
+
+Facts later phases inherit:
+- **`core/query` silently drops a post type that is not publicly viewable.**
+  `build_query_vars_from_block_context()` only honours `postType` when
+  `is_post_type_viewable()` agrees, and none of `dp_role`/`dp_ship`/`dp_video`
+  is. A query block asking for one gets **posts** instead. `DP\Theme\Query\QueryLoops`
+  puts the type back through `query_loop_block_query_vars`; Phase 6 will need the
+  same for the timeline if it queries from a template.
+- **`core/post-meta` refuses meta on those types too**, for the same reason —
+  its callback returns null unless `is_post_publicly_viewable()`. The theme's
+  `dpaternina/post` binding source carries an explicit allowlist of the design's
+  public copy, per post type. Add to that list, do not widen the rule.
+- **WordPress stores a block theme's custom template under its slug**, without
+  the `.html`. A page assigned Contact from the admin carries `dp-contact`.
+  `Destinations` normalises both spellings and `ChromeTest` asserts the names the
+  chrome uses are ones the admin actually offers.
+- **`WP_Theme::get_block_patterns()` is cached in a transient.** Adding the
+  `patterns/` directory to a theme that had none registers nothing until the
+  cache expires or `wp_clean_themes_cache()` runs. It cost half an hour; on a
+  fresh install it does not arise.
+- **A hierarchy template core does not recognise is offered as a page template.**
+  `taxonomy-dp_series` is not in `get_default_block_template_types()`, so it was
+  classified custom and appeared in the admin dropdown.
+  `DP\Theme\Blocks\TemplateHierarchy` states the rule core is missing.
+- The e2e suite is `fullyParallel` against one site. `tests/e2e/chrome.spec.ts`
+  runs serial and sweeps only its own slugs; a spec that clears content will pull
+  the fixture out from under whichever other spec is mid-run.
+
+### For David
+- [ ] **The gradient monogram is a broken export.** `design-source/assets/dp-mark-gradient.png`
+      and `dp-mark-gradient-128.png` both carry only the top arc of the mark and
+      part of one letter, at 2000px as well as at 128px. The chrome ships the
+      white mark instead. Re-export from Claude Design and re-import; the swap is
+      one URL in `chrome.css`.
+- [ ] **Set Settings → Reading.** Without a posts page there is no blog index,
+      nothing in the navigation reads as the blog, and the All pill points at the
+      site root. The site works; it just has no blog.
+- [ ] **Curate the navigation menu.** The theme ships core's fallback, which
+      lists every published page. The design's header is five items.
+
 ## Operational finding — do not run two agents' test suites at once
 Both wp-env `tests` environments share one database. Phase 3 hit
 `Record has changed since last read in table 'wp_options'` and a spurious failure when its

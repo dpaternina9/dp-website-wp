@@ -250,6 +250,19 @@ fatal or blank any template.
 **Tests:** integration tests per template (correct query, correct counts, no notices);
 e2e for the mobile panel (keyboard only) and for filtering with JS disabled.
 
+**Done — 2026-08-20.** All six gates green. The chrome, five templates and ten
+patterns ship; every link in them says which destination it wants and is given a
+URL at render time from Settings → Reading, from core's feed link, or from the
+page carrying a `dp-` template — no href anywhere, asserted by a test. The mobile
+panel is a `<dialog>` that opens from `:target` with no JavaScript at all and is
+upgraded to a real modal when there is some. The 720px and 560px switches are
+container queries; there is not one media query in either new stylesheet.
+
+`theme.json` was opened once, for two `templateParts` entries, under
+`docs/adr/0006-chrome-and-derived-destinations.md`. Deviations from the design —
+the broken gradient monogram, the footer's link groups, the year in the © line —
+are named in the same ADR and in the phase report.
+
 ---
 
 ## Phase 6 — The timeline

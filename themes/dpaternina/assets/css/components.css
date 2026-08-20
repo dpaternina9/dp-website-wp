@@ -118,6 +118,15 @@ p.dp-hero-meta {
 .dp-home-hero {
 	position: relative;
 	isolation: isolate;
+
+	/*
+	 * The orb below is 120vw wide and centred, so it hangs 39px off each edge
+	 * of a 390px screen and gives the document a horizontal scrollbar. `clip`
+	 * rather than `hidden`: it contains the glow without turning the section
+	 * into a scroll container, which `hidden` would, and which would break
+	 * `position: sticky` for anything placed inside it later.
+	 */
+	overflow: clip;
 	max-width: var(--container-lg);
 	margin-inline: auto;
 	padding-block: var(--section-y) 64px;
@@ -1464,4 +1473,113 @@ p.dp-planned-note {
 	color: var(--text-muted);
 	font-size: var(--fs-sm);
 	line-height: var(--lh-relaxed);
+}
+
+/* -------------------------------------------------------------------------
+ * The blog's featured panel
+ *
+ * The one gradient this view spends (digest §1). The main query holds this post
+ * back — see DP\Theme\Query\QueryLoops — so the panel and the list below it
+ * never show the same piece of writing twice.
+ * ---------------------------------------------------------------------- */
+
+.dp-featured {
+	padding-bottom: 40px;
+}
+
+.dp-featured-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-featured-list > li::before {
+	content: none;
+}
+
+.dp-featured-panel {
+	display: grid;
+	overflow: hidden;
+	gap: 0;
+	grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.dp-featured-panel:hover {
+	transform: translateY(-3px);
+}
+
+.dp-featured-body {
+	padding: 44px;
+}
+
+h2.dp-featured-title {
+	margin-block: 24px 16px;
+	font-family: var(--font-display);
+	font-size: var(--fs-2xl);
+	font-weight: var(--fw-bold);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-display);
+}
+
+h2.dp-featured-title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.dp-featured-lead {
+	margin-block: 0 24px;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-featured-lead p {
+	margin: 0;
+	color: inherit;
+	font-size: inherit;
+	line-height: inherit;
+}
+
+.dp-featured-meta {
+	gap: 4px 12px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-featured-meta p,
+.dp-featured-meta .wp-block-post-terms {
+	margin: 0;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	letter-spacing: inherit;
+}
+
+.dp-featured-meta a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.dp-featured-art {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 300px;
+	background: var(--dp-gradient-spectrum);
+	opacity: 0.9;
+}
+
+.dp-featured-art::after {
+	width: 96px;
+	height: 96px;
+	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
+	content: "";
+	opacity: 0.55;
 }

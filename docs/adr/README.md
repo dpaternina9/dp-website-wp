@@ -47,6 +47,7 @@ reasoning intact — the record of why we believed something is the point.
 |---|---|---|
 | [0001](0001-phase-0-toolchain.md) | Phase 0 toolchain | Accepted — 2026-08-20 |
 | [0002](0002-design-token-naming.md) | One source of truth for design tokens, and the bridge that keeps their names | Accepted — 2026-08-20 |
+| [0003](0003-content-model-edges.md) | The content model's edges | Accepted — 2026-08-20 |
+| [0004](0004-tag-driven-signed-releases.md) | Tag-driven signed releases | Accepted — 2026-08-20 |
 | [0005](0005-house-style-blocks.md) | The house style: where a block's appearance is written down | Accepted — 2026-08-20 |
-| 0003 | [Content Model Edges](0003-content-model-edges.md) | Accepted |
-| 0004 | [Tag Driven Signed Releases](0004-tag-driven-signed-releases.md) | Accepted |
+| [0006](0006-chrome-and-derived-destinations.md) | The chrome: two lines of `theme.json`, and where a link's URL comes from | Accepted — 2026-08-20 |

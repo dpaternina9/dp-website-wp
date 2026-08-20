@@ -53,7 +53,7 @@ final class ArchiveTest extends TemplateTestCase {
 
 		$this->assertTrue( is_category() );
 		$this->assertSame( 'dpaternina//category', $this->resolved_template() );
-		$this->assertSame( 3, substr_count( $html, 'class="wp-block-post ' ) );
+		$this->assertSame( 3, substr_count( $html, 'dp-row-body' ) );
 	}
 
 	/**
