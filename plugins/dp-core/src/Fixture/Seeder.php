@@ -12,6 +12,7 @@ namespace DP\Core\Fixture;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\Taxonomies;
 use RuntimeException;
+use WP_Filesystem_Base;
 use WP_Post;
 use WP_Term;
 
@@ -105,6 +106,7 @@ final class Seeder {
 			$pages      = $this->seed_pages();
 			$ships      = $this->seed_ships( $roles, $posts );
 			$videos     = $this->seed_videos();
+			$brand      = $this->seed_brand();
 		} finally {
 			kses_init();
 			$this->save_index();
@@ -120,6 +122,7 @@ final class Seeder {
 				'posts'         => count( $posts ),
 				'planned_parts' => count( $planned ),
 				'pages'         => count( $pages ),
+				'brand'         => $brand,
 			),
 			$fresh
 		);
@@ -135,6 +138,19 @@ final class Seeder {
 	 */
 	public function wipe(): void {
 		$this->load_index();
+
+		/*
+		 * The brand mark is an attachment like any other in the index, and
+		 * `wp_delete_post()` routes an attachment to `wp_delete_attachment()`
+		 * for us. What it cannot know is that an option points at it — so the
+		 * option is cleared first, and only when it points at *our* attachment.
+		 */
+		$mark   = $this->index['posts']['attachment:brand-mark'] ?? 0;
+		$stored = get_option( 'site_logo' );
+
+		if ( $mark > 0 && is_numeric( $stored ) && (int) $stored === $mark ) {
+			delete_option( 'site_logo' );
+		}
 
 		foreach ( $this->index['posts'] as $post_id ) {
 			if ( get_post( $post_id ) instanceof WP_Post ) {
@@ -436,6 +452,140 @@ final class Seeder {
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * The site logo, so a fresh site is not missing its brand mark.
+	 *
+	 * The mark used to be a `background: url()` in the theme's stylesheet, which
+	 * meant it could only be changed by editing CSS and shipping a release. The
+	 * chrome now renders `core/site-logo` in all three places, so David swaps it
+	 * from the admin — and something has to put a first one there.
+	 *
+	 * Two rules govern what this does, and both are about not overreaching.
+	 * **It never replaces a logo.** If `site_logo` already points at a real
+	 * attachment, that is David's decision and this leaves it alone, on this run
+	 * and on every run after it. **It does not know where the file is.** The
+	 * mark ships with the theme and CLAUDE.md section 5.1's spirit — the plugin
+	 * does not reach into the theme — applies to assets as much as to routes, so
+	 * the path arrives through `dp_brand_logo_path`, which the theme answers.
+	 * With the theme switched off nothing answers and nothing happens.
+	 *
+	 * @return int 1 if the logo was set by this run, 0 otherwise.
+	 */
+	private function seed_brand(): int {
+		/**
+		 * Filters the absolute path to the brand mark a fresh site starts with.
+		 *
+		 * The plugin may not reach into the theme's directory, and the mark is
+		 * the theme's asset. This is the seam, and it names no class on either
+		 * side. With no theme answering, nothing is seeded.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param string $path Absolute path to an image file, or '' for none.
+		 */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- `dp_` is this project's public filter prefix; WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
+		$path = apply_filters( 'dp_brand_logo_path', '' );
+
+		if ( ! is_string( $path ) || '' === $path || ! is_readable( $path ) ) {
+			return 0;
+		}
+
+		$stored = get_option( 'site_logo' );
+		$chosen = is_numeric( $stored ) ? (int) $stored : 0;
+
+		if ( $chosen > 0 && get_post( $chosen ) instanceof WP_Post ) {
+			return 0;
+		}
+
+		$attachment_id = $this->brand_attachment( $path );
+
+		if ( 0 === $attachment_id ) {
+			return 0;
+		}
+
+		update_option( 'site_logo', $attachment_id );
+
+		return 1;
+	}
+
+	/**
+	 * The attachment holding the theme's mark, made once and reused after that.
+	 *
+	 * @param string $path Absolute path to the image the theme ships.
+	 * @return int The attachment ID, or 0 when WordPress refused to make one.
+	 */
+	private function brand_attachment( string $path ): int {
+		$key      = 'attachment:brand-mark';
+		$existing = $this->index['posts'][ $key ] ?? 0;
+
+		if ( $existing > 0 && get_post( $existing ) instanceof WP_Post ) {
+			return $existing;
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		WP_Filesystem();
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof WP_Filesystem_Base ) {
+			return 0;
+		}
+
+		$contents = $wp_filesystem->get_contents( $path );
+
+		if ( ! is_string( $contents ) || '' === $contents ) {
+			return 0;
+		}
+
+		$name = basename( $path );
+
+		if ( '' === $name ) {
+			return 0;
+		}
+
+		$upload = wp_upload_bits( $name, null, $contents );
+
+		if ( ! is_string( $upload['file'] ?? null ) || ( $upload['error'] ?? false ) ) {
+			return 0;
+		}
+
+		$type          = wp_check_filetype( $upload['file'] );
+		$attachment_id = wp_insert_attachment(
+			array(
+				'post_mime_type' => is_string( $type['type'] ) ? $type['type'] : 'image/png',
+				'post_title'     => get_bloginfo( 'name' ),
+				'post_status'    => 'inherit',
+				'post_author'    => $this->author(),
+			),
+			$upload['file'],
+			0,
+			true
+		);
+
+		if ( is_wp_error( $attachment_id ) || $attachment_id <= 0 ) {
+			return 0;
+		}
+
+		wp_update_attachment_metadata(
+			$attachment_id,
+			wp_generate_attachment_metadata( $attachment_id, $upload['file'] )
+		);
+
+		/*
+		 * Core falls back to the site's name when an attachment has no alt
+		 * text, so this is belt and braces — but the mark *is* the site's name
+		 * in the header, and a nameless link there is the one accessibility
+		 * failure this change could introduce.
+		 */
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', get_bloginfo( 'name' ) );
+
+		$this->index['posts'][ $key ] = $attachment_id;
+
+		return $attachment_id;
 	}
 
 	/**

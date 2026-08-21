@@ -76,13 +76,27 @@ final class Navigation {
 	 * `_wp_page_template`. `Destinations` normalises either form anyway, since
 	 * a page imported from elsewhere may well carry the file name.
 	 *
+	 * `uses` and `colophon` are here for a reason worth stating, because the
+	 * merge queue said the opposite until this phase. The design's footer links
+	 * both pages and neither is derivable any other way: WordPress has a
+	 * Reading setting for the posts index and a Privacy setting for the privacy
+	 * page, and nothing at all for "which page is Uses". The alternative was a
+	 * navigation menu, and a menu cannot be named from a template file — `ref`
+	 * is a post ID — so the block editor would draw a different menu from the
+	 * one the front end renders, which is the divergence ADR-0008 exists to
+	 * stop. `templates/dp-uses.html` and `dp-colophon.html` are therefore
+	 * byte-identical to `page.html`: assigning one changes nothing about how
+	 * the page renders, and the assignment *is* the nomination. ADR-0011.
+	 *
 	 * @var array<string, string>
 	 */
 	public const TEMPLATES = array(
-		'contact' => 'dp-contact',
-		'work'    => 'dp-work',
-		'about'   => 'dp-about',
-		'resume'  => 'dp-resume',
+		'contact'  => 'dp-contact',
+		'work'     => 'dp-work',
+		'about'    => 'dp-about',
+		'resume'   => 'dp-resume',
+		'uses'     => 'dp-uses',
+		'colophon' => 'dp-colophon',
 	);
 
 	/**
@@ -95,7 +109,19 @@ final class Navigation {
 	 *
 	 * @var list<string>
 	 */
-	public const DESTINATIONS = array( 'posts', 'feed', 'home', 'contact', 'work', 'about', 'resume', 'resume-pdf' );
+	public const DESTINATIONS = array(
+		'posts',
+		'feed',
+		'home',
+		'privacy',
+		'contact',
+		'work',
+		'about',
+		'resume',
+		'resume-pdf',
+		'uses',
+		'colophon',
+	);
 
 	/**
 	 * Constructor.
@@ -278,6 +304,20 @@ final class Navigation {
 		 */
 		if ( 'home' === $destination ) {
 			return home_url( '/' );
+		}
+
+		/*
+		 * Settings to Privacy, which is the same kind of thing as Settings to
+		 * Reading: a page David nominated, recorded by core, under any slug he
+		 * likes. `get_privacy_policy_url()` returns an empty string when he has
+		 * not chosen one, or when the page he chose is no longer published —
+		 * both of which mean "no privacy page", and both of which have to read
+		 * as null here rather than as a link to the site root.
+		 */
+		if ( 'privacy' === $destination ) {
+			$url = get_privacy_policy_url();
+
+			return '' === $url ? null : $url;
 		}
 
 		if ( 'resume-pdf' === $destination ) {

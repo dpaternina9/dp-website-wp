@@ -60,6 +60,7 @@ final class Theme {
 	 */
 	private function register(): void {
 		$destinations = new Chrome\Destinations();
+		$navigation   = new Chrome\Navigation( $destinations );
 
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
@@ -73,7 +74,8 @@ final class Theme {
 		( new Blocks\TemplateHierarchy() )->register();
 		( new Blocks\Timeline( $this ) )->register();
 		$destinations->register();
-		( new Chrome\Navigation( $destinations ) )->register();
+		$navigation->register();
+		( new Chrome\Brand( $this->directory, $navigation ) )->register();
 		( new Chrome\FilterPills( $destinations ) )->register();
 		( new Chrome\PostPresentation() )->register();
 		( new Query\QueryLoops() )->register();

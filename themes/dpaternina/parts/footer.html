@@ -1,7 +1,7 @@
 <!-- wp:group {"tagName":"footer","align":"full","className":"dp-footer","layout":{"type":"default"},"metadata":{"name":"Site footer"}} -->
 <footer class="wp-block-group alignfull dp-footer"><!-- wp:group {"className":"dp-footer-grid","layout":{"type":"default"}} -->
 <div class="wp-block-group dp-footer-grid"><!-- wp:group {"className":"dp-footer-brand","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-footer-brand"><!-- wp:site-title {"level":0,"className":"dp-brand dp-brand-sm"} /-->
+<div class="wp-block-group dp-footer-brand"><!-- wp:site-logo {"width":30,"className":"dp-brand dp-brand-sm"} /-->
 
 <!-- wp:paragraph {"className":"dp-footer-line"} -->
 <p class="dp-footer-line">One site for the work and the writing, because they were never two people.</p>
@@ -13,7 +13,19 @@
 <p class="dp-label">Site</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:navigation {"overlayMenu":"never","className":"dp-footer-nav","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} /--></div>
+<!-- wp:buttons {"className":"dp-footer-links","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} -->
+<div class="wp-block-buttons dp-footer-links"><!-- wp:button {"className":"dp-to-work dp-button-quiet"} -->
+<div class="wp-block-button dp-to-work dp-button-quiet"><a class="wp-block-button__link wp-element-button">Work</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-about dp-button-quiet"} -->
+<div class="wp-block-button dp-to-about dp-button-quiet"><a class="wp-block-button__link wp-element-button">About</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-contact dp-button-quiet"} -->
+<div class="wp-block-button dp-to-contact dp-button-quiet"><a class="wp-block-button__link wp-element-button">Contact</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
 <!-- /wp:group -->
 
 <!-- wp:group {"className":"dp-footer-group","layout":{"type":"default"}} -->
@@ -21,13 +33,33 @@
 <p class="dp-label">Writing</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:buttons {"className":"dp-footer-links"} -->
+<!-- wp:buttons {"className":"dp-footer-links","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} -->
 <div class="wp-block-buttons dp-footer-links"><!-- wp:button {"className":"dp-to-posts dp-button-quiet"} -->
 <div class="wp-block-button dp-to-posts dp-button-quiet"><a class="wp-block-button__link wp-element-button">All posts</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 
 <!-- wp:categories {"className":"dp-footer-cats"} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"dp-footer-group","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-footer-group"><!-- wp:paragraph {"className":"dp-label"} -->
+<p class="dp-label">More</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:buttons {"className":"dp-footer-links","layout":{"type":"flex","orientation":"vertical","justifyContent":"left"}} -->
+<div class="wp-block-buttons dp-footer-links"><!-- wp:button {"className":"dp-to-uses dp-button-quiet"} -->
+<div class="wp-block-button dp-to-uses dp-button-quiet"><a class="wp-block-button__link wp-element-button">Uses</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-resume dp-button-quiet"} -->
+<div class="wp-block-button dp-to-resume dp-button-quiet"><a class="wp-block-button__link wp-element-button">Résumé</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-colophon dp-button-quiet"} -->
+<div class="wp-block-button dp-to-colophon dp-button-quiet"><a class="wp-block-button__link wp-element-button">Colophon</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
 <!-- /wp:group --></div>
 <!-- /wp:group -->
 
@@ -37,7 +69,15 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:buttons {"className":"dp-footer-meta"} -->
-<div class="wp-block-buttons dp-footer-meta"><!-- wp:button {"className":"dp-to-feed dp-button-quiet"} -->
+<div class="wp-block-buttons dp-footer-meta"><!-- wp:button {"className":"dp-to-privacy dp-button-quiet"} -->
+<div class="wp-block-button dp-to-privacy dp-button-quiet"><a class="wp-block-button__link wp-element-button">Privacy</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-colophon dp-button-quiet"} -->
+<div class="wp-block-button dp-to-colophon dp-button-quiet"><a class="wp-block-button__link wp-element-button">Colophon</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-feed dp-button-quiet"} -->
 <div class="wp-block-button dp-to-feed dp-button-quiet"><a class="wp-block-button__link wp-element-button">RSS</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons --></div>
