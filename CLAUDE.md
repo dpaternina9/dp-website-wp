@@ -84,6 +84,14 @@ npm run test:e2e   # Playwright
 Never report work as complete without pasting the actual output of the gates you ran.
 "Should pass" is not a result.
 
+**Cadence — iterate on the fast five, run e2e once.** `npm run test:e2e` costs more
+wall-clock than the other five combined. Do not re-run it after every correction. Cycle
+`composer lint`, `composer analyse`, `composer test`, `npm run lint` and
+`npm run test:unit` as often as you like; run Playwright **once, at the end**, when
+everything else is green. If it fails, fix and re-run it — but do not fold it back into
+the inner loop. All six still have to pass before "done"; this governs how often you run
+the slow one, not whether it counts.
+
 ### 1.7 Accessibility and performance are acceptance criteria
 - WCAG 2.2 AA minimum. The design system's tokens already encode the contrast fixes —
   do not "improve" a colour without re-checking the ratio.
