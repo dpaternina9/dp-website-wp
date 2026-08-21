@@ -86,9 +86,22 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'posts'         => 7,
 				'planned_parts' => 4,
 				'pages'         => 3,
+
+				/*
+				 * The site logo, which the seeder sets from the file the theme
+				 * answers `dp_brand_logo_path` with. 1 because this site has
+				 * none yet; a site where David already chose one reports 0 and
+				 * keeps his (ADR-0011).
+				 */
+				'brand'         => 1,
 			),
 			$report->counts()
 		);
+
+		$logo = get_option( 'site_logo' );
+
+		$this->assertIsNumeric( $logo, 'A fresh site should not be missing its brand mark.' );
+		$this->assertGreaterThan( 0, (int) $logo );
 
 		$this->assertCount(
 			6,

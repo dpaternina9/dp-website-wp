@@ -261,7 +261,7 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 		sort( $declared );
 
 		$this->assertSame(
-			array( 'dp-about', 'dp-contact', 'dp-resume', 'dp-work' ),
+			array( 'dp-about', 'dp-colophon', 'dp-contact', 'dp-resume', 'dp-uses', 'dp-work' ),
 			$declared,
 			'theme.json customTemplates and templates/dp-*.html must agree. dp-watch arrives in Phase 12.'
 		);

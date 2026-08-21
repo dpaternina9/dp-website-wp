@@ -233,4 +233,21 @@ final class WorkTest extends TemplateTestCase {
 			'A page with no chart on it should not be paying for the chart\'s controller.'
 		);
 	}
+
+	/**
+	 * The work template renders no post content, and leaves no wrapper behind.
+	 *
+	 * Same removal as the homepage's, for the same reason: the page is
+	 * composed, and the empty group the block sat in was a `.dp-section` with
+	 * nothing in it and 8px of padding under it.
+	 *
+	 * @return void
+	 */
+	public function test_the_work_template_renders_no_post_content(): void {
+		$html = $this->render( $this->permalink( $this->page ), 'page', self::HIERARCHY );
+
+		$this->assertStringNotContainsString( 'wp-block-post-content', $html );
+		$this->assertStringNotContainsString( 'dp-work-intro', $html );
+		$this->assertStringContainsString( 'dp-work-featured', $html, 'The rest of the template is still there.' );
+	}
 }

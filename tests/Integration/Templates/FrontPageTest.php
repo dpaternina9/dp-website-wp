@@ -121,16 +121,24 @@ final class FrontPageTest extends TemplateTestCase {
 	}
 
 	/**
-	 * A static front page's own content still renders.
+	 * The homepage renders no post content, and leaves no wrapper behind.
+	 *
+	 * David asked for the content block to go: the home page is composed, and a
+	 * `core/post-content` on it drew whichever page happened to be queried —
+	 * the posts index, on a site with no static front page. The group that held
+	 * it went with it, because an empty `.dp-section` is 24px of block gap and
+	 * a stray column, which is the opposite of the spacing this phase fixed.
 	 *
 	 * @return void
 	 */
-	public function test_the_chosen_front_pages_content_is_rendered(): void {
+	public function test_the_homepage_renders_no_post_content(): void {
 		$this->seed_posts_page();
 
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertStringContainsString( 'Placeholder body.', $html );
+		$this->assertStringNotContainsString( 'wp-block-post-content', $html );
+		$this->assertStringNotContainsString( 'dp-front-content', $html );
+		$this->assertStringNotContainsString( 'Placeholder body.', $html );
 	}
 
 	/**
@@ -147,5 +155,43 @@ final class FrontPageTest extends TemplateTestCase {
 		$this->assertTrue( is_home(), 'Nothing was chosen, so the front page is the posts index.' );
 		$this->assertStringContainsString( 'dp-home-hero-title', $html );
 		$this->assertStringNotContainsString( 'Placeholder body.', $html, 'There is no page whose content could render.' );
+	}
+
+	/**
+	 * The hero's first section is not preceded by a block-gap margin.
+	 *
+	 * The spacing rules this phase added live in a stylesheet, so the only
+	 * thing an integration test can honestly assert is that the stylesheet says
+	 * what it is supposed to say — the cascade itself is checked in a browser,
+	 * in `tests/e2e/spacing.spec.ts`, and in both contexts. This is the cheap
+	 * half: the rules that neutralise core's block gap have to out-specify
+	 * `:root :where(.is-layout-flow) > *`, which means naming a second class.
+	 *
+	 * @return void
+	 */
+	public function test_the_block_gap_overrides_name_a_second_class(): void {
+		$lines = file( get_theme_file_path( 'assets/css/components.css' ), FILE_IGNORE_NEW_LINES );
+
+		$this->assertIsArray( $lines );
+
+		$css = implode( "\n", $lines );
+
+		foreach ( array(
+			'.dp-bento.wp-block-group > *',
+			'.dp-shipped.wp-block-group > .dp-shipped-item',
+			'.dp-section-head.wp-block-group > *',
+			'.dp-latest.wp-block-group > *',
+			'.dp-card.wp-block-group > *',
+		) as $selector ) {
+			$this->assertStringContainsString(
+				$selector,
+				$css,
+				sprintf(
+					'"%s" is how the design\'s own spacing beats core\'s block gap in the editor '
+					. 'as well as on the front end. A one-class rule wins in one context only.',
+					$selector
+				)
+			);
+		}
 	}
 }

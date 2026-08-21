@@ -354,6 +354,241 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
+	 * The brand mark is an image David can swap, in all three places.
+	 *
+	 * It used to be a `background: url()` painted over a visually-hidden
+	 * `core/site-title`, which meant the only way to change it was to edit a
+	 * stylesheet and ship a release. `core/site-logo` reads the `site_logo`
+	 * option instead, so the header bar, the mobile panel's head and the footer
+	 * all draw whatever David chose. This asserts the block is there three
+	 * times and that the old mechanism is not.
+	 *
+	 * @return void
+	 */
+	public function test_the_brand_mark_is_a_site_logo_in_all_three_places(): void {
+		update_option( 'site_logo', $this->seed_logo() );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertSame(
+			3,
+			substr_count( $html, 'wp-block-site-logo' ),
+			'The header bar, the mobile panel and the footer each render the mark.'
+		);
+
+		$this->assertStringNotContainsString(
+			'dp-brand wp-block-site-title',
+			$html,
+			'The mark is no longer a site title with the text pushed off-screen.'
+		);
+
+		$this->assertStringContainsString( 'dp-brand dp-brand-sm', $html, "The footer's mark is the small one." );
+
+		delete_option( 'site_logo' );
+	}
+
+	/**
+	 * With no logo chosen the block draws nothing, in both contexts.
+	 *
+	 * This is `core/site-logo`'s own behaviour and is deliberately not papered
+	 * over: a mark drawn from PHP when the option is empty would appear on the
+	 * page and not in the editor's canvas, which is the divergence ADR-0008
+	 * exists to stop. `dp-core`'s seeder is what stops a real site being blank.
+	 *
+	 * @return void
+	 */
+	public function test_no_logo_means_no_mark_rather_than_a_broken_one(): void {
+		delete_option( 'site_logo' );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringNotContainsString( '<img', $html );
+		$this->assertStringContainsString( 'dp-header', $html, 'The rest of the chrome still renders.' );
+	}
+
+	/**
+	 * Swapping the logo swaps the mark, with no code and no deploy.
+	 *
+	 * @return void
+	 */
+	public function test_the_logo_follows_the_site_logo_option(): void {
+		$attachment = $this->seed_logo();
+
+		update_option( 'site_logo', $attachment );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+		$src  = wp_get_attachment_image_url( $attachment, 'full' );
+
+		$this->assertIsString( $src );
+		$this->assertStringContainsString( esc_url( $src ), $html );
+
+		delete_option( 'site_logo' );
+	}
+
+	/**
+	 * The mark links home through the resolver, not through an href in a file.
+	 *
+	 * Core links its logo to `home_url()` directly, which is the right URL by
+	 * the wrong route: every other link in this chrome says which destination it
+	 * wants and is given one at render time, and `data-dp-destination` is what
+	 * makes that visible. The mark answers the same way.
+	 *
+	 * @return void
+	 */
+	public function test_the_mark_links_home_through_a_destination(): void {
+		update_option( 'site_logo', $this->seed_logo() );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertMatchesRegularExpression(
+			'~<a[^>]*data-dp-destination="home"[^>]*href="' . preg_quote( esc_url( home_url( '/' ) ), '~' ) . '"~',
+			$html
+		);
+
+		delete_option( 'site_logo' );
+	}
+
+	/**
+	 * The mark still announces the site to a screen reader.
+	 *
+	 * The old markup got its accessible name from a site title nobody could
+	 * see. An image gets it from `alt`, and core falls back to the site's name
+	 * when an attachment has none — which is the behaviour being pinned here,
+	 * because a nameless link in the header is the one accessibility failure
+	 * this change could have introduced.
+	 *
+	 * @return void
+	 */
+	public function test_the_mark_carries_the_site_name_as_its_accessible_name(): void {
+		update_option( 'site_logo', $this->seed_logo() );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'alt="' . esc_attr( get_bloginfo( 'name' ) ) . '"', $html );
+
+		delete_option( 'site_logo' );
+	}
+
+	/**
+	 * The footer has the design's three groups, and they are not one menu.
+	 *
+	 * Digest §2: SITE / WRITING / MORE. Until this phase the first group was a
+	 * `core/navigation` block with no `ref`, which resolved to the same menu as
+	 * the header — so the footer could only ever mirror it, and MORE did not
+	 * exist at all. Every link now names a destination.
+	 *
+	 * @return void
+	 */
+	public function test_the_footer_has_the_designs_three_groups(): void {
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		foreach ( array( 'Site', 'Writing', 'More' ) as $label ) {
+			$this->assertStringContainsString(
+				'<p class="dp-label wp-block-paragraph">' . $label . '</p>',
+				$html,
+				sprintf( 'The footer is missing its "%s" group.', $label )
+			);
+		}
+
+		foreach ( array( 'work', 'about', 'contact', 'posts', 'uses', 'resume', 'colophon', 'privacy', 'feed' ) as $destination ) {
+			$this->assertStringContainsString(
+				'data-dp-destination="' . $destination . '"',
+				$html,
+				sprintf( 'The footer names no link asking for "%s".', $destination )
+			);
+		}
+
+		$this->assertStringContainsString( 'Uses', $html );
+		$this->assertStringContainsString( 'Colophon', $html );
+		$this->assertStringContainsString( 'Privacy', $html );
+	}
+
+	/**
+	 * Watch is left out until it exists, rather than pointing at a 404.
+	 *
+	 * The same rule Phase 5 applied to the header. Phase 12 adds the template,
+	 * the destination and the two links at once.
+	 *
+	 * @return void
+	 */
+	public function test_the_footer_leaves_watch_out_until_phase_12(): void {
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringNotContainsString( 'dp-to-watch', $html );
+		$this->assertNotContains( 'watch', Navigation::DESTINATIONS );
+	}
+
+	/**
+	 * Uses and Colophon resolve through the template David assigned them.
+	 *
+	 * @return void
+	 */
+	public function test_uses_and_colophon_resolve_through_their_templates(): void {
+		$uses     = $this->seed_page( 'What I use', Navigation::TEMPLATES['uses'] );
+		$colophon = $this->seed_page( 'How this is made', Navigation::TEMPLATES['colophon'] );
+
+		$navigation = new Navigation( new Destinations() );
+
+		$this->assertSame( $this->permalink( $uses ), $navigation->url_for( 'uses' ) );
+		$this->assertSame( $this->permalink( $colophon ), $navigation->url_for( 'colophon' ) );
+	}
+
+	/**
+	 * Privacy follows Settings to Privacy, which is core's own nomination.
+	 *
+	 * @return void
+	 */
+	public function test_privacy_follows_the_privacy_setting(): void {
+		$navigation = new Navigation( new Destinations() );
+
+		update_option( 'wp_page_for_privacy_policy', 0 );
+
+		$this->assertNull( $navigation->url_for( 'privacy' ), 'No page chosen means no link, not a link to the root.' );
+
+		$page = $this->seed_page( 'What I keep' );
+
+		update_option( 'wp_page_for_privacy_policy', $page );
+
+		$this->assertSame( $this->permalink( $page ), $navigation->url_for( 'privacy' ) );
+	}
+
+	/**
+	 * An attachment standing in for a logo David uploaded.
+	 *
+	 * The metadata is written by hand rather than generated, because there is no
+	 * file behind it and none is needed: `image_downsize()` answers from
+	 * `width` and `height` alone, which is all `core/site-logo` asks for.
+	 *
+	 * @return int
+	 */
+	private function seed_logo(): int {
+		$attachment = wp_insert_attachment(
+			array(
+				'post_title'     => 'A mark David uploaded',
+				'post_mime_type' => 'image/png',
+				'post_status'    => 'inherit',
+			),
+			'davids-own-mark.png',
+			0,
+			true
+		);
+
+		$this->assertIsInt( $attachment );
+
+		wp_update_attachment_metadata(
+			$attachment,
+			array(
+				'file'   => 'davids-own-mark.png',
+				'width'  => 128,
+				'height' => 128,
+				'sizes'  => array(),
+			)
+		);
+
+		return $attachment;
+	}
+
+	/**
 	 * The chrome is on every template this phase ships.
 	 *
 	 * @return void
