@@ -61,7 +61,10 @@
 .wp-site-blocks > .wp-block-template-part,
 .wp-site-blocks > .dp-cta-band,
 .wp-site-blocks main > .dp-band,
-.wp-site-blocks main > .dp-cta-band {
+.wp-site-blocks main > .dp-cta-band,
+.wp-site-blocks main > .dp-home-hero,
+.wp-site-blocks main > .dp-hero,
+.wp-site-blocks main > .dp-section {
 	margin-block-start: 0;
 }
 
@@ -206,7 +209,7 @@ p.dp-home-hero-note {
 	line-height: var(--lh-relaxed);
 }
 
-.dp-home-hero-actions {
+.dp-home-hero-actions.wp-block-buttons {
 	margin-block-start: 40px;
 	gap: 12px;
 }
@@ -230,6 +233,18 @@ p.dp-home-hero-note {
 	flex-wrap: wrap;
 	padding-bottom: 16px;
 	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+/*
+ * The head is a flex row that WordPress still treats as flow, because the block
+ * markup asks for the default layout and only this stylesheet makes it flex.
+ * So core hands the second child a 24px `margin-block-start`, and in a
+ * baseline-aligned row that pushes the whole line down and leaves a band of
+ * dead space above the kicker. The paragraphs already zero their own margins;
+ * the trailing `core/buttons` — "FULL TIMELINE →", "ALL POSTS →" — did not.
+ */
+.dp-section-head.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 h2.dp-section-head-heading {
@@ -485,8 +500,8 @@ ul.dp-filter-pills a[aria-current="page"] {
 	padding-left: 10px;
 }
 
-.dp-row-date,
-.dp-row-cat {
+.dp-row .dp-row-date,
+.dp-row .dp-row-cat {
 	margin: 0;
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
@@ -634,6 +649,13 @@ p.dp-row-excerpt {
 	object-fit: cover;
 }
 
+/* The card's own parts carry the design's `gap: 10px`, so core's block gap on
+   top of it made every card 48px taller than the design draws. */
+.dp-card.wp-block-group > *,
+.dp-card-body.wp-block-group > * {
+	margin-block-start: 0;
+}
+
 .dp-card-body {
 	display: flex;
 	flex: 1;
@@ -642,7 +664,7 @@ p.dp-row-excerpt {
 	padding: 24px;
 }
 
-.dp-card-meta {
+.dp-card-meta.wp-block-group {
 	display: flex;
 	gap: 4px 12px;
 	flex-wrap: wrap;
@@ -654,7 +676,7 @@ p.dp-row-excerpt {
 	text-transform: uppercase;
 }
 
-.dp-card-year {
+p.dp-card-year {
 	color: var(--hue-gold);
 }
 
@@ -825,6 +847,12 @@ p.dp-cta-banner-line {
 	}
 }
 
+/* The design's row is `gap: 12px`; core's block gap makes it 24 in both
+   contexts, and would show the moment a second button is added. */
+.dp-cta-band .wp-block-buttons {
+	gap: 12px;
+}
+
 h2.dp-cta-band-title {
 	margin-block: 0 16px;
 	font-family: var(--font-display);
@@ -856,13 +884,44 @@ p.dp-cta-band-line {
  */
 .dp-right-now {
 	container: dp-strip / inline-size;
+
+	/*
+	 * The design's own `padding: 24px var(--gutter) var(--section-y)`. There
+	 * was none: the top read correctly only because core's 24px block gap
+	 * happened to be the same number, and the bottom was simply missing, so
+	 * the record strip ran straight into the border of the band below it.
+	 * `.dp-section` above supplies the width and the inline padding; the
+	 * block padding is per-section and belongs here.
+	 */
+	padding-block: 24px var(--section-y);
 }
 
 .dp-bento {
 	display: grid;
 	gap: 16px;
 	grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+/*
+ * Two classes, and both of them earn it.
+ *
+ * The **margins** were the design's on the site and core's in the canvas:
+ * `:root :where(.is-layout-flow) > *` sets `margin-block-end: 0` at exactly the
+ * specificity of a bare `.dp-bento`, so the 40px under the bento survived on
+ * the front end and vanished in the editor.
+ *
+ * The **tiles** are worse than that, because it is the same rule in the other
+ * direction: every tile after the first got a 24px `margin-block-start` from
+ * the block gap, on top of the grid's own 16px `gap`. That is a 40px row gap
+ * where the design has 16 — the "cards spacing is off by default" David
+ * reported, and it was wrong in both contexts rather than only one.
+ */
+.dp-bento.wp-block-group {
 	margin-block: 24px 40px;
+}
+
+.dp-bento.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 .dp-bento > .dp-tile {
@@ -956,6 +1015,11 @@ p.dp-cta-band-line {
 	margin-block-end: 0;
 }
 
+/* `tileOff` in the design sets 12px under its label, not the 16 the rest use. */
+.dp-tile-aside p.dp-label {
+	margin-block-end: 12px;
+}
+
 .dp-tile p.dp-tile-quiet {
 	color: var(--text-muted);
 	font-size: var(--fs-sm);
@@ -1007,17 +1071,28 @@ h3.dp-tile-title {
 	color: var(--accent-text);
 }
 
-/* The quiet strip of past roles. */
+/*
+ * The design puts 20px between "THE RECORD" and the strip. It cannot go on
+ * `.dp-record`: the post template is the first child of the query block, and
+ * core zeroes a first child's `margin-block-start` at two classes, so the rule
+ * that used to be here was dead and the gap was core's 24px block gap on the
+ * query instead. The query is the element with a margin, so the margin is on
+ * the query — scoped, because the same block on the work page wants 32.
+ */
+.dp-right-now .dp-query {
+	margin-block-start: 20px;
+}
+
 .dp-record {
 	display: grid;
 	gap: 24px 20px;
 	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
 	margin: 0;
 	padding: 0;
-	margin-block-start: 20px;
 	list-style: none;
 }
 
+/* The quiet strip of past roles. */
 .dp-record > li {
 	display: block;
 	margin: 0;
@@ -1077,6 +1152,16 @@ h3.dp-record-org {
 	line-height: var(--lh-relaxed);
 }
 
+/*
+ * The design stacks these in a column with `gap: 0`: each item carries a
+ * `border-top` and 32px of its own padding, and the borders are what separate
+ * them. Core's block gap put 24px of ground between every pair, so the rules
+ * floated instead of dividing.
+ */
+.dp-shipped.wp-block-group > .dp-shipped-item {
+	margin-block-start: 0;
+}
+
 .dp-shipped-item {
 	padding-block: 32px;
 	border-top: var(--border-width) solid var(--border-subtle);
@@ -1113,20 +1198,24 @@ h3.dp-record-org {
 	margin-block-end: 0;
 }
 
-.dp-badges {
+.dp-badges.wp-block-group {
 	display: flex;
 	gap: 8px;
 	flex-wrap: wrap;
 	margin-block-end: 16px;
 }
 
-.dp-latest {
+.dp-latest.wp-block-group {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 16px 24px;
 	flex-wrap: wrap;
 	margin-block-end: 40px;
+}
+
+.dp-latest.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 .dp-latest h2 {
@@ -2363,9 +2452,6 @@ pre.dp-tl-artifact-body {
  * cards, then the whole record. The section paddings are the design's own.
  * ---------------------------------------------------------------------- */
 
-.dp-work-intro {
-	padding-bottom: 8px;
-}
 
 .dp-work-featured {
 	padding-block: 24px 64px;
@@ -2392,15 +2478,19 @@ p.dp-work-lede {
 	text-wrap: pretty;
 }
 
-.dp-work-outro {
+.dp-work-outro.wp-block-group {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
 	gap: 16px 24px;
 	flex-wrap: wrap;
-	margin-top: 40px;
+	margin-block-start: 40px;
 	padding-top: 24px;
 	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-work-outro.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 .dp-work-outro p {

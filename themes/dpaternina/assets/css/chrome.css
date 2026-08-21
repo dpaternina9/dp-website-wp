@@ -53,48 +53,58 @@
 /* -------------------------------------------------------------------------
  * The brand mark
  *
- * `core/site-title` rather than `core/site-logo`: the mark ships with the theme
- * and does not depend on David having uploaded anything, and the site's name is
- * still the link's accessible name. The text is replaced rather than removed,
- * so the link is never nameless.
+ * `core/site-logo`, in all three places — the header bar, the mobile panel's
+ * head, and the footer. It reads the `site_logo` option, so David swaps the
+ * mark from the admin whenever he likes and nothing here has to change.
+ *
+ * This used to be a `background: url(…)` on a `core/site-title` whose text was
+ * pushed off-screen, which meant the mark could only be changed by editing this
+ * file and shipping a release. The image is now content; only its size is here.
+ * `themes/dpaternina/assets/img/dp-mark-gradient-128.png` is still the default
+ * and is still in the theme — `dp-core`'s seeder asks the theme for it through
+ * `dp_brand_logo_path` and sets it as the site logo on a fresh site.
  *
  * The design's chrome uses the *gradient* mark, at 34px in the header and in
- * the mobile panel's head and at 30px, 0.85 opacity, in the footer — which is
- * what the three rules below set.
+ * the mobile panel's head and at 30px, 0.85 opacity, in the footer.
  *
  * `design-source/assets/dp-mark-gradient*.png` is a broken export and stays
  * broken: both sizes carry only the top arc of the monogram. David supplied the
  * real file instead. It lives beside this stylesheet as
  * `assets/img/dp-mark-gradient.src.png` at 2000px, which is a master and not a
- * served asset; `dp-mark-gradient-128.png` is generated from it and is the one
- * the chrome loads. See assets/img/README.md.
+ * served asset; `dp-mark-gradient-128.png` is generated from it.
+ * See assets/img/README.md.
  *
  * The white mark has not gone anywhere — `.dp-featured-art` still draws it over
  * the spectrum gradient, where a gradient mark on a gradient ground would not
  * read.
+ *
+ * Every selector below names `.wp-block-site-logo` as well as `.dp-brand`, for
+ * the reason the button rules give: core's own block styles are
+ * `.wp-block-site-logo img` and `.wp-block-site-logo.is-default-size img`, so a
+ * rule at one or two classes here ties with them and is decided by load order —
+ * which differs between the front end and the editor canvas (ADR-0008).
  * ---------------------------------------------------------------------- */
 
-.dp-brand {
+.dp-brand.wp-block-site-logo {
 	margin: 0;
 	flex: none;
 	line-height: 0;
 }
 
-.dp-brand a {
+.dp-brand.wp-block-site-logo a {
 	display: block;
-	overflow: hidden;
-	width: 34px;
-	height: 34px;
-	background: url(../img/dp-mark-gradient-128.png) no-repeat center / contain;
-	color: transparent;
+	line-height: 0;
 	text-decoration: none;
-	text-indent: -100vw;
-	white-space: nowrap;
 }
 
-.dp-brand-sm a {
+.dp-brand.wp-block-site-logo img {
+	display: block;
+	width: 34px;
+	height: auto;
+}
+
+.dp-brand-sm.wp-block-site-logo img {
 	width: 30px;
-	height: 30px;
 	opacity: 0.85;
 }
 
@@ -266,7 +276,19 @@ span.dp-label {
 	background: var(--bg-page);
 }
 
-.dp-header-bar {
+/*
+ * The gap, the margin and the padding on every rule from here down name a
+ * second class or an element on purpose, and it is the same purpose the button
+ * rules above give. Core emits its layout styles as
+ * `:root :where(.is-layout-flex) { gap: … }` and
+ * `:root :where(.is-layout-flow) > * { margin-block-start: … }`, both one class
+ * of specificity — the same as a bare `.dp-header-bar` or `.dp-footer-bar` — so
+ * a single-class rule here ties and is settled by load order. The front end
+ * prints the global styles first and the block editor injects them last, so
+ * every one of these was the design's value on the site and core's 24px block
+ * gap in the canvas. ADR-0011 has the sweep; ADR-0008 has the mechanism.
+ */
+.dp-header-bar.wp-block-group {
 	gap: var(--space-6);
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -292,7 +314,7 @@ span.dp-label {
 	display: none;
 }
 
-.dp-nav {
+.dp-nav.wp-block-navigation {
 	flex: 0 1 auto;
 	gap: 0;
 	font-size: var(--fs-sm);
@@ -405,7 +427,7 @@ span.dp-label {
  * The panel
  * ---------------------------------------------------------------------- */
 
-.dp-panel {
+dialog.dp-panel {
 	position: fixed;
 	z-index: 40;
 	inset: 0;
@@ -452,7 +474,7 @@ span.dp-label {
 	border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-panel-nav {
+.dp-panel-nav.wp-block-navigation {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow-y: auto;
@@ -518,7 +540,7 @@ span.dp-label {
 	font-size: var(--fs-md);
 }
 
-.dp-panel-wordmark {
+p.dp-panel-wordmark {
 	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
@@ -543,6 +565,21 @@ span.dp-label {
 	background: var(--band);
 }
 
+/*
+ * Every child of the grid, of the footer itself, and of each column carries the
+ * design's own spacing — the grid's `gap`, the columns' `gap`, the bar's
+ * `border-top`. Core's block gap adds a second one on top of all three, which
+ * showed as 24px of dead ground above the bottom bar and as a 64px row gap
+ * whenever the columns wrapped. The design has no margins anywhere in this
+ * stack.
+ */
+.dp-footer.wp-block-group > *,
+.dp-footer-grid.wp-block-group > *,
+.dp-footer-brand.wp-block-group > *,
+.dp-footer-group.wp-block-group > * {
+	margin-block-start: 0;
+}
+
 .dp-footer-grid {
 	display: grid;
 	max-width: var(--container-lg);
@@ -564,7 +601,7 @@ span.dp-label {
 	gap: 16px;
 }
 
-.dp-footer-line {
+p.dp-footer-line {
 	max-width: 26ch;
 	margin: 0;
 	color: var(--text-secondary);
@@ -572,11 +609,17 @@ span.dp-label {
 	line-height: var(--lh-relaxed);
 }
 
-.dp-footer-nav .wp-block-navigation__container {
-	gap: 12px;
-}
-
-.dp-footer-nav .wp-block-navigation-item__content,
+/*
+ * The footer's three groups are `dp-to-*` links, not a menu. Digest §2 lists
+ * them as SITE / WRITING / MORE, and until this phase there was one
+ * `core/navigation` block with no `ref` in the first group — which meant the
+ * footer could only ever show the same menu as the header, and the third group
+ * did not exist. A per-group menu is not available to a theme: `ref` is a post
+ * ID, a template file cannot name one, and a filter that supplies it on the
+ * server leaves the block editor drawing a different menu from the one the
+ * front end renders. ADR-0011.
+ */
+.dp-footer-links .wp-block-button__link,
 .dp-footer-cats a {
 	color: var(--text-secondary);
 	font-size: var(--fs-sm);
@@ -584,12 +627,20 @@ span.dp-label {
 	transition: color var(--dur-base) var(--ease-standard);
 }
 
-.dp-footer-nav .wp-block-navigation-item__content:hover,
+.dp-footer-links .wp-block-button__link:hover,
 .dp-footer-cats a:hover {
 	color: var(--text-primary);
 }
 
-.dp-footer-cats {
+/*
+ * Scoped by its column rather than named by its element. `core/categories`
+ * renders a `<ul>` today and a `<div>` wrapping a `<select>` the moment the
+ * dropdown variant is chosen, and the block editor draws a placeholder of its
+ * own while it fetches the terms — so `ul.dp-footer-cats` is a rule that is
+ * right most of the time. Two classes reach every one of those shapes, and
+ * still beat core's block gap.
+ */
+.dp-footer-group .dp-footer-cats {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -598,11 +649,11 @@ span.dp-label {
 	list-style: none;
 }
 
-.dp-footer-links {
+.dp-footer-links.wp-block-buttons {
 	gap: 12px;
 }
 
-.dp-footer-bar {
+.dp-footer-bar.wp-block-group {
 	gap: 12px 24px;
 	max-width: var(--container-lg);
 	margin-inline: auto;
@@ -610,6 +661,10 @@ span.dp-label {
 	padding-inline: var(--gutter);
 	border-top: var(--border-width) solid var(--border-subtle);
 	align-items: center;
+}
+
+.dp-footer-meta.wp-block-buttons {
+	gap: 20px;
 }
 
 .dp-footer-meta .wp-block-button__link {
