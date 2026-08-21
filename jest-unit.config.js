@@ -29,7 +29,7 @@ module.exports = {
 	/*
 	 * The build externalises every `@wordpress/*` import to the `wp.*` globals
 	 * WordPress already loads, so those packages are not — and should not be —
-	 * dependencies of this repository. The four below have no npm presence here
+	 * dependencies of this repository. The five below have no npm presence here
 	 * at all, so Jest is given a double for each. See tests/js/__mocks__.
 	 */
 	moduleNameMapper: {
@@ -41,5 +41,7 @@ module.exports = {
 		'^@wordpress/components$':
 			'<rootDir>/tests/js/__mocks__/wordpress-components.js',
 		'^@wordpress/data$': '<rootDir>/tests/js/__mocks__/wordpress-data.js',
+		'^@wordpress/server-side-render$':
+			'<rootDir>/tests/js/__mocks__/wordpress-server-side-render.js',
 	},
 };
