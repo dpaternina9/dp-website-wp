@@ -328,3 +328,93 @@ Facts later phases inherit:
       Messages go to Settings → General's administration address, and no address is
       published on the page at all until you give one — deliberately, because where
       mail is delivered and what you publish are two decisions.
+
+---
+
+## Phase 7b — chrome and home-page fidelity (this branch)
+
+Branch: `phase-7b-chrome-and-home-fidelity`. Local, no remote, merges by hand.
+
+David's four review items, and what each turned out to be:
+
+- **The logo could not be edited** because it was not an image. `parts/header.html`
+  rendered `core/site-title` and `chrome.css` painted the monogram behind it as a
+  `background`, with the title text pushed off-screen. All three marks are now
+  `core/site-logo`. ADR-0011.
+- **"Cards spacing is off by default"** was core's block gap adding 24px to every
+  grid item on top of the grid's own `gap`. The bento's row gap was 40px where the
+  design draws 16; the work cards' bodies were 48px taller than the design.
+- **"That section is missing padding at the bottom"** was `.dp-right-now`, which had
+  no `padding-block` at all. Its *top* read correctly only because core's block gap
+  happens to be the same 24px the design asks for.
+- **The footer could only mirror the header** because there was one `wp_navigation`
+  post and no `wp:navigation` block carried a `ref`. The three groups are now
+  `dp-to-*` links.
+
+Chores it could not do from its lane:
+- [x] `docs/adr/README.md` has a row for **0011**.
+- [x] `docs/plan.md` gained §7.3.
+- [x] `plugins/dp-core/src/Fixture/Seeder.php` — Phase 3's file, one new step
+      (`seed_brand()`) and one new count in the report. `ContentSeedTest`'s exact-counts
+      assertion moved with it.
+- [x] `themes/dpaternina/src/Theme.php` — one line, plus `Navigation` is now built
+      before `Assets` so `Brand` can be given it. The registration order is otherwise
+      untouched; it remains the merge point Phase 2 still has to land in.
+
+### Facts later phases inherit
+
+- **`wp_template_part` forks are a separate list from `wp_template`.** The
+  constraint note for this phase said the template customisations were cleared, and
+  they were — but `wp post list --post_type=wp_template_part` still held a forked
+  **header** (ID 71), so `parts/header.html` was not what :8888 rendered and none of
+  the header work reached the page. Deleted, with the content saved into this phase's
+  report. **Check both post types before concluding a chrome edit did nothing.**
+- **`core/site-logo` renders nothing when `site_logo` is unset.** That is the block's
+  own behaviour and is deliberately not patched: a PHP fallback would draw a mark on
+  the page that the editor's canvas does not, which is the ADR-0008 divergence. The
+  seeder is what stops a fresh site being blank.
+- **`.dp-x { gap: … }` and `.dp-x { margin-block-*: … }` are one class, and so are
+  core's layout rules.** Phase 5b said this about type; it is equally true of
+  spacing, and it was true of 18 elements on the home page. Every spacing rule in
+  the theme now carries a second class or an element name, and
+  `tests/e2e/spacing.spec.ts` sweeps the home page in both contexts to keep it that
+  way.
+- **A theme cannot bind a navigation block to a particular menu.** `ref` is a post
+  ID and a template file cannot carry one; supplying it server-side leaves the block
+  editor drawing a different menu from the front end. Anything the chrome links to
+  has to be a derived destination, not a menu entry. ADR-0011.
+- **`core/categories` is a `<ul>` on the page and, briefly, something else in the
+  canvas** while it fetches its terms. A rule written `ul.dp-footer-cats` is right
+  most of the time; `.dp-footer-group .dp-footer-cats` is right always.
+- **The `tests` environment's mu-plugin mapping is not applied by a plain
+  `wp-env start` on containers that already exist.** `WPMU_PLUGIN_DIR` was empty and
+  the contact form's *sent* e2e failed showing the *failed* panel — exactly the
+  ADR-0010 symptom. `npx wp-env start --update` recreates the container and fixes it.
+
+### For David
+
+- [ ] **Your forked header template part was deleted.** It was created by editing the
+      header in the Site Editor, and while it existed the theme's `parts/header.html`
+      did nothing — which is why the logo change would have appeared not to work. The
+      only thing in it that was not in the theme's own file was a `"ref":66` on the two
+      navigation blocks, which core's fallback resolves to the same menu anyway. The
+      full markup is in the phase report if you want any of it back.
+- [ ] **Assign the Uses and Colophon templates.** Two new entries in the page
+      template dropdown, both identical to the default page template — assigning one
+      is how the footer's MORE group learns which page is which. Nothing about how
+      those pages render changes. This supersedes Phase 7's warning that assigning a
+      `dp-` template to them would lose the eyebrow and the deck; that is not true of
+      these two. Done on :8888 already.
+- [ ] **Set Settings → Privacy.** The footer's PRIVACY link resolves from
+      `wp_page_for_privacy_policy` and is inert until you choose a page. Pointed at
+      the seeded Privacy page on :8888 already.
+- [ ] **The site logo is now a media item you can swap** — Appearance → Editor →
+      Styles, or the Customizer. The seeder put the theme's own monogram there. If
+      you clear it, the header, the panel and the footer lose their mark; that is the
+      block behaving correctly, not a bug.
+- [ ] **Your header menu still has one item ("Work").** Phase 5's chore is still
+      open: the design's header is Home · Work · Blog · About plus "Get in touch".
+- [ ] **The footer's WRITING group lists every category**, because `core/categories`
+      is live data. The design shows three links — All posts, My life story,
+      Categories. Say the word if you want the literal three instead; "My life story"
+      and "Categories" both need somewhere to point that the theme can derive.

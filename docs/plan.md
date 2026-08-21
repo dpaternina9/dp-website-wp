@@ -352,6 +352,32 @@ wp-env**, so the design's *sent* panel was unreachable in a browser. A test-only
 must-use plugin, mapped into the `tests` environment alone, answers the send and
 gives each e2e run its own rate-limit counter. ADR-0010.
 
+### 7.3 Phase 7b — chrome and home-page fidelity ✅
+
+A review pass over the rendered site, not a new capability. Four corrections, all
+landed:
+
+- **The brand mark is `core/site-logo`** in the header, the mobile panel and the
+  footer, so David swaps it from the admin. It was a `background: url()` on a
+  visually-hidden `core/site-title`. `dp-core`'s seeder sets the theme's bundled
+  mark as the default; `DP\Theme\Chrome\Brand` points the link at the `home`
+  destination like every other link in the chrome. ADR-0011.
+- **The block gap was adding itself to every composition the design already
+  spaced.** The RIGHT NOW bento's row gap was 40px where the design draws 16,
+  the "Things I've shipped" rows floated 24px apart where the design butts them
+  together, and `.dp-right-now` had no block padding at all. Eighteen elements on
+  the home page had different spacing in the site editor from the front end.
+  Every one is fixed in the stylesheets, at a specificity that wins in both
+  contexts, and `tests/e2e/spacing.spec.ts` sweeps for a nineteenth.
+- **The footer has the design's three groups.** SITE / WRITING / MORE, plus
+  PRIVACY and COLOPHON in the bottom bar. There was one `core/navigation` with no
+  `ref`, so the footer could only mirror the header. Every link is now a
+  `dp-to-*` destination; `privacy` resolves through Settings → Privacy and
+  `uses` / `colophon` through two new page templates that are `page.html` under
+  another name.
+- **`core/post-content` is off the home and work templates**, with the empty
+  groups that held it.
+
 ---
 
 ## Phase 8 — Feeds
