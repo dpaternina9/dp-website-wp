@@ -105,10 +105,22 @@
  * styles — digest §5 says the primitives "become block styles and small
  * patterns" — so the appearance is here, on core's own `wp-element-button`
  * class, which every button block and every button-shaped link already has.
+ *
+ * **Each selector names an element or a second class on purpose.** Core's own
+ * rule is `:root :where(.wp-element-button, .wp-block-button__link)`, which is
+ * one pseudo-class of specificity — exactly the same as a bare
+ * `.wp-element-button` here. Ties are broken by load order, the front end
+ * prints the global styles first and the block editor injects them last, so a
+ * one-class rule was teal on the site and core's default grey in the canvas.
+ * That is the hazard ADR-0008 and the Phase 5b notes describe, and it applied
+ * to every unadorned button on the site. The `.dp-button-*` variants below
+ * already carry two classes, which is why only the base ever diverged.
  * ---------------------------------------------------------------------- */
 
-.wp-element-button,
-.wp-block-button__link {
+a.wp-element-button,
+button.wp-element-button,
+input.wp-element-button,
+.wp-block-button__link.wp-element-button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -134,15 +146,19 @@
 		border-color var(--dur-base) var(--ease-standard);
 }
 
-.wp-element-button:hover,
-.wp-block-button__link:hover {
+a.wp-element-button:hover,
+button.wp-element-button:hover,
+input.wp-element-button:hover,
+.wp-block-button__link.wp-element-button:hover {
 	background: var(--accent-hover);
 	box-shadow: var(--shadow-glow-teal);
 	color: var(--accent-contrast);
 }
 
-.wp-element-button:active,
-.wp-block-button__link:active {
+a.wp-element-button:active,
+button.wp-element-button:active,
+input.wp-element-button:active,
+.wp-block-button__link.wp-element-button:active {
 	transform: scale(0.97);
 }
 
