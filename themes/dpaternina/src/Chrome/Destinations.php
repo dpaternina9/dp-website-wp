@@ -126,16 +126,35 @@ final class Destinations {
 	 * @return string|null Null when David has not assigned that template to anything.
 	 */
 	public function by_template( string $template ): ?string {
-		$pages = $this->template_pages();
-		$slug  = $this->slug( $template );
+		$page_id = $this->id_by_template( $template );
 
-		if ( ! isset( $pages[ $slug ] ) ) {
+		if ( null === $page_id ) {
 			return null;
 		}
 
-		$permalink = get_permalink( $pages[ $slug ] );
+		$permalink = get_permalink( $page_id );
 
 		return is_string( $permalink ) ? $permalink : null;
+	}
+
+	/**
+	 * The ID of the page carrying one of this theme's custom templates.
+	 *
+	 * The URL is what almost every caller wants, and `by_template()` is still
+	 * the way to ask for it. This exists for the one caller that needs the page
+	 * itself: the résumé's PDF link, whose URL `dp-core` builds from a page ID
+	 * because the query variable behind it is the plugin's and its name is not
+	 * something this theme should be writing out.
+	 *
+	 * @param string $template The template's slug, e.g. `dp-resume`. A `.html`
+	 *                         extension is accepted and ignored.
+	 * @return int|null Null when David has not assigned that template to anything.
+	 */
+	public function id_by_template( string $template ): ?int {
+		$pages = $this->template_pages();
+		$slug  = $this->slug( $template );
+
+		return $pages[ $slug ] ?? null;
 	}
 
 	/**

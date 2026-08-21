@@ -66,6 +66,7 @@ final class Theme {
 		( new Patterns() )->register();
 		( new ExternalRequests() )->register();
 		( new Blocks\AllowedBlocks() )->register();
+		( new Blocks\ContactForm( $this ) )->register();
 		( new Blocks\CoreStyles() )->register();
 		( new Blocks\Markup() )->register();
 		( new Blocks\SeriesPlanned() )->register();

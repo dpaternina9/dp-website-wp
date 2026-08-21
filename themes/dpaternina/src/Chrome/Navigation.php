@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Theme\Chrome;
 
+use DP\Core\Resume\ResumePdf;
 use WP_HTML_Tag_Processor;
 use WP_Taxonomy;
 use WP_Term;
@@ -94,7 +95,7 @@ final class Navigation {
 	 *
 	 * @var list<string>
 	 */
-	public const DESTINATIONS = array( 'posts', 'feed', 'contact', 'work', 'about', 'resume' );
+	public const DESTINATIONS = array( 'posts', 'feed', 'home', 'contact', 'work', 'about', 'resume', 'resume-pdf' );
 
 	/**
 	 * Constructor.
@@ -269,9 +270,47 @@ final class Navigation {
 			return get_feed_link();
 		}
 
+		/*
+		 * The site root is not a page and is not David's to move, so it is the
+		 * one destination that always resolves. It is here rather than written
+		 * into the markup for the same reason as the rest: a template that says
+		 * where it is going, and one place that knows where that is today.
+		 */
+		if ( 'home' === $destination ) {
+			return home_url( '/' );
+		}
+
+		if ( 'resume-pdf' === $destination ) {
+			return $this->resume_pdf();
+		}
+
 		return isset( self::TEMPLATES[ $destination ] )
 			? $this->destinations->by_template( self::TEMPLATES[ $destination ] )
 			: null;
+	}
+
+	/**
+	 * The URL that downloads the résumé, when there is a résumé to download.
+	 *
+	 * Two things have to be true, and either can be false on a working site.
+	 * David has to have assigned the `dp-resume` template to a page — this
+	 * theme's half — and `dp-core` has to be active, because the query variable
+	 * the download hangs off is the plugin's and only the plugin knows its name.
+	 * Naming that class unguarded would fatal the theme on a site with the
+	 * plugin deactivated, which is exactly what `composer test:integration`
+	 * leaves behind (ADR-0006 section 5). Either miss leaves the button in
+	 * place and inert, which is what every unresolved destination does.
+	 *
+	 * @return string|null
+	 */
+	private function resume_pdf(): ?string {
+		if ( ! class_exists( ResumePdf::class ) ) {
+			return null;
+		}
+
+		$page_id = $this->destinations->id_by_template( self::TEMPLATES['resume'] );
+
+		return null === $page_id ? null : ResumePdf::download_url( $page_id );
 	}
 
 	/**

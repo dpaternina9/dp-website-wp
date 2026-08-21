@@ -1,13 +1,49 @@
 <!-- wp:template-part {"slug":"header"} /-->
 
 <!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
-<main class="wp-block-group"><!-- wp:group {"className":"dp-section dp-section-reading dp-page","layout":{"type":"constrained"}} -->
-<div class="wp-block-group dp-section dp-section-reading dp-page"><!-- wp:post-title {"level":1,"className":"dp-post-title"} /-->
+<main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-section dp-resume","layout":{"type":"default"}} -->
+<section class="wp-block-group dp-section dp-resume"><!-- wp:group {"className":"dp-resume-head","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-resume-head"><!-- wp:group {"className":"dp-resume-identity","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-resume-identity"><!-- wp:paragraph {"className":"dp-label dp-resume-updated","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"dp_updated"}}}}} -->
+<p class="dp-label dp-resume-updated"></p>
+<!-- /wp:paragraph -->
 
-<!-- wp:post-content {"layout":{"type":"constrained"}} /--></div>
-<!-- /wp:group --></main>
+<!-- wp:post-title {"level":1,"className":"dp-resume-name"} /-->
+
+<!-- wp:paragraph {"className":"dp-resume-role","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"dp_lead"}}}}} -->
+<p class="dp-resume-role"></p>
+<!-- /wp:paragraph --></div>
 <!-- /wp:group -->
 
-<!-- wp:pattern {"slug":"dpaternina/cta-band"} /-->
+<!-- wp:buttons {"className":"dp-resume-download"} -->
+<div class="wp-block-buttons dp-resume-download"><!-- wp:button {"className":"dp-to-resume-pdf dp-button-lg"} -->
+<div class="wp-block-button dp-to-resume-pdf dp-button-lg"><a class="wp-block-button__link wp-element-button">Download PDF</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"dp-resume-summary","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-resume-summary"><!-- wp:post-content {"layout":{"type":"default"}} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:dp/resume-ledger {"heading":"Experience","meta":"2014 — now"} /-->
+
+<!-- wp:group {"className":"dp-resume-outro","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-resume-outro"><!-- wp:paragraph -->
+<p>The interactive version of this — with the projects that came out of each role — is the timeline.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-work dp-button-secondary"} -->
+<div class="wp-block-button dp-to-work dp-button-secondary"><a class="wp-block-button__link wp-element-button">Open the timeline</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-contact dp-button-quiet"} -->
+<div class="wp-block-button dp-to-contact dp-button-quiet"><a class="wp-block-button__link wp-element-button">Get in touch</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
+<!-- /wp:group --></section>
+<!-- /wp:group --></main>
+<!-- /wp:group -->
 
 <!-- wp:template-part {"slug":"footer"} /-->

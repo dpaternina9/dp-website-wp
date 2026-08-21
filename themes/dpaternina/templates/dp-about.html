@@ -1,10 +1,36 @@
 <!-- wp:template-part {"slug":"header"} /-->
 
 <!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
-<main class="wp-block-group"><!-- wp:group {"className":"dp-section dp-section-reading dp-page","layout":{"type":"constrained"}} -->
-<div class="wp-block-group dp-section dp-section-reading dp-page"><!-- wp:post-title {"level":1,"className":"dp-post-title"} /-->
+<main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-section dp-about","layout":{"type":"default"}} -->
+<section class="wp-block-group dp-section dp-about"><!-- wp:group {"className":"dp-about-intro","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-about-intro"><!-- wp:group {"className":"dp-about-lede","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-about-lede"><!-- wp:post-title {"level":1,"className":"dp-about-title"} /-->
 
-<!-- wp:post-content {"layout":{"type":"constrained"}} /--></div>
+<!-- wp:paragraph {"className":"dp-about-deck","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"dp_lead"}}}}} -->
+<p class="dp-about-deck"></p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"tagName":"figure","className":"dp-about-portrait","layout":{"type":"default"}} -->
+<figure class="wp-block-group dp-about-portrait"><!-- wp:post-featured-image {"isLink":false,"aspectRatio":"4/5"} /--></figure>
+<!-- /wp:group --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"dp-about-body","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-about-body"><!-- wp:post-content {"layout":{"type":"default"}} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"dp-about-actions","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-about-actions"><!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-work dp-button-lg"} -->
+<div class="wp-block-button dp-to-work dp-button-lg"><a class="wp-block-button__link wp-element-button">See the record</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"dp-to-contact dp-button-secondary dp-button-lg"} -->
+<div class="wp-block-button dp-to-contact dp-button-secondary dp-button-lg"><a class="wp-block-button__link wp-element-button">Get in touch</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons --></div>
+<!-- /wp:group --></section>
 <!-- /wp:group --></main>
 <!-- /wp:group -->
 
