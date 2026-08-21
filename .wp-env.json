@@ -29,7 +29,8 @@
         "SCRIPT_DEBUG": false
       },
       "mappings": {
-        "wp-content/dp-repo": "."
+        "wp-content/dp-repo": ".",
+        "wp-content/mu-plugins": "./tests/Support/mu-plugins"
       }
     }
   },
