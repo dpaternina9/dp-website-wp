@@ -259,9 +259,13 @@ script, no cookie banner", "no third-party analytics, advertising, or social scr
 load on any page", "four plugins, all load-bearing". **They are placeholder copy, not
 requirements.** Do not derive build constraints from them.
 
-The actual decision: **the site runs Rybbit.** That means one analytics script, one
-allowed external origin in the CSP, and a Privacy page whose copy must be rewritten
-before launch to describe what Rybbit actually collects on David's configuration.
+The actual decision: **the site runs Rybbit, installed as its own plugin.** It is not
+theme code and not `dp-core` code — David installs and configures it, and nothing in
+this repo enqueues an analytics script. The CSP that allows its origin is a security
+plugin's, also David's — this repo sets no headers at all. What is left for us is
+nothing; what is left for David is the Colophon and Privacy copy describing what Rybbit
+collects on his configuration, which is **his to write** — not ours to draft, and not an
+acceptance criterion for any phase.
 
 What still holds, because it is a design property rather than a copy promise:
 
@@ -273,8 +277,9 @@ What still holds, because it is a design property rather than a copy promise:
   a design change to raise, not a component to improvise.
 
 **Flag for David before launch:** the Privacy page copy currently states the opposite of
-what the site will do. It is the one page where placeholder copy shipping as-is would be
-actively misleading.
+what the site will do, and the Colophon's plugin count is now wrong in both directions.
+Both are his to rewrite; Privacy is the one page where placeholder copy shipping as-is
+would be actively misleading.
 
 ## 8. Placeholders — do not invent replacements
 

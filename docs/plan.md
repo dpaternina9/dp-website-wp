@@ -32,9 +32,11 @@ custom sidebar panel built with `@wordpress/scripts` for the structured ones
 (`bullets`, `stats`, `artifact`). That keeps the plugin count at four and the meta in
 the REST API, where the editor and the tests can both reach it.
 
-**Plugins.** `dp-core`, Stackable, and an SMTP/mailer are what the build needs. There is
-no target count — the Colophon's "four plugins" line is placeholder copy, not a budget.
-Anything beyond those three still needs a stated justification.
+**Plugins.** `dp-core`, Stackable, an SMTP/mailer, **Rybbit** (analytics), **AIOSEO**
+(all SEO output), and a security plugin (all HTTP headers). Everything on that list
+except `dp-core` is David's to install and configure; this repo neither enqueues nor
+duplicates any of it. There is no target count — the Colophon's "four plugins" line is
+placeholder copy, not a budget.
 
 ---
 
@@ -286,15 +288,22 @@ expand-all, deep link, and reduced-motion.
 
 ---
 
-## Phase 7 — Contact and the remaining pages
+## Phase 7 ✅ — Contact and the remaining pages
 
 - **Contact.** Normal POST first; `fetch` upgrade second. Nonce + capability +
   sanitize + rate limit + honeypot + timing check. No third-party captcha (it would be
   a tracker). `wp_mail` through the SMTP plugin. Renders the design's three states.
 - **About**, **Uses / Colophon / Privacy** through the shared block kit, **404**.
+  Uses, Colophon and Privacy are plain `page` posts: `templates/page.html` binds
+  their `dp_updated` eyebrow and `dp_lead` deck, and the body is the
+  `dpaternina/page-body` pattern — one of every block the house style allows.
+  404 renders **without site chrome and without the closing band**, which is what
+  the design does (`const chrome = view !== 'notfound' …`); so do Contact and the
+  résumé for the band alone.
 - **Résumé**, with a real downloadable PDF (see §7.1).
-- Service worker + offline page. Precache the shell only; never cache HTML for logged-in
-  users.
+- ~~Service worker + offline page.~~ **Cut 2026-08-21.** No service worker, no
+  registration, no precache, and the design's chrome-less offline state is out of scope.
+  Caching is a plugin's job if David ever wants one. 404 still ships.
 
 ### 7.1 The résumé PDF
 
@@ -322,20 +331,56 @@ is a config change, not a rewrite.
 on the PDF cache key (regenerates on role change, does not regenerate otherwise, serves
 stale on renderer failure); e2e for the three form states.
 
+### 7.2 What Phase 7 found
+
+Two things that were true of the whole project, not of this phase:
+
+- **A block registered only in PHP does not exist in the block editor.** All three
+  of `dp-core`'s dynamic blocks drew as `core/missing` in the site editor while
+  rendering perfectly on the front end. Every one of them now has a
+  `ServerSideRender` preview from the editor bundle `dp/callout` already ships —
+  which means `npm run build` after pulling. ADR-0009.
+- **Every unadorned button was teal on the site and core's grey in the canvas.**
+  `.wp-element-button` ties with core's `:root :where(.wp-element-button)`, and a
+  tie is broken by load order — which differs between the two contexts. The base
+  rule in `chrome.css` now carries an element, like every other component rule in
+  this theme. The `.dp-button-*` variants already did, which is why only the base
+  ever diverged.
+
+And one that is the harness rather than the code: **`wp_mail()` returns false on
+wp-env**, so the design's *sent* panel was unreachable in a browser. A test-only
+must-use plugin, mapped into the `tests` environment alone, answers the send and
+gives each e2e run its own rate-limit counter. ADR-0010.
+
 ---
 
-## Phase 8 — SEO, feeds, social, analytics
+## Phase 8 — Feeds
 
-- `OgCard` rendered server-side at 1200×630 to a cached file per post. Title size
-  switches at 58 characters; tone drives the orb and the kicker pill.
-- Canonicals, `robots`, sitemaps (core's, extended for the CPTs), JSON-LD for
-  `Person`, `BlogPosting`, and the timeline as `Role`/`CreativeWork`.
+Almost nothing. **SEO is AIOSEO's**, installed and configured by David: OG images,
+canonicals, `robots`, sitemaps and JSON-LD all come from the plugin. This repo writes
+none of it — no `OgCard` renderer, no meta-tag output, no schema graph.
+
+Two notes so nobody re-adds the work:
+
+- The old bullet said "sitemaps extended for the CPTs". That was wrong regardless of
+  plugin. `dp_role`, `dp_ship` and `dp_video` are `public => false` with no single view
+  — they have no URLs to submit. AIOSEO will not list them and must not be made to.
+- If David wants the timeline expressed as `Role`/`CreativeWork` schema, that is an
+  AIOSEO custom-schema entry against the Work page, not code here.
+
+What is left:
+
 - RSS at `/rss.xml` (the footer links it), with the full house-style markup surviving.
-- **Rybbit.** One script, loaded from David's own analytics host, `defer`, outside the
-  critical path, and skipped entirely for logged-in users. Its origin is the only
-  external entry in the CSP (`script-src` + `connect-src`). Configuration — self-hosted
-  vs cloud, and whether it is set to store IPs — is David's call and drives the Privacy
-  page rewrite; the theme just needs the host and the site id as constants.
+- **Rybbit is a plugin, not our code.** David installs and configures it: self-hosted
+  vs cloud, whether it stores IPs, whether logged-in users are counted. Nothing in this
+  repo enqueues an analytics script, registers a site id, or reads a Rybbit constant.
+  The CSP that has to allow it is not ours either — see the headers note in Phase 10.
+  One coupling survives and it is small:
+  - **`DP\Theme\ExternalRequests` drops foreign resource hints.** Its
+    `wp_resource_hints` filter keeps only hints whose host matches the site host, so a
+    `preconnect`/`dns-prefetch` the Rybbit plugin adds for its analytics host is
+    silently removed. Harmless — the script still loads — but it should be a decision,
+    not a discovery.
 - No other third-party script. Nothing else sets a cookie.
 
 ---
@@ -363,8 +408,13 @@ total — every old URL resolves 200 or 301, none 404.
 - Contrast re-verified against the token comments, not against a fresh opinion.
 - Lighthouse/CWV budgets in CI: no render-blocking JS, LCP image preloaded,
   CSS under budget, zero third-party requests on first paint.
-- Security review of every write path; headers (CSP, `Referrer-Policy`,
-  `Permissions-Policy`) set from the theme where hosting does not.
+- Security review of every write path.
+- **Headers are not ours.** CSP, `Referrer-Policy` and `Permissions-Policy` come from
+  David's security plugin. This repo ships no `send_headers` handler and no header
+  configuration. Our obligation runs the other way: emit nothing that would force him
+  to loosen the policy — no inline `<script>`, no inline `style=`, no `onclick`, no
+  off-origin request. That holds today and there is an audit for it; the check to add
+  here is that it still holds after Phases 7–9, not a header to write.
 - `php-lts-compat-audit` over both packages.
 
 ---
@@ -416,7 +466,10 @@ entirely.
 | **Update host** | `updates.dpaternina.com` on Cloudflare R2. |
 | **Plugin count** | No target. The Colophon's "four plugins" was placeholder copy that should never have become a build rule. |
 | **ACF** | Not used. `register_post_meta()` + REST schemas + block bindings. |
-| **Analytics** | Rybbit. One script, one CSP origin, skipped for logged-in users. The Privacy page copy must be rewritten before launch. |
+| **Analytics** | Rybbit, installed as its own plugin and configured by David. Not theme code, not `dp-core` code, and we do not enqueue it. The Colophon and Privacy copy describing it is David's to write. |
+| **Offline** | Cut. No service worker anywhere in this repo; the design's offline state is not built. 404 ships. |
+| **SEO** | AIOSEO. Every OG image, canonical, robots directive, sitemap and JSON-LD graph is the plugin's. This repo writes no SEO output. |
+| **HTTP headers** | A security plugin of David's, not this repo. No `send_headers` handler, no CSP config, no header tests. We stay loadable under a strict policy instead. |
 | **Résumé** | Downloadable PDF via Cloudflare Browser Rendering, cached; print stylesheet as the fallback. |
 | **Watch** | Deferred to Phase 12. Ships without it; nav entry removed until it exists. |
 | **Series parts** | Draft posts carrying the `dp_series` term, not a stub post type. See Phase 3.1. |

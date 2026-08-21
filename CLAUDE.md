@@ -50,8 +50,13 @@ must still render.
 - No `eval`, no unserializing untrusted input, no raw `$_GET`/`$_POST`/`$_SERVER` reads
   without `wp_unslash()` + a sanitizer.
 - Nothing enqueues from a CDN. All assets are local and versioned. The one deliberate
-  external origin is the Rybbit analytics endpoint, named explicitly in the CSP
-  (`script-src` + `connect-src`) and nowhere else.
+  external origin is the Rybbit analytics endpoint, loaded by the **Rybbit plugin**.
+  No theme or `dp-core` code enqueues it.
+- **We set no HTTP headers.** CSP, `Referrer-Policy` and `Permissions-Policy` come from
+  David's security plugin, not from this repo. Never add a `send_headers` handler.
+  What our code owes that policy is to need no exceptions from it: no inline `<script>`,
+  no inline `style=`, no `onclick`, no off-origin fetch. That is already true — keep it
+  true, and a strict policy costs us nothing.
 
 ### 1.5 Tests are mandatory
 No PR merges without tests where testable behaviour changed.

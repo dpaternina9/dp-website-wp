@@ -187,11 +187,13 @@ Facts later phases inherit:
   carry an element or a second class or it is not the same in both contexts. Most
   already do (`p.dp-badge`, `h3.dp-tile-title`); the ones that did not are fixed.
   **A style change is not verified until it has been looked at in the editor too.**
-- **`themes/dpaternina/templates/front-page.html` is not what :8888 renders.**
-  David has customised the template in the site editor, so `wp_template` post 65
-  is authoritative there: it detaches the `post-row-compact` and `cta-band`
-  patterns into inline copies, and it sets a `dp-pink` preset text colour on one
-  label. A pattern edit will not reach his home page; a CSS change will.
+- ~~**`themes/dpaternina/templates/front-page.html` is not what :8888 renders.**~~
+  **No longer true — David cleared the customisation on 2026-08-21.** There are now
+  zero `wp_template` posts; the theme's template files are authoritative on :8888 and
+  a pattern edit does reach the home page again. The general hazard stands: the moment
+  a template is touched in the site editor, WordPress forks it into the database and
+  the file stops rendering. Check `wp post list --post_type=wp_template` before
+  concluding that a template edit "did nothing".
 - **`*.src.*` is the convention for an asset master.** Nothing links to it and
   `bin/dp-build.sh` drops it before zipping a release.
 - **`data-dp-destination` is on every link the chrome derives**, resolved or not.
@@ -216,3 +218,113 @@ Both wp-env `tests` environments share one database. Phase 3 hit
 
 **Rule going forward:** parallel agents either work in worktrees with their own wp-env ports
 (as Phase 2 did, on 8898/8899) or do not run `composer test` concurrently.
+
+---
+
+## Phase 7 — contact, the résumé and the remaining pages (this branch)
+
+Branch: `phase-7-contact-and-pages`. **This repository has no git remote**, so there is
+no pull request — the branch is local and merges by hand. Same finding as Phase 2's
+"needs a remote"; adding one is David's.
+
+Chores it could not do from its lane:
+- [x] `docs/plan.md`: Phases 2 to 6 were ticked in the working tree but never
+      committed. They are committed here, with the offline / SEO / headers cuts that
+      were sitting uncommitted beside them. Phase 7 ticked its own.
+- [ ] `docs/adr/README.md` now has rows for **0009** and **0010**.
+- [x] `.wp-env.json` gained one mapping for the `tests` environment only:
+      `wp-content/mu-plugins` → `./tests/Support/mu-plugins`. **A checkout that was
+      already running needs `npm run env:start` before `npm run test:e2e` passes** —
+      without the bind mount, `wp_mail()` fails, and the *sent* test fails showing the
+      *failed* panel, which names neither cause. ADR-0010.
+- [x] `themes/dpaternina/assets/css/chrome.css` — the base button rule. Phase 5's file,
+      one three-selector change, no variant touched. See the defect note below.
+- [x] `plugins/dp-core/src/Blocks/js/callout/index.js` — one import. Phase 4's file.
+      `plugins/dp-core/build/` is compiled, not committed; CI already runs
+      `npm run build` before `composer test`. Run it locally after pulling.
+
+Defects found in the landed Phase 7 code (`f7dc576`), and what they were:
+
+- **The honeypot had no stylesheet rule.** `ContactForm::honeypot()` emits
+  `<div class="dp-hp">` with a labelled text input, and `.dp-hp` was in no CSS file —
+  so a sighted visitor saw a field saying "Leave this field empty", filled it in, and
+  was refused for it. Fixed in `components.css`; asserted twice, once against the file
+  and once in a browser (`not.toBeInViewport()`).
+- **Contact and the résumé both carried the closing CTA band.** The design's own
+  line is `showCta: view !== 'contact' && view !== 'notfound' && view !== 'offline'
+  && view !== 'resume'`. Both templates now omit it and `PagesTest` asserts it.
+- **The `fetch` upgrade had a server but no client.** `Handler::wants_json()` and
+  `dp_contact_panel_html` were both there and nothing ever set the header. The
+  controller is `themes/dpaternina/assets/js/contact-form.js`, enqueued from the
+  block's render like the timeline's.
+
+Facts later phases inherit:
+
+- **A block registered only in PHP is `core/missing` in the block editor.** It was
+  true of `dp/timeline` from Phase 6 and would have been true of both Phase 7 blocks.
+  Every dynamic block in `plugins/dp-core/blocks/` now needs an entry in
+  `src/Blocks/js/dynamic/server-rendered.js` **and a rebuilt bundle**;
+  `ServerRenderedParityTest` fails on either omission. ADR-0009.
+- **`plugins/dp-core/build/` is gitignored and built in CI.** The parity test asserts
+  the compiled bundle carries every name, so a stale local build fails instead of
+  passing quietly. Run `npm run build` after pulling this branch.
+- **A one-class rule loses in the canvas and wins on the page.** Phase 5b said it
+  about `.dp-label`; it was also true of `.wp-element-button` against core's
+  `:root :where(.wp-element-button, .wp-block-button__link)`, which is the same
+  specificity. Every button on the site was grey in the editor and teal on the page.
+  The base rule now names an element.
+- **`core/button` markup must be exactly what core's `save` produces.** A bare
+  `download` attribute on the résumé's PDF link made the block invalid in the editor
+  ("Block contains unexpected or invalid content"). The `Content-Disposition` header
+  already forces the download; the attribute is gone.
+- **`WP_UnitTestCase` empties `$_GET` and `$_POST` between tests but not `$_SERVER`.**
+  A test that sets `REQUEST_METHOD` leaves every test after it looking like a POST.
+  `ContactTestCase` saves and restores it.
+- **`wp_insert_post()` writes `post_modified` as "now" on every update**, so two edits
+  inside one second are the same timestamp and the résumé's cache key cannot tell them
+  apart. `ResumeTestCase::touch_post()` writes the column directly; fixtures are dated
+  2020 so an update visibly moves it.
+- **Brain Monkey cannot stand in for `time()`**, which is a PHP internal, so
+  `RateLimiter::remaining()` reads the real clock. `RateLimiterTest` models the store
+  as core writes it — an absolute expiry in the option row — and moves that timestamp
+  to make time appear to pass.
+- **`tests/bootstrap.php` now defines the four WordPress time constants for the unit
+  harness.** A class constant like `12 * HOUR_IN_SECONDS` is a constant expression PHP
+  evaluates on first read, so without them the failure arrives from inside the class
+  under test and names nothing.
+- **Two new derived destinations**: `home` (always resolves, `home_url('/')`) and
+  `resume-pdf` (the page carrying `dp-resume`, plus the query variable, built by
+  `ResumePdf::download_url()` behind a `class_exists()` guard). `Destinations` grew
+  `id_by_template()` for the second.
+
+### Still open, for a later phase
+
+- [ ] **`dpaternina/series-planned` is still `core/missing` in the site editor.** It is
+      the theme's dynamic block, on `taxonomy-dp_series`. ADR-0009 covers `dp-core`'s
+      three; the theme ships no JavaScript build at all, so giving it a preview means
+      giving the theme a build — a decision of its own.
+- [ ] **The Watch tile is missing from the 404's "OR TRY ONE OF THESE" grid.** The
+      design has three; the digest omits Watch from the navigation until Phase 12
+      ships, so this ships with two. Phase 12 adds the third, a `dp-watch` entry in
+      `Navigation::TEMPLATES`, and `watch` to `DESTINATIONS`.
+- [ ] **The résumé PDF has never been rendered by a real browser.** Every path around
+      the renderer is tested through the port; `CloudflareBrowserRendering` and
+      `Gotenberg` have never made a request, because David has no credentials. The
+      site as shipped falls through to the print view, which is the documented
+      behaviour, not a gap.
+
+### For David
+- [ ] **Assign the About, Contact and Résumé templates.** :8888 already has all three;
+      a fresh site will not. `?format=pdf` means nothing until a page carries
+      `dp-resume`, and the "Get in touch" button in the header stays inert until one
+      carries `dp-contact`.
+- [ ] **The Uses, Colophon and Privacy pages are seeded with no template**, which is
+      right — they render through `page.html`. If you assign one of the `dp-` templates
+      to them by mistake, the eyebrow and the deck disappear.
+- [ ] **The Privacy page still says the opposite of what the site does.** Digest §7
+      flagged it; nothing in this phase changed it, and it is the one page where the
+      placeholder copy shipping as-is would be actively misleading.
+- [ ] **`dp_contact_recipient` and `dp_contact_public_address` are both unset.**
+      Messages go to Settings → General's administration address, and no address is
+      published on the page at all until you give one — deliberately, because where
+      mail is delivered and what you publish are two decisions.
