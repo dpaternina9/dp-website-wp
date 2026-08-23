@@ -41,6 +41,9 @@ export default defineConfig( {
 	 * The parallel-safe answer is one shared fixture in `global-setup.ts` that
 	 * nobody owns, which is a refactor across three files and worth doing on its
 	 * own. Until then the suite costs about seven seconds more and never lies.
+	 *
+	 * One worker also removed a coincidence the suite had been living on — see
+	 * `ensureACategoryHasAPost` in `global-setup.ts`.
 	 */
 	workers: 1,
 	timeout: 60_000,
