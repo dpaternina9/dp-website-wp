@@ -42,9 +42,17 @@ against.
   those styles as "computed inside the design tool and never reach the export" and told
   future phases not to look for them. They *are* in the export. Nobody had fetched it.
 
-  **Re-fetch, do not re-summarise.** `TimelineChart.logic.js` is the first one restored,
-  verbatim, on 2026-08-23. The other twelve are still truncated — see
-  `docs/MERGE-QUEUE.md`. `dpaternina.dc.html` kept its script block and is complete.
+  **Re-fetch, do not re-summarise.** Restoration completed 2026-08-23. Every component
+  carrying computed styles now has a `*.logic.js` beside it, verbatim from the live
+  project: `TimelineChart`, `SiteHeader`, `SiteFooter`, `PostRow`, `PostBlocks`,
+  `SectionHead`, `PageHero`, `FilterPills`, `CtaBanner`.
+
+  Checked and deliberately not given one, because their script blocks are prop defaults
+  with no computed styling: `WorkCard`, `ContactMethod`. `ComponentLibrary` is an index,
+  `OgCard` is superseded by AIOSEO, and `Ledger.dc.html` is the design's own project
+  status page, not a site component — it was never a missing résumé component.
+
+  `dpaternina.dc.html` kept its script block and is complete.
 
 - `Ledger.dc.html` exists in the design project and **was never imported at all**. Phase 7
   built the résumé ledger block without it.
