@@ -1,8 +1,12 @@
 <!-- wp:template-part {"slug":"header"} /-->
 
 <!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
-<main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-hero dp-hero-tight","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-hero dp-hero-tight"><!-- wp:post-title {"level":1,"className":"dp-hero-title"} /--></section>
+<main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-hero","layout":{"type":"default"}} -->
+<section class="wp-block-group dp-hero"><!-- wp:post-title {"level":1,"className":"dp-hero-title"} /-->
+
+<!-- wp:paragraph {"className":"dp-hero-deck","metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"dp_lead"}}}}} -->
+<p class="dp-hero-deck"></p>
+<!-- /wp:paragraph --></section>
 <!-- /wp:group -->
 
 <!-- wp:group {"tagName":"section","className":"dp-section dp-work-featured","layout":{"type":"default"}} -->

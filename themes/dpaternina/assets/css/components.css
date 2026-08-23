@@ -676,8 +676,26 @@ p.dp-row-excerpt {
 	text-transform: uppercase;
 }
 
+/*
+ * `.dp-card-meta` already carries the design's mono caps `--fs-xs`, and on a
+ * container of `<span>`s that would be the whole story. These are paragraphs,
+ * and `theme.json`'s `core/paragraph` style is `:root :where(p)` — one class,
+ * which outranks a container's inherited value on every property it names.
+ * It names font-size, line-height and colour, so all three are restated here
+ * against the element. ADR-0008; the same shape as `p.dp-badge`.
+ */
+p.dp-card-year,
+p.dp-card-org {
+	font-size: var(--fs-xs);
+	line-height: var(--lh-relaxed);
+}
+
 p.dp-card-year {
 	color: var(--hue-gold);
+}
+
+p.dp-card-org {
+	color: var(--text-muted);
 }
 
 h3.dp-card-title {
@@ -2100,6 +2118,13 @@ p.dp-tl-prose {
  * The expanded panel behind a shipped thing
  * ---------------------------------------------------------------------- */
 
+/* The design gives the same paragraph two bottom margins: 12px under a role's
+   detail (TimelineChart.dc.html L62) and 16px under a shipped thing's, where a
+   bullet list follows it (L97). */
+.dp-tl-panel p.dp-tl-prose {
+	margin-bottom: 16px;
+}
+
 .dp-tl-panel {
 	margin-block: 4px 16px;
 	padding: 20px;
@@ -2461,12 +2486,29 @@ pre.dp-tl-artifact-body {
 	margin-bottom: 32px;
 }
 
+/*
+ * Core's block gap, on top of the head's own 32. Both sections here space
+ * themselves the way the design does — the element above declares the gap
+ * below it — so core's `:root :where(.is-layout-flow) > * + *` has nothing left
+ * to add and its 24px is simply a second gap. Two classes, because that rule is
+ * one and a tie is decided by load order, which differs between the page and
+ * the editor canvas (ADR-0008, ADR-0011).
+ */
+.dp-work-featured .dp-query {
+	margin-block-start: 0;
+}
+
 .dp-work-record {
 	padding-block: 20px 120px;
 }
 
 .dp-work-record .dp-section-head {
 	margin-bottom: 24px;
+}
+
+/* The lede already carries the design's 24px below it; see above. */
+.dp-work-record .dp-timeline {
+	margin-block-start: 0;
 }
 
 p.dp-work-lede {
@@ -2499,6 +2541,13 @@ p.dp-work-lede {
 	color: var(--text-secondary);
 	font-size: var(--fs-base);
 	line-height: var(--lh-relaxed);
+}
+
+/* "READ THE SERIES →" is one line in the design — `white-space: nowrap` on its
+   own span — and it is the flex row's second item, so wrapping it moves the
+   arrow onto a line of its own rather than gaining anything. */
+.dp-work-outro .wp-block-button__link {
+	white-space: nowrap;
 }
 
 /* -------------------------------------------------------------------------
