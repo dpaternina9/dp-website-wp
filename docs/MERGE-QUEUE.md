@@ -418,3 +418,92 @@ Chores it could not do from its lane:
       is live data. The design shows three links — All posts, My life story,
       Categories. Say the word if you want the literal three instead; "My life story"
       and "Categories" both need somewhere to point that the theme can derive.
+
+---
+
+## Phase 7c — the work page's fidelity (this branch)
+
+Branch: `phase-7c-work-fidelity`. Local, no remote, merges by hand.
+
+David's three review items, and what each turned out to be:
+
+- **"The featured cards show the wrong content."** Two of the four bindings in
+  `patterns/work-card.php` named the wrong field. `.dp-card-org` was bound to
+  `dp_stack` and `.dp-card-line` to `dp_detail` — the panel's paragraph, which on
+  Kiveo opens "One line on what Kiveo does … copy to come".
+- **"Font size is wrong."** The card's meta row. `.dp-card-meta` carries the
+  design's `--fs-xs`, and both children are `<p>`, so `theme.json`'s
+  `core/paragraph` style — `:root :where(p)`, one class — overrode the inherited
+  size, line-height and colour. 16px body grey instead of 12px mono gold/muted.
+- **"The timeline has spacing issues."** Above the chart rather than inside it:
+  the lede declares 24px below itself and core's flow layout added its own 24 on
+  top, so the chart sat 48px down. The same doubling put 56px under "Featured
+  work" where the design draws 32. Inside the chart the numbers already matched
+  the component spec — the MY ROLE / STACK divider measured the design's exact
+  `padding-top: 16px`, and the only stated value that was wrong was a shipped
+  thing's detail paragraph, 12px below it where the design gives 16.
+
+Chores it could not do from its lane:
+- [x] `plugins/dp-core/src/Content/Meta.php` — Phase 3's file, one new field
+      (`dp_line` on `dp_ship`). Registered the same way as every other: typed,
+      sanitised, `auth_callback`, REST schema.
+- [x] `plugins/dp-core/src/Fixture/Fixture.php` and `Seeder.php` — Phase 3's
+      files, one new key per shipped thing and one new line in the meta array.
+      **`wp dp seed` must be re-run** after pulling, or the cards render with an
+      empty line.
+- [x] `tests/Integration/Templates/TemplateTestCase.php` — `seed_ship()` gained an
+      optional `$line` and now seeds `dp_stack` and `dp_detail` with strings that
+      name themselves, so "the card is showing the stack" is a failed assertion
+      rather than something to notice.
+- [x] `docs/plan.md` gained §7.4.
+
+### Facts later phases inherit
+
+- **`theme.json`'s `core/paragraph` style is `:root :where(p)` and it names three
+  properties**: `font-size`, `line-height` and `color`. Phase 5b learned this
+  about a label's type; it is equally true of colour, and it means a container
+  that styles a row of `<p>` children styles nothing. Any `dp-` component whose
+  parts are paragraphs has to restate all three against the element.
+- **`:root :where(.is-layout-flow) > :last-child { margin-block-end: 0 }` is two
+  classes** — `:root` plus `:last-child` — so it beats `h1.dp-hero-title`, which
+  is one class and an element. `h1.dp-hero-title`'s own 16px bottom margin was
+  therefore dead on any hero whose title was the last child, which is what the
+  work hero was before it gained a deck. A rule that only applies when an
+  optional sibling exists is a rule that will look right in review and be absent
+  on the page.
+- **A page-wide `assertStringNotContainsString` is the wrong shape for "this
+  field is not on the card".** `dp_stack` and `dp_detail` are both legitimately
+  on the work page, in the panel below. `WorkTest::card_grid()` narrows to the
+  `<ul class="dp-cards">` first, and the tests assert the strings *are* still on
+  the page, in the place the design puts them.
+- **The site editor's query-block preview does not run
+  `query_loop_block_query_vars`.** The canvas draws every `dp_ship`, not the
+  featured ones, so a card count is not a thing to assert in the editor. The
+  parity sweep keys on `class#n` and skips anything present in only one context,
+  which is why that does not matter.
+
+### For David
+
+- [ ] **The Work page has no deck.** The template now carries one, bound to
+      `dp_lead` like About, Uses and Colophon. The design's placeholder is
+      "There's no separate portfolio here. Three projects I'd show first, then
+      every role I've held and everything that came out of each one." — that copy
+      is yours, and the field is empty until you write it. While it is empty the
+      hero closes 16px lower than the design does, because the title keeps its
+      own bottom margin whether or not a deck follows.
+- [ ] **None of the three featured cards has a featured image.** The design's
+      `WorkCard` leads with a 16:10 shot on `var(--band)`; with no image
+      `core/post-featured-image` renders nothing, so the card starts at its meta
+      row. The theme deliberately does **not** draw a grey placeholder box in its
+      place — that would be inventing a design element for content that is
+      missing. Set a featured image on each `dp_ship` and the shot appears.
+- [ ] **The cards are ordered newest-shipped first**, which is `dp_end`
+      descending: Kiveo, Agency platform & ops, Natural-language queries. The
+      design's `featuredWork` array is hand-ordered — Kiveo, Natural-language
+      queries, Agency platform & ops — and nothing in the data expresses that.
+      If the order matters, say so and it becomes `menu_order`, which the seeder
+      already writes and which you can drag in the admin.
+- [ ] **"Performance work" has no card line**, because the design never writes
+      one for it — it is the one shipped thing `featuredWork` leaves out. If you
+      ever mark it featured, give it a `dp_line` first or its card renders with
+      an empty sentence.

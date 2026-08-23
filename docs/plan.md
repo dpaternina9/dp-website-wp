@@ -378,6 +378,34 @@ landed:
 - **`core/post-content` is off the home and work templates**, with the empty
   groups that held it.
 
+### 7.4 Phase 7c — the work page ✅
+
+The same kind of pass over `dp-work`, and the same two mechanisms behind most of
+it.
+
+- **The featured cards were bound to the wrong two fields.** `.dp-card-org`
+  printed `dp_stack` and `.dp-card-line` printed `dp_detail`. The design's
+  `featuredWork` fixture carries `year`, `org`, `title` and `line` on the card
+  and puts `stack` and `detail` in the timeline's expanded panel, so neither
+  substitution was a near-miss. `org` is derived through `dp_role_id` — a role's
+  post title already is the organisation, and `DP\Core\Content\Meta`'s own rule
+  is that `org` is never stored twice. `dp_line` is a new registered field with
+  the design's verbatim copy behind it.
+- **`:root :where(p)` beat the container again.** `theme.json`'s
+  `core/paragraph` style names font-size, line-height *and* colour, so the two
+  paragraphs in the card's meta row ignored `.dp-card-meta`'s `--fs-xs` and drew
+  at 16px body type in the muted-then-secondary grey. Same shape as the Phase 5b
+  label bug, restated against the element.
+- **Core's block gap was a second gap.** 56px under "Featured work" where the
+  design draws 32, and 48px between the lede and the chart where it draws 24 —
+  in both cases because the element above already declares the gap below it.
+- **The hero was `tight` and had no deck.** The design uses `tight` only on the
+  generic page view; the work hero is the full 40px and carries a deck, now
+  bound to `dp_lead` like every other `dp-` template.
+
+`tests/e2e/spacing.spec.ts` now sweeps `dp-work` in both contexts as well as the
+home page, and pins the four numbers above.
+
 ---
 
 ## Phase 8 — Feeds

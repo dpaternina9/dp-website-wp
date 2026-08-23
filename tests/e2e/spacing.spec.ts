@@ -37,6 +37,28 @@ const DESKTOP = { width: 1600, height: 1000 };
 /** The home page's template, as the site editor addresses it. */
 const FRONT_PAGE = 'dpaternina//front-page';
 
+/** The work page's template, addressed the same way. */
+const WORK = 'dpaternina//dp-work';
+
+/**
+ * The slugs this file's own work-page fixture owns.
+ *
+ * Distinct from `timeline.spec.ts`'s, deliberately: the suite is
+ * `fullyParallel` against one site, and two specs sweeping the same slugs would
+ * delete each other's content mid-run.
+ */
+const SLUGS = {
+	page: 'spacing-fixture-work',
+	role: 'spacing-fixture-lab',
+	ships: [ 'spacing-fixture-kiveo', 'spacing-fixture-ops' ],
+};
+
+/** The work page's URL, filled in by `beforeAll`. */
+let workPage = '';
+
+/** The shape of the REST fields this spec reads back. */
+type Created = { id: number; link: string };
+
 /** The spacing of one element, keyed so the two contexts can be lined up. */
 type Spacing = Record< string, string >;
 
@@ -264,5 +286,237 @@ test.describe( 'the home page spaces itself the same way twice', () => {
 			'The design stacks these with gap: 0 and separates them with a border.'
 		).toBe( 0 );
 		expect( boxes[ 2 ].top - boxes[ 1 ].bottom ).toBe( 0 );
+	} );
+} );
+
+/**
+ * Delete everything carrying one of this file's own slugs, and nothing else.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function removeFixture(
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	requestUtils: any
+): Promise< void > {
+	const sweep: Array< [ string, string[] ] > = [
+		[ 'pages', [ SLUGS.page ] ],
+		[ 'dp_role', [ SLUGS.role ] ],
+		[ 'dp_ship', SLUGS.ships ],
+	];
+
+	for ( const [ endpoint, slugs ] of sweep ) {
+		const found: Created[] = await requestUtils.rest( {
+			path: `/wp/v2/${ endpoint }`,
+			params: { slug: slugs.join( ',' ), per_page: 100, status: 'any' },
+		} );
+
+		for ( const item of found ) {
+			await requestUtils.rest( {
+				path: `/wp/v2/${ endpoint }/${ item.id }`,
+				method: 'DELETE',
+				params: { force: true },
+			} );
+		}
+	}
+}
+
+/**
+ * Read one element's computed spacing and type out of a document.
+ *
+ * @param scope    The page, or the editor canvas frame.
+ * @param selector What to measure.
+ */
+async function one(
+	scope: Page | Frame,
+	selector: string
+): Promise< Record< string, string > > {
+	return scope
+		.locator( selector )
+		.first()
+		.evaluate( ( el ) => {
+			const style = window.getComputedStyle( el );
+
+			return {
+				marginBlockStart: style.marginBlockStart,
+				marginBlockEnd: style.marginBlockEnd,
+				fontSize: style.fontSize,
+			};
+		} );
+}
+
+test.describe( 'the work page spaces itself the same way twice', () => {
+	/*
+	 * Serial, for the same reason `timeline.spec.ts` is: one fixture, one
+	 * `beforeAll` per worker, and `fullyParallel` would otherwise race two
+	 * workers to create the same slugs.
+	 */
+	test.describe.configure( { mode: 'serial' } );
+	test.use( { viewport: DESKTOP } );
+
+	test.beforeAll( async ( { requestUtils } ) => {
+		await removeFixture( requestUtils );
+
+		const role = await requestUtils.rest< Created >( {
+			path: '/wp/v2/dp_role',
+			method: 'POST',
+			data: {
+				title: 'Spacing fixture — Fanxie Lab',
+				slug: SLUGS.role,
+				status: 'publish',
+				meta: {
+					dp_role_title: 'CTO & founder',
+					dp_start: 2016,
+					dp_end: 2026.6,
+					dp_range: '2016 — now',
+					dp_detail: 'The thread running under everything else.',
+					dp_stack: 'LARAVEL · NESTJS',
+				},
+			},
+		} );
+
+		for ( const slug of SLUGS.ships ) {
+			await requestUtils.rest< Created >( {
+				path: '/wp/v2/dp_ship',
+				method: 'POST',
+				data: {
+					title: `Spacing fixture — ${ slug }`,
+					slug,
+					status: 'publish',
+					meta: {
+						dp_role_id: role.id,
+						dp_start: 2023,
+						dp_end: 2026.6,
+						dp_range: '2023 — now',
+						dp_headline: 'The one line.',
+						dp_detail: 'What it is and who it is for.',
+						dp_line: 'The sentence written for the card.',
+						dp_stack: 'SWIFT · SWIFTUI',
+						dp_featured: true,
+					},
+				},
+			} );
+		}
+
+		const created = await requestUtils.rest< Created >( {
+			path: '/wp/v2/pages',
+			method: 'POST',
+			data: {
+				title: 'Spacing fixture — what I have worked on',
+				slug: SLUGS.page,
+				status: 'publish',
+				template: 'dp-work',
+			},
+		} );
+
+		workPage = created.link;
+	} );
+
+	test.afterAll( async ( { requestUtils } ) => {
+		await removeFixture( requestUtils );
+	} );
+
+	test( 'every margin and gap is identical on the page and in the canvas', async ( {
+		page,
+		admin,
+	} ) => {
+		await page.goto( workPage );
+
+		const front = await collect( page );
+
+		expect(
+			Object.keys( front ).length,
+			'The page rendered nothing to compare.'
+		).toBeGreaterThan( 20 );
+
+		const canvas = await canvasOf( page, admin, WORK );
+		const editor = await collect( canvas );
+
+		const divergent: string[] = [];
+
+		for ( const [ key, value ] of Object.entries( front ) ) {
+			const other = editor[ key ];
+
+			if ( other !== undefined && other !== value ) {
+				divergent.push(
+					`${ key } — page: ${ value } / canvas: ${ other }`
+				);
+			}
+		}
+
+		expect(
+			divergent,
+			'A rule that wins on the page and loses in the canvas is a rule with ' +
+				'only one class in its selector. Give it a second class or an ' +
+				'element name (ADR-0008, ADR-0011).'
+		).toEqual( [] );
+	} );
+
+	test( 'each section head declares the whole gap under it, and core adds nothing', async ( {
+		page,
+		admin,
+	} ) => {
+		const read = async ( scope: Page | Frame ) => ( {
+			featuredHead: await one(
+				scope,
+				'.dp-work-featured .dp-section-head'
+			),
+			cards: await one( scope, '.dp-work-featured .dp-query' ),
+			recordHead: await one( scope, '.dp-work-record .dp-section-head' ),
+			lede: await one( scope, '.dp-work-lede' ),
+			chart: await one( scope, '.dp-timeline' ),
+		} );
+
+		await page.goto( workPage );
+
+		const front = await read( page );
+
+		// dpaternina.dc.html, isTimeline: the SectionHead wrapper above the
+		// cards carries `margin-bottom: 32px` and the one above the chart 24,
+		// and neither the grid nor the chart carries a margin of its own.
+		expect( front.featuredHead.marginBlockEnd ).toBe( '32px' );
+		expect(
+			front.cards.marginBlockStart,
+			"Core's block gap is a second gap on top of the head's own."
+		).toBe( '0px' );
+
+		expect( front.recordHead.marginBlockEnd ).toBe( '24px' );
+		expect( front.lede.marginBlockStart ).toBe( '0px' );
+		expect( front.lede.marginBlockEnd ).toBe( '24px' );
+		expect( front.chart.marginBlockStart ).toBe( '0px' );
+
+		const canvas = await canvasOf( page, admin, WORK );
+
+		expect( await read( canvas ) ).toEqual( front );
+	} );
+
+	test( "the card's meta line is the design's 12px mono, not a paragraph", async ( {
+		page,
+		admin,
+	} ) => {
+		const read = async ( scope: Page | Frame ) => ( {
+			meta: await one( scope, '.dp-card-meta' ),
+			year: await one( scope, '.dp-card-year' ),
+			org: await one( scope, '.dp-card-org' ),
+			line: await one( scope, '.dp-card-line' ),
+			title: await one( scope, '.dp-card-title' ),
+		} );
+
+		await page.goto( workPage );
+
+		const front = await read( page );
+
+		// WorkCard.dc.html: the meta row is --fs-xs, the title --fs-md and the
+		// line --fs-sm. theme.json's core/paragraph style is `:root :where(p)`,
+		// which outranks the container's inherited size on the two paragraphs
+		// inside the row and left both at 16px.
+		expect( front.meta.fontSize ).toBe( '12px' );
+		expect( front.year.fontSize ).toBe( '12px' );
+		expect( front.org.fontSize ).toBe( '12px' );
+		expect( front.title.fontSize ).toBe( '20px' );
+		expect( front.line.fontSize ).toBe( '14px' );
+
+		const canvas = await canvasOf( page, admin, WORK );
+
+		expect( await read( canvas ) ).toEqual( front );
 	} );
 } );
