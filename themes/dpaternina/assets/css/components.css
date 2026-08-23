@@ -1875,9 +1875,18 @@ h2.dp-featured-title a {
 
 	/* The open-row tint, and the colour every bar in this subtree is drawn in.
 	   A lane with its own accent overrides the colour on the row; nothing else
-	   in the component names a hue. */
+	   in the component names a hue.
+
+	   Two properties, because a row's accent is used twice and CLAUDE.md §5
+	   settles which token each use takes: `--dp-*` is a FILL, `--hue-*` is TEXT.
+	   `--dp-tl-color` fills the bar and the legend swatch; `--dp-tl-hue` writes
+	   the kind label and an open row's title. On dark they resolve to the same
+	   hex — `theme.css` sets `--hue-teal: var(--dp-teal)` there — so this buys
+	   nothing visible today and everything the moment a scope changes them, which
+	   is exactly why the design keeps two families rather than one. */
 	--dp-tl-tint: 4%;
 	--dp-tl-color: var(--dp-teal);
+	--dp-tl-hue: var(--hue-teal);
 
 	/* The gap belongs to a two-column grid and is declared once. In stack mode
 	   the grid has a single column, where a column gap has nothing to separate. */
@@ -2027,30 +2036,37 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 
 .dp-tl-row.is-accent-teal {
 	--dp-tl-color: var(--dp-teal);
+	--dp-tl-hue: var(--hue-teal);
 }
 
 .dp-tl-row.is-accent-pink,
 .dp-tl-swatch.is-accent-pink {
 	--dp-tl-color: var(--dp-pink);
+	--dp-tl-hue: var(--hue-pink);
 }
 
 .dp-tl-row.is-accent-gold,
 .dp-tl-swatch.is-accent-gold {
 	--dp-tl-color: var(--dp-gold);
+	--dp-tl-hue: var(--hue-gold);
 }
 
 .dp-tl-row.is-accent-purple,
 .dp-tl-swatch.is-accent-purple {
 	--dp-tl-color: var(--dp-purple);
+	--dp-tl-hue: var(--hue-purple);
 }
 
+/* `muted` is already a text token, so the fill and the text are one value. */
 .dp-tl-row.is-accent-muted,
 .dp-tl-swatch.is-accent-muted {
 	--dp-tl-color: var(--text-muted);
+	--dp-tl-hue: var(--text-muted);
 }
 
 .dp-tl-row-ship {
 	--dp-tl-color: var(--dp-gold);
+	--dp-tl-hue: var(--hue-gold);
 }
 
 /* `list-style: none` removes the disclosure triangle in every engine that
@@ -2088,6 +2104,35 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	font-weight: var(--fw-semibold);
 	line-height: var(--lh-snug);
 	text-wrap: pretty;
+}
+
+/*
+ * An open row says which one it is in its own accent.
+ *
+ * `orgStyle` is one of the four chart styles the design tool computes and does
+ * not export (ADR-0012), so this is not read out of the markup. What it is read
+ * from is the design's own screenshot of the open MonsterInsights entry — teal
+ * title on the role, gold title on the shipped thing beneath it — and from the
+ * two rules in the export that make that a pattern rather than a one-off:
+ *
+ *   - Open state recolours to the accent. "Chevron (stack only): … colour
+ *     var(--dp-teal) when open else var(--text-muted)" (LAYOUT NOTES). It is the
+ *     only state-dependent colour the design writes down, and this is the same
+ *     move on a different element.
+ *   - The accent is per row, not per chart. "role bar lane.accent ||
+ *     var(--dp-teal); ship bar var(--dp-gold)" (COLOURS). Teal on a role and
+ *     gold on a shipped thing is exactly `--dp-tl-hue`, which is why this needs
+ *     no second selector for the ship.
+ *
+ * A closed row keeps `--text-primary` above: the design's screenshot shows the
+ * closed rows white, and nothing here is a licence to paint the whole column.
+ *
+ * The child combinator matters. A ship's `<details>` is a sibling of the role's,
+ * not a descendant — see DP\Core\Blocks\TimelineRows::lane — so a descendant
+ * selector would be correct today by accident. This says what it means.
+ */
+.dp-tl-row[open] > .dp-tl-summary .dp-tl-org {
+	color: var(--dp-tl-hue);
 }
 
 .dp-tl-role {
@@ -2176,8 +2221,25 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	padding-bottom: 16px;
 }
 
+/*
+ * ROLE — the label naming what an open role's detail is.
+ *
+ * `kindLabelStyle` is computed in the design tool and not exported, but the
+ * shipped thing's counterpart *is*: the same element, in the same position of
+ * the same disclosure, one level down, and it is written out in full —
+ *
+ *   font-family: var(--font-mono); font-size: var(--fs-xs);
+ *   letter-spacing: var(--ls-caps); color: var(--hue-gold)
+ *
+ * (TimelineChart.dc.html, the `SHIPPED · {{ sh.range }}` line, which the theme
+ * draws as `.dp-tl-shipped` below). Gold is the shipped thing's accent. The
+ * role's label is computed for the one reason the ship's is not: a lane carries
+ * its own `accent`, so the value varies per row. That makes `--dp-tl-hue` the
+ * whole of the difference between the two, and `--text-muted` — which is what
+ * this said for three review rounds — a colour the design never asked for.
+ */
 .dp-tl-kind {
-	color: var(--text-muted);
+	color: var(--dp-tl-hue);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
 	letter-spacing: var(--ls-caps);
@@ -2481,8 +2543,25 @@ pre.dp-tl-artifact-body {
 		display: block;
 	}
 
+	/*
+	 * No chevron here, so no gutter for one.
+	 *
+	 * The base rule reserves 28px on the right of the label for the chevron the
+	 * design absolutely-positions there. "Chevron (stack only)" (LAYOUT NOTES) —
+	 * so in bars mode there is nothing in that space, and the 16px grid gap
+	 * already separates the label from the track.
+	 *
+	 * It is not cosmetic. The design says the label column is 200px and that a
+	 * shipped thing's column "subtracts that same padding back out", giving 180.
+	 * "Natural-language queries" — the fixture's own longest ship name — measures
+	 * 170.6px at `--fs-sm`/`--fw-semibold`, so it fits 180 and does not fit the
+	 * 168 that 12px of gutter leaves. The design's screenshot sets it on one
+	 * line; a 2.6px gutter was turning it into two. `labelCellStyle` is computed
+	 * in the design tool and unexportable, so the value is not read from the
+	 * source — but the reason it is zero is.
+	 */
 	.dp-tl-label {
-		padding-right: 12px;
+		padding-right: 0;
 	}
 
 	.dp-tl-chevron {
