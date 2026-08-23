@@ -563,12 +563,16 @@ What the audit changed, worst first:
   person that is a liability; read by a program it is a complete per-element
   declaration block. `composer design:baseline` extracts it; `composer
   design:check` fails when the committed baseline and the design have drifted.
-- **Four of the chart's styles cannot be audited at all.** `legendStyle`,
-  `kindLabelStyle`, `orgStyle` and `headlineStyle` are computed inside the design
-  tool and never reach the export, and the same is true of the open role row's
-  vertical padding and of `.dp-tl-summary`, which have no counterpart at all. The
-  theme has to supply something; nothing pretends it came from the design. Do not
-  spend a day looking for them.
+- ~~**Four of the chart's styles cannot be audited at all.**~~ **Superseded — it
+  was 26, and half of them were recoverable.** `TimelineChart.dc.html` carries 26
+  `style="{{ … }}"` attributes against 33 written-out ones, and the four this list
+  named were the four somebody happened to notice. Worse, "computed" was read as
+  "unrecoverable": the closing COLOURS block states both bar fills and the open
+  bar's ring in full, and the shipped thing's kind label is *declared* as
+  `var(--hue-gold)` one level below the role's computed one. Three wrong colours
+  shipped behind that sentence. See the amendment in
+  `docs/adr/0012-design-parity-harness.md` for the full list, the two recovery
+  routes, and the entries that are now pinned by hand and labelled as such.
 - **The e2e suite runs in one worker now.** Not for flakiness in general: the
   work page's featured cards are a global query for three `dp_ship` posts, and
   three specs publish featured ships into it. Two running at once means each
@@ -602,3 +606,45 @@ What the audit changed, worst first:
       design's — the row and detail styles are computed in the design tool. If it
       still reads tight beside the shipped panels below it, say so and it becomes
       a decision rather than a default.
+
+---
+
+## Phase 7e — the timeline's open entry (worktree lane)
+
+Branch: `worktree-agent-a9b8d61dda285d99c`, cut from `phase-7d-work-design-parity`.
+Ran its own wp-env on **8898/8899** through an uncommitted `.wp-env.override.json`, per
+the operational finding above. Never touched the shared 8888/8889 pair.
+
+Files touched — four, all outside the five `phase-7d` owns:
+`themes/dpaternina/assets/css/components.css`, `tests/Support/DesignBaseline.php`,
+`tests/e2e/fixtures/work-design-baseline.json` (generated), `docs/adr/0012-…md`.
+
+Chores it could not do from its lane:
+- [ ] **`design-parity.spec.ts` needs a third sweep, with no `dp-open`.** Both of its
+      existing sweeps navigate with `dp-open=all`, so no closed row exists on the page
+      they measure and nothing in the fixture can assert one. The closed bar's
+      `color-mix(… 38%, var(--bg-surface))`, the closed chevron's `--text-muted` and a
+      closed title's `--text-primary` are all unasserted as a result — and the closed
+      bar is stated verbatim in the design's COLOURS block, so it is free to pin the
+      moment the sweep exists. Give it a `viewport` name of its own; the fixture side
+      needs no new machinery. **This is the next thing to do to the harness.**
+- [ ] `docs/adr/README.md`: 0012's row should mention the amendment.
+
+Facts later phases inherit:
+- **A row's accent is two tokens, not one.** `--dp-tl-color` fills (the bar, the
+  legend swatch); `--dp-tl-hue` writes (the kind label, an open row's title).
+  CLAUDE.md §5. They resolve to the same hex on dark, which is exactly why reaching
+  for the wrong one is invisible until it is not — declare both when you add an
+  accent.
+- **A shipped thing's label column is 180px and its longest fixture name sets at
+  170.6.** There is nine pixels of room in the whole column. Any padding on
+  `.dp-tl-label` in bars mode breaks the title onto a second line; the baseline's
+  `row.label.gutter` now fails if it comes back.
+- **Three of the deltas in the brief are width, not styling.** At `--container-lg`
+  the panel's main column computes to 482px out of the design's own
+  `flex: 1 1 320px` / `1 1 260px`. Its facts row needs 498 to sit on one line and its
+  paragraph needs about 500 to set in two. Nothing in the design's declared
+  arithmetic produces either at 1120px, so the screenshot they came from was a
+  component canvas wider than the container the design itself puts the chart in. Do
+  not chase them by shrinking `.dp-tl-panel`'s padding, which is a theme number with
+  nothing behind it.
