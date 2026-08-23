@@ -25,7 +25,24 @@ export default defineConfig( {
 	fullyParallel: true,
 	forbidOnly: !! process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	workers: process.env.CI ? 2 : undefined,
+
+	/*
+	 * One worker, because there is one site.
+	 *
+	 * Every spec here creates its own content under its own slugs, which keeps
+	 * them from deleting each other's fixtures — but the work page's featured
+	 * cards are a *global* query (`dpLoop: featured-ships`, three of them,
+	 * ordered by `dp_end`), so three specs publishing featured `dp_ship` posts
+	 * are three specs writing to one list that only holds three. Two of them
+	 * running at once means each one's page shows the other's cards. That was
+	 * already latent between `timeline.spec.ts` and `spacing.spec.ts`; adding
+	 * `design-parity.spec.ts` made it deterministic.
+	 *
+	 * The parallel-safe answer is one shared fixture in `global-setup.ts` that
+	 * nobody owns, which is a refactor across three files and worth doing on its
+	 * own. Until then the suite costs about seven seconds more and never lies.
+	 */
+	workers: 1,
 	timeout: 60_000,
 	expect: { timeout: 10_000 },
 	reporter: process.env.CI
