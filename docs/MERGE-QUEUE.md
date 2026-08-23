@@ -566,16 +566,18 @@ What the audit changed, worst first:
   person that is a liability; read by a program it is a complete per-element
   declaration block. `composer design:baseline` extracts it; `composer
   design:check` fails when the committed baseline and the design have drifted.
-- ~~**Four of the chart's styles cannot be audited at all.**~~ **Superseded — it
-  was 26, and half of them were recoverable.** `TimelineChart.dc.html` carries 26
-  `style="{{ … }}"` attributes against 33 written-out ones, and the four this list
-  named were the four somebody happened to notice. Worse, "computed" was read as
-  "unrecoverable": the closing COLOURS block states both bar fills and the open
-  bar's ring in full, and the shipped thing's kind label is *declared* as
-  `var(--hue-gold)` one level below the role's computed one. Three wrong colours
-  shipped behind that sentence. See the amendment in
-  `docs/adr/0012-design-parity-harness.md` for the full list, the two recovery
-  routes, and the entries that are now pinned by hand and labelled as such.
+- ~~**Four of the chart's styles cannot be audited at all.**~~
+  ~~**Superseded — it was 26, and half of them were recoverable.**~~
+  **Both of those were wrong, and the second was wrong in the more expensive
+  way.** All 26 are in the export, in the `<script type="text/x-dc">` block that
+  the 2026-08-19 import dropped from every component file. Nobody had fetched it.
+  The first note said "four" because four were noticed; the second said
+  "recoverable from prose and from a screenshot" because it went looking for
+  workarounds instead of for the file. They are now
+  `design-source/components/*.logic.js`, `DP\Tests\Support\DesignLogic` evaluates
+  them, and every value the harness pinned by hand is gone. **When
+  `design-source/` appears not to say something the design plainly does, re-fetch
+  it.** See the second amendment in `docs/adr/0012-design-parity-harness.md`.
 - **~~The e2e suite runs in one worker now.~~** **Closed 2026-08-23**, and the
   reasoning it was based on was half right. The featured-card query really is
   global and three specs really were writing to it — but the failures under
@@ -608,12 +610,12 @@ What the audit changed, worst first:
       crop its own glow. Nothing inside reaches 1120px at any size, so nothing
       moves — but it is a real difference in shape, recorded in the baseline as a
       skip rather than closed.
-- [ ] **Is the open role row meant to breathe more?** Its detail sits 8px under
-      the label block and closes 16px under the stack line, inside a tint with no
-      vertical padding of its own. Those three numbers are the theme's, not the
-      design's — the row and detail styles are computed in the design tool. If it
-      still reads tight beside the shipped panels below it, say so and it becomes
-      a decision rather than a default.
+- [x] ~~**Is the open role row meant to breathe more?**~~ **The design had already
+      answered.** `rowStyle` gives an open role `8px 16px 14px` in bars mode and
+      `16px 12px 18px` in stack, against a closed row's `6px 16px` / `16px 12px`,
+      and `detailGridStyle` adds `16px 0 4px` of its own. The theme carried a flat
+      8px on the `<summary>` and nothing on the row. Nothing here was ever a
+      judgement call.
 
 ---
 
@@ -628,15 +630,12 @@ Files touched — four, all outside the five `phase-7d` owns:
 `tests/e2e/fixtures/work-design-baseline.json` (generated), `docs/adr/0012-…md`.
 
 Chores it could not do from its lane:
-- [ ] **`design-parity.spec.ts` needs a third sweep, with no `dp-open`.** Both of its
-      existing sweeps navigate with `dp-open=all`, so no closed row exists on the page
-      they measure and nothing in the fixture can assert one. The closed bar's
-      `color-mix(… 38%, var(--bg-surface))`, the closed chevron's `--text-muted` and a
-      closed title's `--text-primary` are all unasserted as a result — and the closed
-      bar is stated verbatim in the design's COLOURS block, so it is free to pin the
-      moment the sweep exists. Give it a `viewport` name of its own; the fixture side
-      needs no new machinery. **This is the next thing to do to the harness.**
-- [ ] `docs/adr/README.md`: 0012's row should mention the amendment.
+- [x] **`design-parity.spec.ts` needs a third sweep, with no `dp-open`.** Done, and
+      it needed a fourth and a fifth. A sweep is now a page, a width and an open
+      state: `bars`, `bars-closed`, `stack`, `stack-closed`, `home`. The closed
+      shipped thing's title was `--text-primary` where the design says
+      `--text-secondary`; nothing else closed was wrong.
+- [x] `docs/adr/README.md`: 0012's row should mention the amendment.
 
 Facts later phases inherit:
 - **A row's accent is two tokens, not one.** `--dp-tl-color` fills (the bar, the
@@ -671,3 +670,62 @@ Facts later phases inherit:
       (purple)". Say the word and the chart's accent text goes through that instead
       of the raw hue. Not done here because it would change teal and pink too, and
       those are the two colours you just looked at and approved.
+
+---
+
+## Phase 7f — the home page and the work template, against the restored logic (this branch)
+
+Branch: `phase/design-parity-home-work`. Local, no remote, merges by hand.
+
+The fourth pass over `dp-work` and the first over `front-page`, and the first of
+either with the design's own computed styles in front of it. Three audits had
+passed because the harness could only see the half of each component that lives
+in its markup; `design-source/components/*.logic.js` is the other half, restored
+2026-08-23, and the sweep went from 62 entries to 141 and from 0 divergences to
+162 without a line of the theme changing.
+
+### Facts later phases inherit
+
+- **Re-fetch before you reason.** Every wrong note in this repository's history
+  of the work page has the same shape: `design-source/` appeared not to say
+  something, and the next writer explained why it could not rather than going to
+  look. The explanation got more sophisticated each round — "computed and not
+  exported", then "26 rather than 4, and half recoverable from prose" — and the
+  file was one fetch away the whole time.
+- **A conditional style is two assertions.** `isStack ? a : b` appears about
+  thirty times in `TimelineChart.logic.js`. An entry that pins one branch is an
+  entry that cannot fail in the other mode.
+- **A closed state is a state.** Four of the divergences the theme shipped were
+  only visible with nothing expanded, and both of the old sweeps opened
+  everything.
+- **A property the design declines to set is still a value**, and it was true in
+  a second place: `p.dp-label` carried `--lh-normal` sitewide, where the design
+  declares no leading on any mono caps label. That is the same bug ADR-0012 found
+  in the chart, one layer up, and it moved every label on every page.
+
+### For David
+
+- [ ] **The ships rail may not be a rail.** `shipsWrapStyle` declares
+      `padding-left` and no border. The comment directly above it says shipped
+      items "hang off a hairline rail in every mode — an indent alone never read
+      as nesting", and the closing LAYOUT NOTES say it again. The theme keeps the
+      hairline and the fixture records that it is not read from the computed
+      style. Say which, and the design gets changed or the border goes.
+- [ ] **The chart's legend now sits in the 200px label column**, beside the year
+      axis rather than above it, because `headStyle` is a grid on the rows' own
+      track list. With three keys — ROLES, SHIPPED and an accented lane's name —
+      it wraps to two or three lines. That is what the design computes; if it
+      reads cramped, the design is where to widen it.
+- [ ] **The first "things I've shipped" item is `--fs-xl` in the design and the
+      other two are `--fs-lg`.** Nothing says why, and the theme cannot express
+      "the first one is bigger" as a rule about content you own. All three are
+      `--fs-xl`. Say the word and it becomes `:first-child`, or fix the design.
+- [ ] **The design paints the current role's title pink in the record strip** —
+      `r.org === 'Fanxie Lab' ? var(--hue-pink) : var(--text-muted)`. The theme
+      draws all three muted, because the strip has no accent to bind to. The
+      roles already carry `dp_accent`; wiring it is small, and it is a decision
+      about whether the home page should shout the current job.
+- [ ] **`site_logo` has to be set for the home page's monogram to draw at all.**
+      `core/site-logo` renders nothing when the option is empty, which is
+      deliberate (ADR-0011). `dp-core`'s seeder sets it on a fresh site; the e2e
+      suite now sets it too.

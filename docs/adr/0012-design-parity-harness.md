@@ -51,9 +51,10 @@ be extracted.
 **We keep a generated design baseline and assert the rendered page against it.**
 
 1. `composer design:baseline` runs `bin/dp-design-baseline.php`, which reads
-   `design-source/*.dc.html` through `DP\Tests\Support\DesignMarkup` and writes
-   `tests/e2e/fixtures/work-design-baseline.json`. The file is committed and
-   never hand-edited, exactly like `assets/css/tokens.css` (ADR-0002).
+   `design-source/` through `DP\Tests\Support\DesignMarkup` (the markup) and
+   `DP\Tests\Support\DesignLogic` (the computed styles) and writes
+   `tests/e2e/fixtures/design-baseline.json`. The file is committed and never
+   hand-edited, exactly like `assets/css/tokens.css` (ADR-0002).
 2. `DP\Tests\Support\DesignBaseline` holds the only hand-written part: a map from
    a theme selector to one element of one design file, anchored by that element's
    **exact** `style` attribute. Mapping design to theme is a judgement about
@@ -96,13 +97,14 @@ time a font subset or a test viewport changes. Handing the design's own
 expression to the same engine, in the same inherited context, at the same pinned
 width, compares like with like and pins nothing that can drift.
 
-**Four of the chart's styles cannot be asserted at all, and are not.**
-`legendStyle`, `kindLabelStyle`, `orgStyle` and `headlineStyle` are computed
-inside the design tool and never reach the exported file. The theme has to supply
-something; this harness does not pretend that something came from the design. The
-same is true of the open role row's vertical padding and of `.dp-tl-summary`,
-which have no counterpart in the export at all. They are named here so the next
-reviewer does not spend a day looking for them.
+~~**Four of the chart's styles cannot be asserted at all, and are not.**~~
+**Struck through 2026-08-23 — every word of it was false, and see the second
+amendment below.** `legendStyle`, `kindLabelStyle`, `orgStyle`, `headlineStyle`,
+the open role row's vertical padding and `.dp-tl-summary` are all in the export,
+in the `<script type="text/x-dc">` block that the 2026-08-19 import dropped from
+every component file. Nobody had fetched it. This paragraph, and the amendment
+below that corrected its arithmetic without questioning its premise, are why
+three audits of the work page passed with about half of the chart unasserted.
 
 ## Amendment, 2026-08-23 — the hole was bigger than four, and naming a hole is not the same as leaving it open
 
@@ -184,15 +186,16 @@ that never binds on this template — the main column is 482px and 68ch is ~605p
 so it is recorded rather than fixed, because fixing it means adding a wrapper
 element to `dp-core`'s markup to satisfy a limit nothing reaches.
 
-**The harness never measures a closed row.** Both sweeps navigate with
-`dp-open=all`, so `.dp-tl-row:not([open])` matches nothing on the page they read
-and the closed bar's `color-mix(in srgb, <color> 38%, var(--bg-surface))`, the
-closed chevron's `--text-muted`, and a closed title's `--text-primary` are
-unasserted. That is a property of the spec rather than of the fixture, so closing
-it is a change to `design-parity.spec.ts` — a third sweep at the desktop width
-with no `dp-open`, and a `viewport` name of its own in the fixture. It is not
-done here because that file was owned by another lane at the time. **It is the
-next thing to do to this harness.**
+~~**The harness never measures a closed row.**~~ **Closed 2026-08-23.** A sweep
+is now a page, a width *and* an open state, and there are five of them — `bars`,
+`bars-closed`, `stack`, `stack-closed`, `home`. The closed bar's
+`color-mix(in srgb, <color> 38%, var(--bg-surface))`, the closed chevron's
+`--text-muted`, a closed role's `--text-primary` and a closed shipped thing's
+`--text-secondary` are all asserted. The last of those was wrong in the theme.
+
+~~**It covers one template.**~~ **Closed 2026-08-23.** It covers the work
+template and the front page, and extending it was more map rather than more
+machinery, as this ADR predicted.
 
 **An anchor is a coupling to the design's current text.** Change a declaration in
 Claude Design, re-import, and the anchor stops matching — which fails the unit
@@ -227,13 +230,19 @@ means either a tolerance large enough to hide a four-pixel line box — the exac
 bug we were trying to catch — or a permanent stream of false failures.
 
 **Rendering `design-source/` in a browser and diffing computed styles against the
-theme.** Genuinely attractive, and rejected on a fact: the components' most
-interesting styles (`cardStyle`, `gridStyle`, `detailGridStyle`, `rowStyle`) are
-computed by JavaScript that lives in the design tool and is not in the export.
-A rendered `.dc.html` would draw the chart with those attributes empty, so the
-comparison would be against a version of the design that does not exist. The
-prose LAYOUT NOTES are what the design says about those, and quoting them is
-honest in a way that measuring a broken render is not.
+theme.** Rejected here on a fact that was not one — "the components' most
+interesting styles are computed by JavaScript that lives in the design tool and
+is not in the export". The JavaScript is in the export. It is now evaluated, in
+PHP, by `DesignLogic`, which is the third amendment below.
+
+Rendering the components in a browser is still not what we do, and now for a
+better reason: a `.dc.html` is not a page. It has no `<body>`, no tokens, no
+inherited font context and no container to be measured against, so a render of
+one would need a harness of its own before it could be compared with anything —
+and the comparison would then be between two renders rather than between the
+theme and a declaration. Evaluating the style object and handing the result to
+the same browser that draws the theme compares like with like and needs no
+scaffolding.
 
 **Resolving every value to a literal in PHP and pinning the number.** Simpler to
 read, and it is what the token bridge does — correctly, because a token *is* a
@@ -245,3 +254,74 @@ one font file. See the second consequence above.
 grounds that its failure message would then mean two unrelated things. Its
 message tells you to give a rule a second class; this one tells you to change a
 value or re-import the design. Merging them would make both worse.
+
+## Amendment, 2026-08-23 (second, later the same day) — the script block was always in the export
+
+The paragraph this ADR opened with, the amendment that corrected its arithmetic,
+and the alternative it rejected were all resting on one claim: that the design
+tool computes some of a component's styles and does not export them. **It
+exports all of them.** Every `.dc.html` in the design project carries a
+`<script type="text/x-dc">` block, and the 2026-08-19 import dropped it from
+every component file. Nobody re-fetched; each round of review read the stripped
+file, found the styles missing, and wrote down a stronger version of the same
+wrong conclusion.
+
+The cost is worth stating plainly, because it is the argument for the rule that
+follows. Three audits passed. The fourth found three wrong colours and pinned
+them by hand from a screenshot — which this ADR blessed, in the amendment above,
+as a bounded weakening. It was not bounded. It was a way of writing down a value
+without going to look for it, and the value was one fetch away. Beside those
+three colours, the same file states the display face on a role's title, the body
+face and 600 on a shipped thing's, four vertical paddings per mode on a row, a
+two-column head with a rule under it, a 24px gutter the year axis was 8px out of,
+bar insets, panel padding, and a bold `--ls-display` headline a size larger than
+the theme drew it. None of that was in any list of known gaps, because the list
+was written by looking at what the stripped file happened to show.
+
+**The rule this leaves behind.** When `design-source/` appears not to say
+something the design plainly does, the first move is to re-fetch it, not to
+reason about why it cannot be there. A note that tells the next phase to stop
+looking is worse than no note, and this ADR was that note for four days.
+
+### What changed
+
+- `design-source/components/*.logic.js` — nine files, verbatim from the live
+  project, one per component that computes a style. `WorkCard` and
+  `ContactMethod` were checked and carry only prop defaults, which is recorded in
+  `design-source/README.md` so that the absence is a finding rather than a gap.
+- `DP\Tests\Support\DesignLogic` evaluates one named style object out of one of
+  them, and `DP\Tests\Support\JsExpression` is the grammar those objects are
+  written in. It is small on purpose and throws on anything outside it: a reader
+  that returns a shorter answer when the design grows a construct is a new
+  version of the hole this ADR exists to close.
+- **A conditional value needs both branches.** `isStack ? a : b` is two
+  assertions, so a map entry names the mode it is asserting and the generator
+  writes an entry per mode. The environment — which mode, which lane accent — is
+  the only hand-written part of a computed entry, and it is the same kind of
+  judgement as the selector beside it rather than a value.
+- **An entry that pins part of an object writes down the rest.** A bar's `left`
+  and `width` are the row's dates and reach the page as an inline style; the
+  entry pins the other nine properties and lists the three it did not in an
+  `omitted` field. A fixture that quietly asserts a subset is the failure this
+  whole apparatus is for.
+- **Every PINNED BY HAND entry is gone**, and
+  `DP\Tests\Unit\DesignBaselineTest::test_no_value_was_pinned_by_hand` fails if
+  the phrase comes back.
+- **A sweep is a page, a width and an open state.** Five, where there were two.
+- The fixture is `tests/e2e/fixtures/design-baseline.json`, because it is no
+  longer one template's.
+
+### What is still not read from the design, and why
+
+- **`transition` and `animation`.** Dropped by the spec, not by the fixture; the
+  durations and curves are tokens and `tokens.spec.ts` holds them.
+- **`.dp-tl-ships`'s `border-left`.** `shipsWrapStyle` declares `padding-left`
+  and no border, and the comment directly above it says shipped items "hang off a
+  hairline rail in every mode — an indent alone never read as nesting", which the
+  closing LAYOUT NOTES repeat. The design contradicts itself; the theme follows
+  the prose, and the entry carries a `skip` saying so. This one needs David.
+- **Two resolved values the probe cannot answer.** `translateY(-50%)` is half of
+  an element's own height and the probe is empty; `.dp-record` is a `<ul>` where
+  the design draws a `<div>`, so the probe takes the user agent's 40px list
+  indent that the theme zeroes. Both are asserted on the rendered box in named
+  tests instead, the way the filter chips' target size already was.

@@ -431,9 +431,10 @@ dashed border to a more specific pill rule, the quiet button variant keeping
 `line-height: 1` from the pill it strips, and a ship's label column giving 16px
 back to a year axis that does not exist in stack mode.
 
-**The harness itself is the deliverable.** `composer design:baseline` reads the
-inline `style` attributes out of `design-source/*.dc.html` and writes them beside
-the theme selector that plays the same role;
+**The harness itself is the deliverable.** `composer design:baseline` reads
+`design-source/` — the inline `style` attributes through `DesignMarkup`, and the
+style objects each component *computes* through `DesignLogic` — and writes both
+beside the theme selector that plays the same role.
 `tests/e2e/design-parity.spec.ts` measures each element, appends a classless
 probe of the same tag carrying the design's declarations verbatim, and compares
 only the longhands those declarations expand to. Both sides are resolved by one
@@ -441,6 +442,19 @@ engine, in one inherited font context, at one width — which is what makes `ch`
 `em`, `clamp()` of a viewport unit and `color-mix()` assertable rather than
 re-implemented in PHP as numbers that rot. `DP\Tests\Unit\DesignBaselineTest`
 fails the fast gate when the committed baseline and the design have drifted.
+
+**The second half arrived late and was the larger half.** Every component was
+imported without its `<script type="text/x-dc">` block, so about half of each
+one's declared values were simply absent — and ADR-0012's first draft wrote them
+off as unexportable and told the next phase not to look. They were restored on
+2026-08-23 as `design-source/components/*.logic.js`, and the sweep went from 62
+entries to 141 and turned up 162 divergences on a template that had been audited
+three times. **If `design-source/` appears not to say something the design
+plainly does, re-fetch it before reasoning about why it cannot be there.**
+
+A sweep is a page, a width and an open state — `bars`, `bars-closed`, `stack`,
+`stack-closed`, `home` — because a closed row and an open one are different
+assertions, and the harness measured no closed row at all until then.
 
 The reasoning, what it cannot answer, and the alternatives are in
 `docs/adr/0012-design-parity-harness.md`. The next template review inherits the
