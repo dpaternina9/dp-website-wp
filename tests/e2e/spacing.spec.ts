@@ -31,6 +31,11 @@
 import type { Frame, Page } from '@playwright/test';
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 
+/**
+ * Internal dependencies
+ */
+import { sharedWorkPageUrl } from './global-setup';
+
 /** Wide enough that every `clamp()` on the page has reached its ceiling. */
 const DESKTOP = { width: 1600, height: 1000 };
 
@@ -40,24 +45,8 @@ const FRONT_PAGE = 'dpaternina//front-page';
 /** The work page's template, addressed the same way. */
 const WORK = 'dpaternina//dp-work';
 
-/**
- * The slugs this file's own work-page fixture owns.
- *
- * Distinct from `timeline.spec.ts`'s, deliberately: the suite is
- * `fullyParallel` against one site, and two specs sweeping the same slugs would
- * delete each other's content mid-run.
- */
-const SLUGS = {
-	page: 'spacing-fixture-work',
-	role: 'spacing-fixture-lab',
-	ships: [ 'spacing-fixture-kiveo', 'spacing-fixture-ops' ],
-};
-
-/** The work page's URL, filled in by `beforeAll`. */
+/** The work page's URL, looked up once per worker. */
 let workPage = '';
-
-/** The shape of the REST fields this spec reads back. */
-type Created = { id: number; link: string };
 
 /** The spacing of one element, keyed so the two contexts can be lined up. */
 type Spacing = Record< string, string >;
@@ -290,37 +279,6 @@ test.describe( 'the home page spaces itself the same way twice', () => {
 } );
 
 /**
- * Delete everything carrying one of this file's own slugs, and nothing else.
- *
- * @param requestUtils The suite's REST client.
- */
-async function removeFixture(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	requestUtils: any
-): Promise< void > {
-	const sweep: Array< [ string, string[] ] > = [
-		[ 'pages', [ SLUGS.page ] ],
-		[ 'dp_role', [ SLUGS.role ] ],
-		[ 'dp_ship', SLUGS.ships ],
-	];
-
-	for ( const [ endpoint, slugs ] of sweep ) {
-		const found: Created[] = await requestUtils.rest( {
-			path: `/wp/v2/${ endpoint }`,
-			params: { slug: slugs.join( ',' ), per_page: 100, status: 'any' },
-		} );
-
-		for ( const item of found ) {
-			await requestUtils.rest( {
-				path: `/wp/v2/${ endpoint }/${ item.id }`,
-				method: 'DELETE',
-				params: { force: true },
-			} );
-		}
-	}
-}
-
-/**
  * Read one element's computed spacing and type out of a document.
  *
  * @param scope    The page, or the editor canvas frame.
@@ -345,74 +303,17 @@ async function one(
 }
 
 test.describe( 'the work page spaces itself the same way twice', () => {
-	/*
-	 * Serial, for the same reason `timeline.spec.ts` is: one fixture, one
-	 * `beforeAll` per worker, and `fullyParallel` would otherwise race two
-	 * workers to create the same slugs.
-	 */
-	test.describe.configure( { mode: 'serial' } );
 	test.use( { viewport: DESKTOP } );
 
+	/*
+	 * A lookup, not a fixture. The cards above this page's chart come from a
+	 * global query that holds three, and the chart itself from another one that
+	 * draws every role and shipped thing on the site — so publishing either here
+	 * would put this file's content on every other spec's work page. It reads
+	 * what `tests/e2e/global-setup.ts` establishes. ADR-0013.
+	 */
 	test.beforeAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
-
-		const role = await requestUtils.rest< Created >( {
-			path: '/wp/v2/dp_role',
-			method: 'POST',
-			data: {
-				title: 'Spacing fixture — Fanxie Lab',
-				slug: SLUGS.role,
-				status: 'publish',
-				meta: {
-					dp_role_title: 'CTO & founder',
-					dp_start: 2016,
-					dp_end: 2026.6,
-					dp_range: '2016 — now',
-					dp_detail: 'The thread running under everything else.',
-					dp_stack: 'LARAVEL · NESTJS',
-				},
-			},
-		} );
-
-		for ( const slug of SLUGS.ships ) {
-			await requestUtils.rest< Created >( {
-				path: '/wp/v2/dp_ship',
-				method: 'POST',
-				data: {
-					title: `Spacing fixture — ${ slug }`,
-					slug,
-					status: 'publish',
-					meta: {
-						dp_role_id: role.id,
-						dp_start: 2023,
-						dp_end: 2026.6,
-						dp_range: '2023 — now',
-						dp_headline: 'The one line.',
-						dp_detail: 'What it is and who it is for.',
-						dp_line: 'The sentence written for the card.',
-						dp_stack: 'SWIFT · SWIFTUI',
-						dp_featured: true,
-					},
-				},
-			} );
-		}
-
-		const created = await requestUtils.rest< Created >( {
-			path: '/wp/v2/pages',
-			method: 'POST',
-			data: {
-				title: 'Spacing fixture — what I have worked on',
-				slug: SLUGS.page,
-				status: 'publish',
-				template: 'dp-work',
-			},
-		} );
-
-		workPage = created.link;
-	} );
-
-	test.afterAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
+		workPage = await sharedWorkPageUrl( requestUtils );
 	} );
 
 	test( 'every margin and gap is identical on the page and in the canvas', async ( {

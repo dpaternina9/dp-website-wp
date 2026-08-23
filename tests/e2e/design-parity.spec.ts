@@ -41,6 +41,11 @@ import * as path from 'path';
 import type { Page } from '@playwright/test';
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 
+/**
+ * Internal dependencies
+ */
+import { SHARED_SHIPS, sharedWorkPageUrl } from './global-setup';
+
 /** One element of the design, and the theme element that plays its part. */
 type Entry = {
 	id: string;
@@ -71,50 +76,27 @@ const BASELINE: Baseline = JSON.parse(
 /** Logged out: the admin bar is chrome no reader sees, and it moves the page down. */
 const READER = { cookies: [], origins: [] };
 
-/** The slugs this fixture owns. Distinct from every other spec's, deliberately. */
-const SLUGS = {
-	page: 'parity-fixture-work',
-	post: 'parity-fixture-writeup',
-	role: 'parity-fixture-lab',
-	ships: [ 'parity-fixture-kiveo', 'parity-fixture-ops' ],
-};
-
-/** The work page's URL, filled in by `beforeAll`. */
+/** The work page's URL, looked up once per worker. */
 let workPage = '';
 
-/** The shape of the REST fields this spec reads back. */
-type Created = { id: number; link: string };
-
 /**
- * Delete everything carrying one of this fixture's slugs, and nothing else.
+ * Fail loudly if the reduced-motion preference did not reach the document.
  *
- * @param requestUtils The suite's REST client.
+ * Every measurement below depends on it — see the note above `beforeEach` — so
+ * a preference that silently stopped applying would turn this file into a test
+ * that samples whatever frame it lands on.
+ *
+ * @param page The page.
  */
-async function removeFixture(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	requestUtils: any
-): Promise< void > {
-	const sweep: Array< [ string, string[] ] > = [
-		[ 'pages', [ SLUGS.page ] ],
-		[ 'posts', [ SLUGS.post ] ],
-		[ 'dp_role', [ SLUGS.role ] ],
-		[ 'dp_ship', SLUGS.ships ],
-	];
-
-	for ( const [ endpoint, slugs ] of sweep ) {
-		const found: Created[] = await requestUtils.rest( {
-			path: `/wp/v2/${ endpoint }`,
-			params: { slug: slugs.join( ',' ), per_page: 100, status: 'any' },
-		} );
-
-		for ( const item of found ) {
-			await requestUtils.rest( {
-				path: `/wp/v2/${ endpoint }/${ item.id }`,
-				method: 'DELETE',
-				params: { force: true },
-			} );
-		}
-	}
+async function assertMotionIsOff( page: Page ): Promise< void > {
+	expect(
+		await page.evaluate(
+			() =>
+				window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches
+		),
+		'The reduced-motion preference did not reach the document, so a ' +
+			'measurement here can land mid-transition.'
+	).toBe( true );
 }
 
 /**
@@ -244,101 +226,42 @@ function entriesFor( viewport: string ): Entry[] {
 }
 
 test.describe( 'the work template against design-source/', () => {
-	/*
-	 * Serial, for the same reason `timeline.spec.ts` is: one fixture, one
-	 * `beforeAll` per worker, and `fullyParallel` would race two workers to
-	 * create the same slugs.
-	 */
-	test.describe.configure( { mode: 'serial' } );
 	test.use( { storageState: READER } );
 
+	/*
+	 * This file establishes nothing. The chart it measures is drawn from a
+	 * *global* query — every published role and shipped thing on the site — and
+	 * the cards above it from another one that holds three, so a fixture of its
+	 * own would be a fixture in everybody's page. It reads the one
+	 * `tests/e2e/global-setup.ts` establishes, which nothing creates during a
+	 * run and nothing deletes. ADR-0013.
+	 */
 	test.beforeAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
-
-		const writeup = await requestUtils.rest< Created >( {
-			path: '/wp/v2/posts',
-			method: 'POST',
-			data: {
-				title: 'Parity fixture — the write-up',
-				slug: SLUGS.post,
-				status: 'publish',
-				content: 'Placeholder.',
-			},
-		} );
-
-		const role = await requestUtils.rest< Created >( {
-			path: '/wp/v2/dp_role',
-			method: 'POST',
-			data: {
-				title: 'Parity fixture — Fanxie Lab',
-				slug: SLUGS.role,
-				status: 'publish',
-				meta: {
-					dp_role_title: 'CTO & founder',
-					dp_start: 2016,
-					dp_end: 2026.6,
-					dp_range: '2016 — now',
-					dp_detail:
-						'The thread running under everything else, said at enough length that the paragraph wraps.',
-					dp_stack: 'LARAVEL · NESTJS',
-					dp_accent: 'pink',
-				},
-			},
-		} );
-
-		for ( const slug of SLUGS.ships ) {
-			await requestUtils.rest< Created >( {
-				path: '/wp/v2/dp_ship',
-				method: 'POST',
-				data: {
-					title: `Parity fixture — ${ slug }`,
-					slug,
-					status: 'publish',
-					meta: {
-						dp_role_id: role.id,
-						dp_start: 2023,
-						dp_end: 2026.6,
-						dp_range: '2023 — now',
-						dp_headline: 'The one line above the paragraph.',
-						dp_detail:
-							'What it is and who it is for, at enough length that the paragraph wraps onto a second line.',
-						dp_line: 'The sentence written for the card.',
-						dp_bullets: [ 'One constraint.', 'Another one.' ],
-						dp_ship_role: 'Everything',
-						dp_stack: 'SWIFT · SWIFTUI',
-						dp_artifact_label: 'SWIFTUI',
-						dp_artifact: 'struct EntryList: View { }',
-						dp_stat1: '0',
-						dp_stat1_label: 'TRACKERS',
-						dp_stat2: '—',
-						dp_stat2_label: 'APPS SHIPPED',
-						dp_writeup_id: writeup.id,
-						dp_featured: true,
-					},
-				},
-			} );
-		}
-
-		const created = await requestUtils.rest< Created >( {
-			path: '/wp/v2/pages',
-			method: 'POST',
-			data: {
-				title: 'Parity fixture — where I worked',
-				slug: SLUGS.page,
-				status: 'publish',
-				template: 'dp-work',
-				meta: {
-					dp_lead:
-						"There's no separate portfolio here. Three projects I'd show first, then every role I've held and everything that came out of each one.",
-				},
-			},
-		} );
-
-		workPage = created.link;
+		workPage = await sharedWorkPageUrl( requestUtils );
 	} );
 
-	test.afterAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
+	/*
+	 * Measured with motion switched off, and this is a correctness requirement
+	 * rather than a courtesy.
+	 *
+	 * `.dp-tl-row` carries `transition: background`, and the tint it transitions
+	 * to is declared inside a container query. A container query cannot be
+	 * resolved until the container has been laid out, so the row's background
+	 * changes once *after* first paint — which starts a transition on a page
+	 * nobody has touched. Sample during it and the row reports about 60% of the
+	 * design's alpha, serialised in oklab because that is the interpolation
+	 * space, and the sweep reports a divergence that is really a timestamp.
+	 * Under several workers the machine is slow enough to land there.
+	 *
+	 * `base.css` blunts every transition to 0.01ms under this preference and
+	 * `components.css` takes the chart's out altogether, so with it set there is
+	 * no in-between state to sample. Nothing this file pins is motion:
+	 * `divergences()` already drops the transition and animation longhands, and
+	 * the only non-motion rule in either reduced-motion block is a transform on
+	 * the 404 page's button, which is not on this page and not in the baseline.
+	 */
+	test.beforeEach( async ( { page } ) => {
+		await page.emulateMedia( { reducedMotion: 'reduce' } );
 	} );
 
 	test( 'the baseline is the design, and there is enough of it to mean something', () => {
@@ -349,6 +272,36 @@ test.describe( 'the work template against design-source/', () => {
 
 		expect( entriesFor( 'desktop' ).length ).toBeGreaterThan( 40 );
 		expect( entriesFor( 'narrow' ).length ).toBeGreaterThan( 0 );
+	} );
+
+	/*
+	 * The guard on everything below it.
+	 *
+	 * `.dp-card` and its family are measured with `querySelector`, so what they
+	 * resolve to is whatever the featured loop put first — and that loop is
+	 * global, ordered by `dp_end`, and holds three. If a spec ever publishes a
+	 * featured `dp_ship` of its own again, this page silently starts measuring
+	 * that spec's card instead of the fixture's, and the sweep either passes on
+	 * the wrong element or fails somewhere that says nothing about why.
+	 *
+	 * Naming the three, in order, is what turns that back into a sentence: the
+	 * cards under measurement are the ones nobody owns.
+	 */
+	test( 'the cards it measures are the fixture nobody owns', async ( {
+		page,
+	} ) => {
+		await page.setViewportSize( {
+			width: BASELINE.viewports.desktop,
+			height: 1200,
+		} );
+		await page.goto( workPage );
+
+		await expect(
+			page.locator( '.dp-cards .dp-card-title' ),
+			'Something published a featured dp_ship during the run. The featured ' +
+				'loop is global; the three cards belong to tests/e2e/global-setup.ts ' +
+				'and to nothing else. See docs/adr/0013-one-fixture-nobody-owns.md.'
+		).toHaveText( SHARED_SHIPS.map( ( ship ) => ship.title ) );
 	} );
 
 	test( 'bars mode matches the design it was drawn from', async ( {
@@ -364,6 +317,7 @@ test.describe( 'the work template against design-source/', () => {
 
 		await page.goto( url.toString() );
 		await page.locator( '.dp-tl-panel' ).first().waitFor();
+		await assertMotionIsOff( page );
 
 		expect(
 			await divergences( page, entriesFor( 'desktop' ) ),
@@ -454,6 +408,7 @@ test.describe( 'the work template against design-source/', () => {
 
 		await page.goto( url.toString() );
 		await page.locator( '.dp-tl-panel' ).first().waitFor();
+		await assertMotionIsOff( page );
 
 		expect(
 			await divergences( page, entriesFor( 'narrow' ) ),

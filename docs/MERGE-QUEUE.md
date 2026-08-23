@@ -90,9 +90,12 @@ Facts later phases inherit:
   `taxonomy-dp_series` is not in `get_default_block_template_types()`, so it was
   classified custom and appeared in the admin dropdown.
   `DP\Theme\Blocks\TemplateHierarchy` states the rule core is missing.
-- The e2e suite is `fullyParallel` against one site. `tests/e2e/chrome.spec.ts`
-  runs serial and sweeps only its own slugs; a spec that clears content will pull
-  the fixture out from under whichever other spec is mid-run.
+- The e2e suite is `fullyParallel` against one site. Owning your slugs is enough
+  for content addressed *by* slug, and not enough for anything a global query
+  reads — the work page's cards and the whole timeline chart are both global, so
+  publishing a `dp_role` or a `dp_ship` puts it on every other spec's page.
+  That content is established once in `tests/e2e/global-setup.ts` and no spec
+  touches it. ADR-0013.
 
 ### For David
 - [x] **The gradient monogram is a broken export.** Closed in Phase 5b. David
@@ -573,12 +576,17 @@ What the audit changed, worst first:
   shipped behind that sentence. See the amendment in
   `docs/adr/0012-design-parity-harness.md` for the full list, the two recovery
   routes, and the entries that are now pinned by hand and labelled as such.
-- **The e2e suite runs in one worker now.** Not for flakiness in general: the
-  work page's featured cards are a global query for three `dp_ship` posts, and
-  three specs publish featured ships into it. Two running at once means each
-  one's page shows the other's cards. The parallel-safe fix is one shared fixture
-  in `global-setup.ts` that nobody owns — a refactor across three files, worth
-  doing on its own.
+- **~~The e2e suite runs in one worker now.~~** **Closed 2026-08-23**, and the
+  reasoning it was based on was half right. The featured-card query really is
+  global and three specs really were writing to it — but the failures under
+  parallelism came from two other places: the *chart* is global too (every
+  published role and ship, on every work page), which is what pushed
+  `timeline.spec.ts`'s own row past its fortieth press of Tab; and the parity
+  sweep was sampling row backgrounds mid-transition, because a container query
+  resolves after first paint and `.dp-tl-row` transitions `background`. The
+  shared fixture now lives in `global-setup.ts`, no spec creates or deletes
+  content a global query reads, the parity sweep measures under reduced motion,
+  and `workers` is back to the default. 51 tests, ~15s. ADR-0013.
 
 ### For David
 

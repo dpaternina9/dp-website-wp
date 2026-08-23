@@ -208,6 +208,11 @@ the card grid. Where the design specifies a *size* rather than a declaration —
 the chips' 36px target — the spec asserts the rendered box in a named test of its
 own, with the design's own sentence quoted above it.
 
+**Its fixture is not its own.** The chart the harness measures is drawn from a
+global query, so the content it reads is established once for the whole suite and
+owned by no spec. ADR-0013 has the reasoning, including the reason this file's
+sweep runs with motion switched off.
+
 **It covers one template.** The map is the work page. Extending it to another
 template is more map, not more machinery, and the next review should inherit the
 harness rather than invent one.

@@ -57,3 +57,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0010](0010-test-only-mail-and-sender-identity.md) | The test site answers its own mail, and each e2e run is its own sender | Accepted — 2026-08-21 |
 | [0011](0011-the-brand-mark-is-content-and-spacing-out-specifies-the-block-gap.md) | The brand mark is content, and every spacing rule out-specifies the block gap | Accepted — 2026-08-21 |
 | [0012](0012-design-parity-harness.md) | A template is checked against `design-source/`, not against itself | Accepted — 2026-08-23 |
+| [0013](0013-one-fixture-nobody-owns.md) | E2E content that a global query reads belongs to nobody | Accepted — 2026-08-23 |
