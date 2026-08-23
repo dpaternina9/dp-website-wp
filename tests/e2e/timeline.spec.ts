@@ -534,10 +534,26 @@ test.describe( 'The timeline', () => {
 	} );
 
 	test.describe( 'with JavaScript switched off', () => {
+		/*
+		 * Motion off as well, and for a reason that is about the test rather than
+		 * about the browser. `rowStyle` transitions `padding` as well as
+		 * `background` — an open row is taller than a closed one — so for 200ms
+		 * after the first click the `<summary>` is still easing into place, and
+		 * Playwright will not click an element whose box moved between two
+		 * frames. What this block asserts is that a disclosure works with no
+		 * script at all; how long its padding takes to settle is not part of it,
+		 * and `components.css` already takes the transition away under this
+		 * preference. Same tool, same reasoning as `design-parity.spec.ts`
+		 * (ADR-0013).
+		 */
 		test.use( {
 			viewport: DESKTOP,
 			storageState: READER,
 			javaScriptEnabled: false,
+		} );
+
+		test.beforeEach( async ( { page } ) => {
+			await page.emulateMedia( { reducedMotion: 'reduce' } );
 		} );
 
 		test( 'rows still open and close', async ( { page } ) => {

@@ -179,6 +179,24 @@ p.dp-hero-meta {
 	transform: translateX(-50%);
 }
 
+/*
+ * The design opens the home page with the monogram — 40px, 32px of air under
+ * it — and the theme drew nothing there. It is `core/site-logo` in the template
+ * rather than a background here, because ADR-0011 settles that the mark is
+ * content: David can change it in Site Identity without touching the theme.
+ */
+.dp-brand-hero.wp-block-site-logo {
+	display: flex;
+	align-items: center;
+	margin-block-end: 32px;
+}
+
+.dp-brand-hero.wp-block-site-logo img {
+	display: block;
+	width: 40px;
+	height: auto;
+}
+
 h1.dp-home-hero-title {
 	margin: 0;
 	font-family: var(--font-display);
@@ -1139,16 +1157,43 @@ h3.dp-tile-title {
 	margin-block-start: 20px;
 }
 
+/*
+ * `recordGridStyle`: three fixed columns, not `auto-fit`. The design says why in
+ * its own comment — "6 record cells: 3 / 2 / 1 all divide evenly, so no cell is
+ * ever orphaned on its own row" — and `auto-fit` cannot promise that, because
+ * the column count falls out of the width rather than being chosen. With
+ * `minmax(min(200px, 100%), 1fr)` and three roles the strip was drawing two
+ * 518px columns and two empty tracks.
+ */
 .dp-record {
 	display: grid;
 	gap: 24px 20px;
-	grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
-/* The quiet strip of past roles. */
+@container dp-strip (width < 700px) {
+
+	.dp-record {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@container dp-strip (width < 420px) {
+
+	.dp-record {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/*
+ * The quiet strip of past roles. `cellStyle` hangs the divider off the cell's
+ * position in its row rather than its index in the list — "so the cell at the
+ * right edge of any row never dangles a border into the gutter" — which is
+ * `:nth-child(3n)` here, and the column count is the same three the grid takes.
+ */
 .dp-record > li {
 	display: block;
 	margin: 0;
@@ -1156,8 +1201,28 @@ h3.dp-tile-title {
 	border-right: var(--border-width) solid var(--border-subtle);
 }
 
+.dp-record > li:nth-child(3n),
 .dp-record > li:last-child {
 	border-right: 0;
+}
+
+@container dp-strip (width < 700px) {
+
+	.dp-record > li:nth-child(3n) {
+		border-right: var(--border-width) solid var(--border-subtle);
+	}
+
+	.dp-record > li:nth-child(2n),
+	.dp-record > li:last-child {
+		border-right: 0;
+	}
+}
+
+@container dp-strip (width < 420px) {
+
+	.dp-record > li {
+		border-right: 0;
+	}
 }
 
 .dp-record > li::before {
@@ -1171,25 +1236,31 @@ h3.dp-record-org {
 	font-family: var(--font-body);
 	font-size: var(--fs-sm);
 	font-weight: var(--fw-semibold);
-	line-height: var(--lh-normal);
+	line-height: normal;
 	letter-spacing: var(--ls-normal);
 	text-wrap: pretty;
 }
 
+/* `line-height: normal` for the reason the chart's label family has it: the
+   design declares a size here and no leading, and `theme.json` declares a root
+   one that every one of these inherited. */
 .dp-record p {
 	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }
 
-.dp-record-role {
+.dp-record p.dp-record-role {
 	min-height: 17px;
 }
 
-.dp-record-years {
+/* Two classes and an element: `.dp-record p` above zeroes the margin at one
+   class and one element, so a bare `.dp-record-years` lost its 4px to it. */
+.dp-record p.dp-record-years {
 	margin-block-start: 4px;
 }
 
@@ -1888,9 +1959,10 @@ h2.dp-featured-title a {
 	--dp-tl-color: var(--dp-teal);
 	--dp-tl-hue: var(--hue-teal);
 
-	/* The gap belongs to a two-column grid and is declared once. In stack mode
-	   the grid has a single column, where a column gap has nothing to separate. */
-	--dp-tl-gap: 16px;
+	/* The gap between the label column and the track. `gridStyle`, `headStyle`
+	   and `detailGridStyle` all take it, and all three say 24 in every mode that
+	   draws a track. Stack has one column and states its own row gaps below. */
+	--dp-tl-gap: 24px;
 }
 
 /* `hidden` is how a filtered-out row is removed — see DP\Core\Blocks\TimelineRows.
@@ -1924,11 +1996,29 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	background: var(--bg-surface);
 }
 
+.dp-tl-scroller {
+	min-width: 0;
+	max-width: 100%;
+	overflow: visible;
+}
+
+/*
+ * `headStyle` is a grid on the same track list as the rows below it, not a
+ * stack: the legend occupies the label column and the year axis occupies the
+ * track's, which is what puts a year over the bar that starts in it. The theme
+ * used to stack them and push the axis across with
+ * `padding-left: calc(label + gap)` — arithmetic that was 8px short of the
+ * design's, because the gap was 16 where the design says 24.
+ *
+ * The rule under the head is the design's too, and was simply not drawn.
+ */
 .dp-tl-head {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding-top: 12px;
+	display: grid;
+	align-items: center;
+	gap: 8px;
+	grid-template-columns: var(--dp-tl-label-base);
+	padding-block: 12px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
 /*
@@ -1973,7 +2063,8 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 
 .dp-tl-legend {
 	display: flex;
-	gap: 8px 20px;
+	align-items: center;
+	gap: 16px;
 	flex-wrap: wrap;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
@@ -2007,7 +2098,6 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 .dp-tl-years {
 	display: none;
 	justify-content: space-between;
-	padding-left: calc(var(--dp-tl-label-base) + var(--dp-tl-gap));
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
@@ -2021,14 +2111,42 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	padding-top: 18px;
 }
 
+/*
+ * `wrapStyle`: the lane, which holds a role and everything that came out of it.
+ * In stack mode it carries the hairline that separates one lane from the next
+ * and its two children sit flush; in bars mode there is no rule and 6px of air.
+ */
+.dp-tl-lane {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+/*
+ * `rowStyle`: the padding is a function of the mode AND the open state, which is
+ * four numbers per mode rather than one. The theme carried a single 8px on the
+ * `<summary>` and nothing on the row, so an open row had no vertical padding of
+ * its own at all — the question Phase 7d put to David as "is the open role row
+ * meant to breathe more?" was the design saying yes, in a file nobody had.
+ *
+ * Stack is the default, so the stack numbers are the ones declared here.
+ */
 .dp-tl-row {
 	--dp-tl-label: var(--dp-tl-label-base);
 
 	margin-inline: calc(var(--dp-tl-bleed) * -1);
-	padding-inline: var(--dp-tl-bleed);
+	padding: 16px var(--dp-tl-bleed);
 	border-radius: var(--radius-sm);
-	transition: background var(--dur-base) var(--ease-standard);
+	transition:
+		background var(--dur-base) var(--ease-standard),
+		padding var(--dur-base) var(--ease-standard);
 }
+
+.dp-tl-row-role[open] {
+	padding-bottom: 18px;
+}
+
 
 .dp-tl-row[open] {
 	background: color-mix(in srgb, var(--dp-white) var(--dp-tl-tint), transparent);
@@ -2067,6 +2185,9 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 .dp-tl-row-ship {
 	--dp-tl-color: var(--dp-gold);
 	--dp-tl-hue: var(--hue-gold);
+
+	/* `rowStyle`'s ship branch: 12px all round on a phone, open or closed. */
+	padding-block: 12px;
 }
 
 /* `list-style: none` removes the disclosure triangle in every engine that
@@ -2074,7 +2195,6 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
    reads. The design draws its own chevron, and only in stack mode. */
 .dp-tl-summary {
 	display: block;
-	padding-block: 8px;
 	cursor: pointer;
 	list-style: none;
 }
@@ -2086,24 +2206,61 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 .dp-tl-grid {
 	display: grid;
 	align-items: center;
-	gap: var(--dp-tl-gap);
+	gap: 2px;
 	grid-template-columns: var(--dp-tl-label);
 }
 
+/*
+ * `labelCellStyle`. On a phone the cell is a centred column with its own 4px
+ * rhythm and a 36px floor — the design's `--target-min`, which is what makes the
+ * whole label a comfortable tap target — and it reserves 32px on the right for
+ * the chevron. Beside a bar chart it is a plain block with no gutter at all.
+ */
 .dp-tl-label {
 	position: relative;
-	display: block;
+	left: 0;
+	display: flex;
 	min-width: 0;
-	padding-right: 28px;
+	min-height: var(--target-min);
+	flex-direction: column;
+	justify-content: center;
+	gap: 4px;
+	padding-right: 32px;
+	text-align: left;
 }
 
+/*
+ * `orgStyle`, and it is two different objects rather than one.
+ *
+ * A role is set in the DISPLAY face with `--ls-tight` and no weight of its own;
+ * a shipped thing is set in the BODY face at 600 and one step smaller. Both are
+ * a size larger on a phone than they are beside a bar chart, and a closed
+ * shipped thing is `--text-secondary` where a closed role is `--text-primary`.
+ * None of that was in the theme: every title was body-face, semibold,
+ * `--fs-sm`, `--text-primary`, in both modes and both states.
+ *
+ * `line-height: normal` for the reason the label family above has it — the
+ * design declares no leading here and `theme.json` declares a root one.
+ */
 .dp-tl-org {
 	display: block;
 	color: var(--text-primary);
+	line-height: normal;
+	transition: color var(--dur-base) var(--ease-standard);
+}
+
+.dp-tl-row-role > .dp-tl-summary .dp-tl-org {
+	padding-right: 28px;
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	letter-spacing: var(--ls-tight);
+}
+
+.dp-tl-row-ship > .dp-tl-summary .dp-tl-org {
+	color: var(--text-secondary);
+	font-family: var(--font-body);
 	font-size: var(--fs-sm);
 	font-weight: var(--fw-semibold);
-	line-height: var(--lh-snug);
-	text-wrap: pretty;
 }
 
 /*
@@ -2187,13 +2344,22 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
    about a bar is here. */
 .dp-tl-bar {
 	position: absolute;
-	top: 0;
-	bottom: 0;
-	border-radius: inherit;
+	top: 4px;
+	bottom: 4px;
+	overflow: hidden;
+	box-sizing: border-box;
+	border-radius: var(--radius-xs);
 	background: color-mix(in srgb, var(--dp-tl-color) 38%, var(--bg-surface));
 	transition:
 		background var(--dur-base) var(--ease-standard),
 		box-shadow var(--dur-base) var(--ease-standard);
+}
+
+/* `barStyle`'s `small` branch: a shipped thing's bar is inset 6px in a 32px
+   track where a role's is inset 4 in a 40px one. */
+.dp-tl-row-ship .dp-tl-bar {
+	top: 6px;
+	bottom: 6px;
 }
 
 .dp-tl-row[open] .dp-tl-bar {
@@ -2210,6 +2376,10 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
    label is the only column and giving 16px back to an axis that is not there
    left a dead gutter down the right of every shipped thing. */
 .dp-tl-ships {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-block: 4px;
 	padding-left: var(--dp-tl-rail);
 	border-left: var(--border-width) solid var(--border-subtle);
 }
@@ -2218,7 +2388,7 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	display: grid;
 	gap: 8px;
 	grid-template-columns: minmax(0, 1fr);
-	padding-bottom: 16px;
+	padding: 16px 0 0;
 }
 
 /*
@@ -2240,6 +2410,7 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
  */
 .dp-tl-kind {
 	color: var(--dp-tl-hue);
+	text-align: left;
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
 	letter-spacing: var(--ls-caps);
@@ -2275,8 +2446,8 @@ p.dp-tl-prose {
 }
 
 .dp-tl-panel {
-	margin-block: 4px 16px;
-	padding: 20px;
+	margin-block: 12px 0;
+	padding: 14px;
 	border: var(--border-width) solid var(--border-subtle);
 	border-radius: var(--radius-sm);
 	background: var(--band);
@@ -2340,13 +2511,15 @@ p.dp-tl-prose {
 	text-transform: uppercase;
 }
 
+/* `headlineStyle`. Bold, tracked `--ls-display`, and a size larger beside a bar
+   chart than on a phone — three values the theme had guessed at. */
 h3.dp-tl-headline {
-	max-width: var(--measure);
 	margin: 0 0 12px;
 	font-family: var(--font-display);
 	font-size: var(--fs-lg);
+	font-weight: var(--fw-bold);
 	line-height: var(--lh-snug);
-	letter-spacing: var(--ls-tight);
+	letter-spacing: var(--ls-display);
 	text-wrap: pretty;
 }
 
@@ -2524,11 +2697,40 @@ pre.dp-tl-artifact-body {
 	}
 
 	.dp-tl-head {
-		padding-top: 0;
+		gap: var(--dp-tl-gap);
+		grid-template-columns: var(--dp-tl-label-base) minmax(0, 1fr);
+		padding-block: 0 16px;
 	}
 
 	.dp-tl-years {
 		display: flex;
+	}
+
+	.dp-tl-lane {
+		gap: 6px;
+		border-top: 0;
+	}
+
+	.dp-tl-ships {
+		gap: 6px;
+		margin-block: 6px 0;
+	}
+
+	.dp-tl-row {
+		padding-block: 6px;
+	}
+
+	.dp-tl-row-role[open] {
+		padding-block: 8px 14px;
+	}
+
+	.dp-tl-row-ship,
+	.dp-tl-row-ship[open] {
+		padding-block: 6px;
+	}
+
+	.dp-tl-row-ship[open] {
+		padding-bottom: 14px;
 	}
 
 	.dp-tl-ships .dp-tl-row {
@@ -2536,6 +2738,7 @@ pre.dp-tl-artifact-body {
 	}
 
 	.dp-tl-grid {
+		gap: var(--dp-tl-gap);
 		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
 	}
 
@@ -2561,7 +2764,20 @@ pre.dp-tl-artifact-body {
 	 * source — but the reason it is zero is.
 	 */
 	.dp-tl-label {
+		display: block;
+		position: static;
+		min-height: auto;
+		gap: 0;
 		padding-right: 0;
+	}
+
+	.dp-tl-row-role > .dp-tl-summary .dp-tl-org {
+		padding-right: 0;
+		font-size: var(--fs-sm);
+	}
+
+	.dp-tl-row-ship > .dp-tl-summary .dp-tl-org {
+		font-size: var(--fs-xs);
 	}
 
 	.dp-tl-chevron {
@@ -2569,8 +2785,21 @@ pre.dp-tl-artifact-body {
 	}
 
 	.dp-tl-detail {
-		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
 		gap: var(--dp-tl-gap);
+		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
+		padding-bottom: 4px;
+	}
+
+	.dp-tl-panel {
+		padding: 24px;
+	}
+
+	.dp-tl-panel-cols {
+		gap: 32px;
+	}
+
+	h3.dp-tl-headline {
+		font-size: var(--fs-xl);
 	}
 
 	/* The design tints an open shipped thing more lightly than an open role,
@@ -2598,13 +2827,40 @@ pre.dp-tl-artifact-body {
 
 	.is-mobile-scroll .dp-tl-inner {
 		--dp-tl-label-base: 128px;
-		--dp-tl-gap: 12px;
 
 		min-width: 720px;
 	}
 
+	.is-mobile-scroll .dp-tl-head {
+		gap: var(--dp-tl-gap);
+		grid-template-columns: var(--dp-tl-label-base) minmax(0, 1fr);
+		padding-block: 0 16px;
+	}
+
+	/* `legendStyle`: the only mode where the legend is a column, so that the
+	   part of the chart meant to be read stays inside the visible width. */
+	.is-mobile-scroll .dp-tl-legend {
+		align-items: flex-start;
+		gap: 6px;
+		flex-direction: column;
+	}
+
 	.is-mobile-scroll .dp-tl-years {
 		display: flex;
+	}
+
+	.is-mobile-scroll .dp-tl-lane {
+		gap: 6px;
+		border-top: 0;
+	}
+
+	.is-mobile-scroll .dp-tl-ships {
+		gap: 6px;
+		margin-block: 6px 0;
+	}
+
+	.is-mobile-scroll .dp-tl-panel {
+		padding: 14px;
 	}
 
 	.is-mobile-scroll .dp-tl-ships .dp-tl-row {
@@ -2612,6 +2868,7 @@ pre.dp-tl-artifact-body {
 	}
 
 	.is-mobile-scroll .dp-tl-grid {
+		gap: var(--dp-tl-gap);
 		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
 	}
 
@@ -2623,8 +2880,12 @@ pre.dp-tl-artifact-body {
 		position: sticky;
 		left: 0;
 		z-index: 1;
+		display: block;
+		min-height: auto;
+		gap: 0;
 		padding-right: 12px;
 		background: var(--bg-surface);
+		box-sizing: border-box;
 	}
 
 	.is-mobile-scroll .dp-tl-chevron {
