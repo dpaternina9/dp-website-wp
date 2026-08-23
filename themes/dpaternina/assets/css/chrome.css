@@ -266,7 +266,7 @@ span.dp-label {
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
-	line-height: var(--lh-normal);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }

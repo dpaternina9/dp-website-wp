@@ -354,27 +354,32 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
-	 * The brand mark is an image David can swap, in all three places.
+	 * The brand mark is an image David can swap, everywhere it is drawn.
 	 *
 	 * It used to be a `background: url()` painted over a visually-hidden
 	 * `core/site-title`, which meant the only way to change it was to edit a
 	 * stylesheet and ship a release. `core/site-logo` reads the `site_logo`
-	 * option instead, so the header bar, the mobile panel's head and the footer
-	 * all draw whatever David chose. This asserts the block is there three
-	 * times and that the old mechanism is not.
+	 * option instead, so the header bar, the mobile panel's head, the footer and
+	 * the top of the home page all draw whatever David chose. This asserts the
+	 * block is there four times and that the old mechanism is not.
+	 *
+	 * Four rather than three since the home hero gained its own: the design opens
+	 * the front page with the monogram at 40px and the theme drew nothing there.
 	 *
 	 * @return void
 	 */
-	public function test_the_brand_mark_is_a_site_logo_in_all_three_places(): void {
+	public function test_the_brand_mark_is_a_site_logo_everywhere_it_is_drawn(): void {
 		update_option( 'site_logo', $this->seed_logo() );
 
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
 		$this->assertSame(
-			3,
+			4,
 			substr_count( $html, 'wp-block-site-logo' ),
-			'The header bar, the mobile panel and the footer each render the mark.'
+			'The header bar, the mobile panel, the footer and the home hero each render the mark.'
 		);
+
+		$this->assertStringContainsString( 'dp-brand dp-brand-hero', $html, "The home page's mark is the 40px one." );
 
 		$this->assertStringNotContainsString(
 			'dp-brand wp-block-site-title',
@@ -385,6 +390,29 @@ final class ChromeTest extends TemplateTestCase {
 		$this->assertStringContainsString( 'dp-brand dp-brand-sm', $html, "The footer's mark is the small one." );
 
 		delete_option( 'site_logo' );
+	}
+
+	/**
+	 * The footer prints the year, and the year is the site's.
+	 *
+	 * `SiteFooter.logic.js` computes `new Date().getFullYear()` and the design
+	 * prints "© 2026 DAVID PATERNINA". ADR-0006 recorded dropping the year as a
+	 * deviation, on the reasoning that a template part is static markup — which
+	 * is true of the markup and not of a block binding, which is the mechanism
+	 * for exactly this. `wp_date()` reads the site's timezone, so the line turns
+	 * over when David's year does rather than when a visitor's does.
+	 *
+	 * @return void
+	 */
+	public function test_the_footer_copyright_carries_the_year(): void {
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+		$year = (string) wp_date( 'Y' );
+
+		$this->assertStringContainsString(
+			'© ' . $year . ' David Paternina',
+			$html,
+			'The design\'s © line carries the year; the binding is dpaternina/site.'
+		);
 	}
 
 	/**

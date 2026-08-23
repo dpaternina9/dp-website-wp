@@ -78,6 +78,7 @@ final class Theme {
 		( new Chrome\Brand( $this->directory, $navigation ) )->register();
 		( new Chrome\FilterPills( $destinations ) )->register();
 		( new Chrome\PostPresentation() )->register();
+		( new Chrome\SiteFacts() )->register();
 		( new Query\QueryLoops() )->register();
 	}
 
