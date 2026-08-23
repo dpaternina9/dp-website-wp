@@ -656,3 +656,18 @@ Facts later phases inherit:
   component canvas wider than the container the design itself puts the chart in. Do
   not chase them by shrinking `.dp-tl-panel`'s padding, which is a theme number with
   nothing behind it.
+
+### For David
+
+- [ ] **A lane accented `purple` would now fail AA on its own title.** Open titles
+      take the row's accent through `--hue-*`, which is what the chart's own
+      declared label does (`--hue-gold`). On dark `--hue-purple` is the raw
+      `--dp-purple`, and `_ds/tokens/colors.css` says so itself: "purple measures
+      2.80:1 on ink". Measured on the open row's tinted ground it is 2.57:1. It
+      costs nothing today — the seeded lanes are teal and pink, which measure about
+      10:1 and 5.0:1 — and `Tone` offers purple, so the first time you pick it a
+      title goes unreadable. The design system already ships the fix in prose:
+      `--tone-mix` mixes a hue 75% toward white on dark, "worst case 4.59
+      (purple)". Say the word and the chart's accent text goes through that instead
+      of the raw hue. Not done here because it would change teal and pink too, and
+      those are the two colours you just looked at and approved.
