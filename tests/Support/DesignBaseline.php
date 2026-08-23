@@ -626,6 +626,130 @@ final class DesignBaseline {
 				'anchor'       => 'the closing LAYOUT NOTES: "(2.5% for ships in bars mode)"',
 				'declarations' => array( 'background' => 'color-mix(in srgb, var(--dp-white) 2.5%, transparent)' ),
 			),
+
+			/*
+			 * ---- What a row's accent paints ---------------------------
+			 *
+			 * `barStyle`, `orgStyle` and `kindLabelStyle` are all computed in the
+			 * design tool, and the first three review rounds treated that as the
+			 * end of the matter. It is not: the design writes the bar's colours
+			 * out in prose, and the kind label's colour is *declared* one level
+			 * down on the shipped thing's counterpart. Only the open title is
+			 * pinned from the screenshot, and it says so.
+			 *
+			 * Every selector below names the accent it is asserting rather than
+			 * relying on which lane the fixture happens to draw first. The
+			 * fixture's one role carries `dp_accent: pink`; its ships are gold,
+			 * which the design fixes for every shipped thing.
+			 * ------------------------------------------------------------
+			 */
+			array(
+				'id'           => 'row.role.bar.open',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-role.is-accent-pink[open] .dp-tl-bar',
+				'file'         => $chart,
+				'anchor'       => 'the closing COLOURS block: "role bar lane.accent || var(--dp-teal)" and '
+					. '"open bar: solid <color> + box-shadow 0 0 0 4px color-mix(in srgb, <color> 16%, transparent)"',
+				'declarations' => array(
+					'background' => 'var(--dp-pink)',
+					'box-shadow' => '0 0 0 4px color-mix(in srgb, var(--dp-pink) 16%, transparent)',
+				),
+				'note'         => 'A bar is a fill, so it takes the `--dp-*` hue and not the `--hue-*` text one '
+					. '(CLAUDE.md section 5). The closed bar\'s "color-mix(in srgb, <color> 38%, var(--bg-surface))" '
+					. 'is in the same COLOURS block and is NOT asserted anywhere: design-parity.spec.ts opens the '
+					. 'chart with `dp-open=all`, so no closed row exists on the page it measures.',
+			),
+			array(
+				'id'           => 'row.ship.bar.open',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-ship[open] .dp-tl-bar',
+				'file'         => $chart,
+				'anchor'       => 'the closing COLOURS block: "ship bar var(--dp-gold)" and "open bar: solid '
+					. '<color> + box-shadow 0 0 0 4px color-mix(in srgb, <color> 16%, transparent)"',
+				'declarations' => array(
+					'background' => 'var(--dp-gold)',
+					'box-shadow' => '0 0 0 4px color-mix(in srgb, var(--dp-gold) 16%, transparent)',
+				),
+			),
+			array(
+				'id'           => 'row.role.kind',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-role.is-accent-pink[open] .dp-tl-kind',
+				'file'         => $chart,
+				'anchor'       => 'the `SHIPPED · {{ sh.range }}` line — the same label on the shipped thing one '
+					. 'level down, where the design writes it out: "font-family: var(--font-mono); font-size: '
+					. 'var(--fs-xs); letter-spacing: var(--ls-caps); color: var(--hue-gold)". Gold is the shipped '
+					. 'thing\'s accent; `kindLabelStyle` is computed for the one reason that one is not, which is '
+					. 'that a lane carries its own.',
+				'declarations' => array(
+					'font-family'    => 'var(--font-mono)',
+					'font-size'      => 'var(--fs-xs)',
+					'letter-spacing' => 'var(--ls-caps)',
+					'color'          => 'var(--hue-pink)',
+				),
+				'skip'         => array(
+					'textTransform' => 'See row.detail.stack: the label is a translated string, so the theme '
+						. 'casts the case in CSS rather than shipping capitals a translator cannot change.',
+				),
+			),
+			array(
+				'id'           => 'row.role.org.open',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-role.is-accent-pink[open] > .dp-tl-summary .dp-tl-org',
+				'file'         => $chart . ' — NOT IN THE FILE; see the note',
+				'anchor'       => 'the design\'s screenshot of the open MonsterInsights entry, where the role\'s '
+					. 'title is teal and the shipped thing\'s beneath it is gold — read against the COLOURS block '
+					. '("role bar lane.accent || var(--dp-teal); ship bar var(--dp-gold)"), which is what makes '
+					. '"the row\'s own accent" the rule rather than two literals.',
+				'declarations' => array( 'color' => 'var(--hue-pink)' ),
+				'note'         => 'PINNED BY HAND, from a picture and the tokens. `orgStyle` is computed in the '
+					. 'design tool and is not in the export, so unlike every other entry here this value was not '
+					. 'read out of design-source/. It is written down anyway because the alternative — leaving it '
+					. 'unasserted — is what let the titles render white through three reviews. A re-import cannot '
+					. 'invalidate it the way an anchor invalidates the others; re-checking it needs a person and a '
+					. 'screenshot. See docs/adr/0012-design-parity-harness.md.',
+			),
+			array(
+				'id'           => 'row.ship.org.open',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-ship[open] > .dp-tl-summary .dp-tl-org',
+				'file'         => $chart . ' — NOT IN THE FILE; see row.role.org.open',
+				'anchor'       => 'the design\'s screenshot of the open "Natural-language queries" entry, whose '
+					. 'title is gold — the accent the COLOURS block fixes for every shipped thing.',
+				'declarations' => array( 'color' => 'var(--hue-gold)' ),
+				'note'         => 'PINNED BY HAND. See row.role.org.open.',
+			),
+			array(
+				'id'           => 'row.label.gutter',
+				'viewport'     => 'desktop',
+				'selector'     => '.dp-tl-row-ship[open] > .dp-tl-summary .dp-tl-label',
+				'file'         => $chart,
+				'anchor'       => 'the closing LAYOUT NOTES: "Chevron (stack only): absolute right 4, '
+					. 'translateY(-50%)" — read together with "bars … label column 200px" and "the ship label '
+					. 'column subtracts that same padding back out so ship bars stay true to the year axis"',
+				'declarations' => array( 'padding-right' => '0px' ),
+				'note'         => 'DERIVED, not quoted. `labelCellStyle` is computed in the design tool, so the '
+					. 'number is not in the export. What is in the export is that the chevron this gutter clears '
+					. 'is drawn in stack mode only, and that a shipped thing\'s label column is 200 minus the 20px '
+					. 'rail — 180. The fixture\'s longest ship name sets at 170.6px, so it fits 180 and does not '
+					. 'fit the 168 that a 12px gutter leaves, which is what was breaking the title onto a second '
+					. 'line against the design\'s screenshot. Asserted on the ship rather than the role because '
+					. 'the ship is the column the arithmetic is tight in.',
+			),
+			array(
+				'id'           => 'row.chevron.open',
+				'viewport'     => 'narrow',
+				'selector'     => '.dp-tl-row[open] .dp-tl-chevron',
+				'file'         => $chart,
+				'anchor'       => 'the closing LAYOUT NOTES: "Chevron (stack only): … colour var(--dp-teal) when '
+					. 'open else var(--text-muted)"',
+				'declarations' => array( 'color' => 'var(--dp-teal)' ),
+				'note'         => 'The design names the fill token for a text colour here. On dark they are the '
+					. 'same value — theme.css sets `--hue-teal: var(--dp-teal)` — so the theme uses the text one '
+					. '(CLAUDE.md section 5) and this still asserts the design\'s own expression. Note the design '
+					. 'says teal literally rather than the row\'s accent, which is why an open pink lane draws a '
+					. 'pink title above a teal chevron. That is the design\'s word, not an oversight here.',
+			),
 			array(
 				'id'           => 'row.ships.rail',
 				'viewport'     => 'desktop',
