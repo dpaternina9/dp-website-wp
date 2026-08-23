@@ -29,6 +29,7 @@
  *
  * External dependencies
  */
+import * as path from 'path';
 import type { FullConfig } from '@playwright/test';
 import { RequestUtils } from '@wordpress/e2e-test-utils-playwright';
 
@@ -154,7 +155,49 @@ async function globalSetup( config: FullConfig ): Promise< void > {
 	await requestUtils.activateTheme( 'dpaternina' );
 	await requestUtils.activatePlugin( 'dp-core' );
 
+	await establishBrandMark( requestUtils );
 	await establishSharedContent( requestUtils );
+}
+
+/**
+ * Put the theme's own mark in Site Identity, if nothing is there.
+ *
+ * The design draws the monogram in three places — the header, the footer and
+ * the top of the home page — and all three render `core/site-logo`, which
+ * renders *nothing at all* when `site_logo` is unset (ADR-0011). So on a site
+ * with no logo those three elements are simply absent, and a sweep measuring
+ * them reports "the design draws this and the selector matched nothing", which
+ * is true and is about the fixture rather than about the theme.
+ *
+ * `dp-core`'s seeder does this on a real site. The suite does not run the
+ * seeder, so it does the same thing here, and it does it the same way the
+ * seeder does: never replacing a mark that is already set.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function establishBrandMark(
+	requestUtils: RequestUtils
+): Promise< void > {
+	const settings = await requestUtils.rest< { site_logo?: number } >( {
+		path: '/wp/v2/settings',
+	} );
+
+	if ( settings.site_logo ) {
+		return;
+	}
+
+	const media = await requestUtils.uploadMedia(
+		path.join(
+			process.cwd(),
+			'themes/dpaternina/assets/img/dp-mark-gradient-128.png'
+		)
+	);
+
+	await requestUtils.rest( {
+		path: '/wp/v2/settings',
+		method: 'POST',
+		data: { site_logo: media.id },
+	} );
 }
 
 /**

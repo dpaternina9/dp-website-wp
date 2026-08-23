@@ -27,12 +27,22 @@
  * compared; the CSSOM says which those are, so nothing is asserted that the
  * design did not say.
  *
- * **What is deliberately not pinned.** Four of the chart's styles — the legend,
- * the kind label, the org name and the shipped headline — are computed inside
- * the design tool and never reach the exported file, so there is no design value
- * to assert and this file does not invent one. Everything else the theme had to
- * decide for itself carries a `skip` in the baseline with the reason written
- * out. See `docs/adr/0012-design-parity-harness.md`.
+ * **The half that is not in the markup.** A component's most interesting values
+ * — `rowStyle`, `orgStyle`, `legendStyle`, `headlineStyle` — are computed in the
+ * design's own script block. This file used to say those "never reach the
+ * exported file", which was false: the 2026-08-19 import had dropped every
+ * `<script type="text/x-dc">`, and nobody had re-fetched. They are back as
+ * `design-source/components/*.logic.js`, `DesignBaseline` evaluates them, and
+ * roughly half of each component is asserted here for the first time. Where the
+ * theme legitimately differs, the baseline carries a `skip` with the reason
+ * written out; where an entry pins only part of an object, it carries an
+ * `omitted` list naming the rest. See `docs/adr/0012-design-parity-harness.md`.
+ *
+ * **Five passes, not two.** A sweep is a page, a width and an open state,
+ * because all three change what the design says. Until 2026-08-23 both passes
+ * navigated with `dp-open=all`, so `.dp-tl-row:not([open])` matched nothing and
+ * every closed state in the design was unasserted; and the front page had no
+ * pass at all.
  *
  * External dependencies
  */
@@ -49,26 +59,27 @@ import { SHARED_SHIPS, sharedWorkPageUrl } from './global-setup';
 /** One element of the design, and the theme element that plays its part. */
 type Entry = {
 	id: string;
-	viewport: string;
+	sweep: string;
 	selector: string;
 	source: { file: string; anchor: string };
 	declarations: Record< string, string >;
 	skip?: Record< string, string >;
+	omitted?: string[];
 	note?: string;
 };
 
+/** A page, a width and an open state. */
+type Sweep = { page: string; width: number; open: string };
+
 /** The generated baseline. */
 type Baseline = {
-	viewports: Record< string, number >;
+	sweeps: Record< string, Sweep >;
 	entries: Entry[];
 };
 
 const BASELINE: Baseline = JSON.parse(
 	fs.readFileSync(
-		path.join(
-			process.cwd(),
-			'tests/e2e/fixtures/work-design-baseline.json'
-		),
+		path.join( process.cwd(), 'tests/e2e/fixtures/design-baseline.json' ),
 		'utf8'
 	)
 );
@@ -78,6 +89,9 @@ const READER = { cookies: [], origins: [] };
 
 /** The work page's URL, looked up once per worker. */
 let workPage = '';
+
+/** The front page, which is the site root. */
+const homePage = ( process.env.WP_BASE_URL ?? 'http://localhost:8889' ) + '/';
 
 /**
  * Fail loudly if the reduced-motion preference did not reach the document.
@@ -217,12 +231,53 @@ async function divergences(
 }
 
 /**
- * The entries measured at one of the baseline's two widths.
+ * One sweep by name, or a failure that says which one is missing.
  *
- * @param viewport The baseline's name for it.
+ * @param name The baseline's name for it.
  */
-function entriesFor( viewport: string ): Entry[] {
-	return BASELINE.entries.filter( ( entry ) => entry.viewport === viewport );
+function sweepNamed( name: string ): Sweep {
+	const sweep = BASELINE.sweeps[ name ];
+
+	if ( ! sweep ) {
+		throw new Error(
+			`The baseline has no "${ name }" sweep. Run: composer design:baseline`
+		);
+	}
+
+	return sweep;
+}
+
+/**
+ * The entries measured in one pass.
+ *
+ * @param sweep The baseline's name for it.
+ */
+function entriesFor( sweep: string ): Entry[] {
+	return BASELINE.entries.filter( ( entry ) => entry.sweep === sweep );
+}
+
+/**
+ * Put the page at one sweep's width, page and open state.
+ *
+ * @param page  The page.
+ * @param sweep Which pass.
+ */
+async function visit( page: Page, sweep: Sweep ): Promise< void > {
+	await page.setViewportSize( { width: sweep.width, height: 1200 } );
+
+	const url = new URL( 'home' === sweep.page ? homePage : workPage );
+
+	if ( 'none' !== sweep.open ) {
+		url.searchParams.set( 'dp-open', sweep.open );
+	}
+
+	await page.goto( url.toString() );
+
+	if ( 'work' === sweep.page && 'none' !== sweep.open ) {
+		await page.locator( '.dp-tl-panel' ).first().waitFor();
+	}
+
+	await assertMotionIsOff( page );
 }
 
 test.describe( 'the work template against design-source/', () => {
@@ -268,10 +323,24 @@ test.describe( 'the work template against design-source/', () => {
 		expect(
 			BASELINE.entries.length,
 			'The generated baseline is empty. Run: composer design:baseline'
-		).toBeGreaterThan( 40 );
+		).toBeGreaterThan( 120 );
 
-		expect( entriesFor( 'desktop' ).length ).toBeGreaterThan( 40 );
-		expect( entriesFor( 'narrow' ).length ).toBeGreaterThan( 0 );
+		// Every sweep the fixture declares has something to measure. A sweep
+		// with no entries is a pass that runs, navigates and asserts nothing.
+		for ( const name of Object.keys( BASELINE.sweeps ) ) {
+			expect(
+				entriesFor( name ).length,
+				`The "${ name }" sweep has no entries.`
+			).toBeGreaterThan( 0 );
+		}
+
+		// Every entry belongs to a sweep that exists.
+		for ( const entry of BASELINE.entries ) {
+			expect(
+				BASELINE.sweeps[ entry.sweep ],
+				`${ entry.id } names a sweep that does not exist.`
+			).toBeTruthy();
+		}
 	} );
 
 	/*
@@ -291,7 +360,7 @@ test.describe( 'the work template against design-source/', () => {
 		page,
 	} ) => {
 		await page.setViewportSize( {
-			width: BASELINE.viewports.desktop,
+			width: sweepNamed( 'bars' ).width,
 			height: 1200,
 		} );
 		await page.goto( workPage );
@@ -304,27 +373,108 @@ test.describe( 'the work template against design-source/', () => {
 		).toHaveText( SHARED_SHIPS.map( ( ship ) => ship.title ) );
 	} );
 
-	test( 'bars mode matches the design it was drawn from', async ( {
+	/*
+	 * One test per sweep, and the list of sweeps comes out of the fixture rather
+	 * than out of this file. Adding a pass is then a change to the generator —
+	 * the thing that reads the design — instead of a change here, which is what
+	 * kept `closed` and `home` unwritten for as long as they were.
+	 */
+	for ( const [ name, sweep ] of Object.entries( BASELINE.sweeps ) ) {
+		test( `the ${ name } pass matches the design it was drawn from`, async ( {
+			page,
+		} ) => {
+			await visit( page, sweep );
+
+			expect(
+				await divergences( page, entriesFor( name ) ),
+				'Each line is one property of one element that does not have the value ' +
+					'design-source/ gives it. Fix the theme, or — if the design has moved — ' +
+					're-import and run `composer design:baseline`.'
+			).toEqual( [] );
+		} );
+	}
+
+	/*
+	 * The two things the probe cannot answer, asserted on the rendered box.
+	 *
+	 * `recordGridStyle` is `repeat(3, minmax(0, 1fr))` and the theme's rule says
+	 * the same words, but the two cannot be compared as resolved track lists: the
+	 * design draws the strip as a `<div>` and the theme as a `<ul>`, the probe is
+	 * the same tag as its target, and the user agent's 40px list indent — which
+	 * `.dp-record` zeroes — makes the probe's box 40px narrower. What the rule is
+	 * *for* is that "3 / 2 / 1 all divide evenly, so no cell is ever orphaned on
+	 * its own row", and that is a property of the rendered columns.
+	 *
+	 * The chevron is the same shape of problem: `translateY(-50%)` is half of an
+	 * element's own height and the probe has none, so the rotation that says
+	 * which way it points travels in a shorthand the sweep has to skip.
+	 */
+	test( 'the record strip is three equal columns, and the chevron turns over', async ( {
 		page,
 	} ) => {
 		await page.setViewportSize( {
-			width: BASELINE.viewports.desktop,
+			width: sweepNamed( 'home' ).width,
 			height: 1200,
 		} );
+		await page.goto( homePage );
 
-		const url = new URL( workPage );
-		url.searchParams.set( 'dp-open', 'all' );
+		const columns = await page.evaluate( () => {
+			const strip = document.querySelector( '.dp-record' );
 
-		await page.goto( url.toString() );
-		await page.locator( '.dp-tl-panel' ).first().waitFor();
-		await assertMotionIsOff( page );
+			return strip
+				? window
+						.getComputedStyle( strip )
+						.gridTemplateColumns.split( ' ' )
+						.map( ( track ) => Math.round( parseFloat( track ) ) )
+				: [];
+		} );
 
+		expect( columns ).toHaveLength( 3 );
 		expect(
-			await divergences( page, entriesFor( 'desktop' ) ),
-			'Each line is one property of one element that does not have the value ' +
-				'design-source/ gives it. Fix the theme, or — if the design has moved — ' +
-				're-import and run `composer design:baseline`.'
-		).toEqual( [] );
+			new Set( columns ).size,
+			`Three tracks, ${ columns.join( '/' ) }`
+		).toBe( 1 );
+
+		const sweep = sweepNamed( 'stack' );
+
+		await visit( page, sweep );
+
+		const chevrons = await page.evaluate( () => {
+			const open = document.querySelector(
+				'.dp-tl-row[open] .dp-tl-chevron'
+			);
+
+			return open ? window.getComputedStyle( open ).transform : '';
+		} );
+
+		// rotate(180deg) is the -1 on both diagonal terms; the translation is the
+		// element's own half-height and is not what this asserts.
+		expect( chevrons ).toMatch( /^matrix\(-1, 0, 0, -1,/ );
+	} );
+
+	/*
+	 * `SectionHead` renders a meta or an action, never both:
+	 * `hasMeta: !!meta && !action` (SectionHead.logic.js). A template that put
+	 * both in one head would look right in the editor and be wrong against the
+	 * design, and no property sweep can see it, because the divergence is an
+	 * element that should not be in the document at all.
+	 */
+	test( 'no section head carries a meta and an action at once', async ( {
+		page,
+	} ) => {
+		for ( const url of [ workPage, homePage ] ) {
+			await page.goto( url );
+
+			expect(
+				await page
+					.locator(
+						'.dp-section-head:has(.dp-section-head-action):has(.dp-section-head-meta)'
+					)
+					.count(),
+				`A section head on ${ url } renders both a meta and an action. ` +
+					'SectionHead.logic.js suppresses the meta when there is an action.'
+			).toBe( 0 );
+		}
 	} );
 
 	/*
@@ -350,7 +500,7 @@ test.describe( 'the work template against design-source/', () => {
 		page,
 	} ) => {
 		await page.setViewportSize( {
-			width: BASELINE.viewports.desktop,
+			width: sweepNamed( 'bars' ).width,
 			height: 1200,
 		} );
 		await page.goto( workPage );
@@ -393,27 +543,5 @@ test.describe( 'the work template against design-source/', () => {
 			'A chip taller than --target-min is a chip whose padding and border ' +
 				'were added on top of the height its token declares.'
 		).toEqual( measured.heights.map( () => measured.target ) );
-	} );
-
-	test( 'stack mode matches the design it was drawn from', async ( {
-		page,
-	} ) => {
-		await page.setViewportSize( {
-			width: BASELINE.viewports.narrow,
-			height: 1200,
-		} );
-
-		const url = new URL( workPage );
-		url.searchParams.set( 'dp-open', 'all' );
-
-		await page.goto( url.toString() );
-		await page.locator( '.dp-tl-panel' ).first().waitFor();
-		await assertMotionIsOff( page );
-
-		expect(
-			await divergences( page, entriesFor( 'narrow' ) ),
-			'The chart below 700px of container is the design\'s "stack" mode; ' +
-				'its numbers are in the LAYOUT NOTES at the end of TimelineChart.dc.html.'
-		).toEqual( [] );
 	} );
 } );

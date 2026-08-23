@@ -74,6 +74,9 @@ final class DesignBaselineTest extends TestCase {
 		$this->assertIsArray( $decoded['entries'] );
 		$this->assertNotEmpty( $decoded['entries'], 'The map produced no entries at all.' );
 
+		$this->assertArrayHasKey( 'sweeps', $decoded );
+		$this->assertIsArray( $decoded['sweeps'] );
+
 		foreach ( $decoded['entries'] as $entry ) {
 			$this->assertIsArray( $entry );
 			$this->assertIsString( $entry['selector'] ?? null );
@@ -81,6 +84,74 @@ final class DesignBaselineTest extends TestCase {
 			$this->assertNotEmpty(
 				$entry['declarations'],
 				sprintf( 'The entry "%s" pins nothing.', is_string( $entry['id'] ?? null ) ? $entry['id'] : '?' )
+			);
+			$this->assertArrayHasKey(
+				is_string( $entry['sweep'] ?? null ) ? $entry['sweep'] : '?',
+				$decoded['sweeps'],
+				sprintf( 'The entry "%s" names a sweep that does not exist.', is_string( $entry['id'] ?? null ) ? $entry['id'] : '?' )
+			);
+		}
+	}
+
+	/**
+	 * Nothing in the fixture is a value somebody typed from a screenshot.
+	 *
+	 * The amendment to ADR-0012 introduced entries marked **PINNED BY HAND** —
+	 * three colours read off a picture, because the export was believed not to
+	 * carry `orgStyle` and `kindLabelStyle`. It carried both, in a script block
+	 * the import had dropped. The blocks are restored, every one of those values
+	 * is read from `design-source/components/*.logic.js`, and this test is what
+	 * stops the shortcut coming back: a hand-pinned entry cannot fail when the
+	 * design moves, which is the one thing this harness is for.
+	 *
+	 * @return void
+	 */
+	public function test_no_value_was_pinned_by_hand(): void {
+		$rendered = DesignBaseline::for_repository( dirname( __DIR__, 2 ) )->render();
+
+		$this->assertStringNotContainsString(
+			'PINNED BY HAND',
+			$rendered,
+			'An entry carries a value nothing in design-source/ states. Read the component\'s '
+				. '*.logic.js — the styles ADR-0012 called unexportable are all in it.'
+		);
+
+		$this->assertStringNotContainsString(
+			'NOT IN THE FILE',
+			$rendered,
+			'An entry names no design file. Every value in this fixture has one.'
+		);
+	}
+
+	/**
+	 * Every sweep the fixture declares has something to measure.
+	 *
+	 * A sweep with no entries is a pass that navigates, waits, and asserts
+	 * nothing — which is what the chart's closed states were until 2026-08-23,
+	 * except that there was not even a pass.
+	 *
+	 * @return void
+	 */
+	public function test_every_sweep_measures_something(): void {
+		$decoded = json_decode( DesignBaseline::for_repository( dirname( __DIR__, 2 ) )->render(), true );
+
+		$this->assertIsArray( $decoded );
+		$this->assertIsArray( $decoded['sweeps'] ?? null );
+		$this->assertIsArray( $decoded['entries'] ?? null );
+
+		$counted = array();
+
+		foreach ( $decoded['entries'] as $entry ) {
+			if ( is_array( $entry ) && is_string( $entry['sweep'] ?? null ) ) {
+				$counted[ $entry['sweep'] ] = ( $counted[ $entry['sweep'] ] ?? 0 ) + 1;
+			}
+		}
+
+		foreach ( array_keys( $decoded['sweeps'] ) as $sweep ) {
+			$this->assertArrayHasKey(
+				$sweep,
+				$counted,
+				sprintf( 'The "%s" sweep measures nothing.', is_string( $sweep ) ? $sweep : '?' )
 			);
 		}
 	}
