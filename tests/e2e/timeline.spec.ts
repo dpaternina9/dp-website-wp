@@ -20,13 +20,25 @@
  * 4. **Reduced motion is honoured.** The expanded panel has an entrance. Under
  *    `prefers-reduced-motion: reduce` it has none — not a fast one.
  *
- * The suite establishes its own content. :8889 is a fixture, not a preview, and
- * `composer test:integration` reinstalls WordPress into the same database.
+ * The content is not this file's. The chart is drawn from a global query, so a
+ * role published here would be a row on every other spec's work page as well;
+ * `tests/e2e/global-setup.ts` establishes one set for the whole suite and no
+ * spec creates or deletes any of it. ADR-0013.
  *
  * External dependencies
  */
 import type { Page } from '@playwright/test';
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
+
+/**
+ * Internal dependencies
+ */
+import {
+	SHARED_BARE_ROLE,
+	SHARED_ROLE,
+	SHARED_SHIPS,
+	sharedWorkPageUrl,
+} from './global-setup';
 
 /** Desktop, comfortably above the chart's 700px container query. */
 const DESKTOP = { width: 1440, height: 900 };
@@ -37,67 +49,24 @@ const PHONE = { width: 390, height: 844 };
 /** Logged out: the admin bar is chrome no reader sees. */
 const READER = { cookies: [], origins: [] };
 
-/** The slugs this fixture owns. Nothing outside this list is ever deleted. */
-const SLUGS = {
-	page: 'timeline-fixture-work',
-	lab: 'timeline-fixture-lab',
-	bare: 'timeline-fixture-backbone',
-	kiveo: 'timeline-fixture-kiveo',
-	ops: 'timeline-fixture-ops',
-};
-
-/** The entry ids the block derives from those slugs. */
-const ENTRY = {
-	lab: `dp-role-${ SLUGS.lab }`,
-	bare: `dp-role-${ SLUGS.bare }`,
-	kiveo: `dp-ship-${ SLUGS.kiveo }`,
-	ops: `dp-ship-${ SLUGS.ops }`,
-};
-
-/** Titles, distinctive enough that no other spec's content can be mistaken for them. */
-const TITLE = {
-	lab: 'Timeline fixture — Fanxie Lab',
-	bare: 'Timeline fixture — Backbone',
-	kiveo: 'Timeline fixture — Kiveo',
-	ops: 'Timeline fixture — Agency ops',
-};
-
-/** The work page's URL, filled in by `beforeAll`. */
-let workPage = '';
-
-/** The shape of the REST fields this spec reads back. */
-type Created = { id: number; link: string };
-
 /**
- * Delete everything carrying one of this fixture's slugs, and nothing else.
+ * The chart this file drives, which is the site's and not this file's.
  *
- * @param requestUtils The suite's REST client.
+ * The block draws every published `dp_role` and `dp_ship` there is, on whatever
+ * page it sits on, so a role published here is a row on every other spec's work
+ * page too. This file used to publish four of them and then tab towards its own
+ * — a distance that quietly depended on how many fixtures the rest of the suite
+ * happened to have alive, and that ran out of Tab presses once three files were
+ * doing it at once. The content now comes from `tests/e2e/global-setup.ts`,
+ * where it is established before any worker starts and deleted by nothing, so
+ * the chart is the same chart in every test in the run. ADR-0013.
  */
-async function removeFixture(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	requestUtils: any
-): Promise< void > {
-	const sweep: Array< [ string, string[] ] > = [
-		[ 'pages', [ SLUGS.page ] ],
-		[ 'dp_role', [ SLUGS.lab, SLUGS.bare ] ],
-		[ 'dp_ship', [ SLUGS.kiveo, SLUGS.ops ] ],
-	];
+const LAB = SHARED_ROLE;
+const BARE = SHARED_BARE_ROLE;
+const [ KIVEO, OPS ] = SHARED_SHIPS;
 
-	for ( const [ endpoint, slugs ] of sweep ) {
-		const found: Created[] = await requestUtils.rest( {
-			path: `/wp/v2/${ endpoint }`,
-			params: { slug: slugs.join( ',' ), per_page: 100, status: 'any' },
-		} );
-
-		for ( const item of found ) {
-			await requestUtils.rest( {
-				path: `/wp/v2/${ endpoint }/${ item.id }`,
-				method: 'DELETE',
-				params: { force: true },
-			} );
-		}
-	}
-}
+/** The work page's URL, looked up once per worker. */
+let workPage = '';
 
 /**
  * Whether a `<details>` is open.
@@ -211,106 +180,12 @@ async function tabTo(
 
 test.describe( 'The timeline', () => {
 	/*
-	 * Serial, against the grain of the rest of the suite: every test shares one
-	 * fixture, `beforeAll` runs once per worker, and under `fullyParallel` two
-	 * workers would race to create the same slugs.
+	 * Nothing is created here. The chart is a global query and the shared
+	 * fixture is established once in `tests/e2e/global-setup.ts`; this is a
+	 * lookup, so two workers doing it at the same time is two reads.
 	 */
-	test.describe.configure( { mode: 'serial' } );
-
 	test.beforeAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
-
-		const lab = await requestUtils.rest< Created >( {
-			path: '/wp/v2/dp_role',
-			method: 'POST',
-			data: {
-				title: TITLE.lab,
-				slug: SLUGS.lab,
-				status: 'publish',
-				menu_order: 2,
-				meta: {
-					dp_role_title: 'CTO & founder',
-					dp_start: 2016,
-					dp_end: 2026.6,
-					dp_range: '2016 — now',
-					dp_detail: 'The thread running under everything else.',
-					dp_stack: 'LARAVEL · NESTJS',
-					dp_accent: 'pink',
-				},
-			},
-		} );
-
-		await requestUtils.rest< Created >( {
-			path: '/wp/v2/dp_role',
-			method: 'POST',
-			data: {
-				title: TITLE.bare,
-				slug: SLUGS.bare,
-				status: 'publish',
-				menu_order: 1,
-				meta: {
-					dp_role_title: 'Developer',
-					dp_start: 2014,
-					dp_end: 2016,
-					dp_range: '2014 — 2016',
-					dp_detail: 'Placeholder role description.',
-					dp_stack: 'STACK · PLACEHOLDER',
-				},
-			},
-		} );
-
-		for ( const [ slug, title, order ] of [
-			[ SLUGS.kiveo, TITLE.kiveo, 1 ],
-			[ SLUGS.ops, TITLE.ops, 2 ],
-		] as Array< [ string, string, number ] > ) {
-			await requestUtils.rest< Created >( {
-				path: '/wp/v2/dp_ship',
-				method: 'POST',
-				data: {
-					title,
-					slug,
-					status: 'publish',
-					menu_order: order,
-					meta: {
-						dp_role_id: lab.id,
-						dp_start: 2023,
-						dp_end: 2026.6,
-						dp_range: '2023 — now',
-						dp_headline: `${ title } — the one line.`,
-						dp_detail: `What ${ title } is and who it is for.`,
-						dp_bullets: [ 'One constraint.', 'Another.' ],
-						dp_ship_role: 'Everything',
-						dp_stack: 'SWIFT · SWIFTUI',
-						dp_artifact_label: 'SWIFTUI',
-						dp_artifact: 'struct EntryList: View { }',
-						dp_stat1: '0',
-						dp_stat1_label: 'TRACKERS',
-						dp_stat2: '—',
-						dp_stat2_label: 'APPS SHIPPED',
-						dp_featured: true,
-					},
-				},
-			} );
-		}
-
-		const page = await requestUtils.rest< Created >( {
-			path: '/wp/v2/pages',
-			method: 'POST',
-			data: {
-				title: 'Timeline fixture — what I have worked on',
-				slug: SLUGS.page,
-				status: 'publish',
-				// The admin stores a block theme's custom template under its
-				// slug, without the extension.
-				template: 'dp-work',
-			},
-		} );
-
-		workPage = page.link;
-	} );
-
-	test.afterAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
+		workPage = await sharedWorkPageUrl( requestUtils );
 	} );
 
 	test.describe( 'the three modes', () => {
@@ -322,7 +197,7 @@ test.describe( 'The timeline', () => {
 			await page.setViewportSize( DESKTOP );
 			await page.goto( workPage );
 
-			const row = page.locator( `#${ ENTRY.lab }` );
+			const row = page.locator( `#${ LAB.entry }` );
 
 			await expect( row.locator( '.dp-tl-track' ) ).toBeVisible();
 			await expect( row.locator( '.dp-tl-chevron' ) ).toBeHidden();
@@ -342,7 +217,7 @@ test.describe( 'The timeline', () => {
 			await page.setViewportSize( PHONE );
 			await page.goto( workPage );
 
-			const row = page.locator( `#${ ENTRY.lab }` );
+			const row = page.locator( `#${ LAB.entry }` );
 
 			await expect( row.locator( '.dp-tl-track' ) ).toBeHidden();
 			await expect( row.locator( '.dp-tl-chevron' ) ).toBeVisible();
@@ -381,7 +256,7 @@ test.describe( 'The timeline', () => {
 			expect( width ).toBeLessThan( 700 );
 
 			await expect(
-				page.locator( `#${ ENTRY.lab } .dp-tl-track` )
+				page.locator( `#${ LAB.entry } .dp-tl-track` )
 			).toBeHidden();
 		} );
 	} );
@@ -398,29 +273,29 @@ test.describe( 'The timeline', () => {
 			// of the two would fail if the context option stopped applying.
 			expect( await scriptsAreOff( page ) ).toBe( false );
 
-			expect( await isOpen( page, ENTRY.lab ) ).toBe( false );
+			expect( await isOpen( page, LAB.entry ) ).toBe( false );
 
-			await page.locator( `#${ ENTRY.lab } .dp-tl-summary` ).click();
+			await page.locator( `#${ LAB.entry } .dp-tl-summary` ).click();
 			await expect(
-				page.locator( `#${ ENTRY.lab } .dp-tl-detail` )
+				page.locator( `#${ LAB.entry } .dp-tl-detail` )
 			).toBeVisible();
 
-			await page.locator( `#${ ENTRY.kiveo } .dp-tl-summary` ).click();
+			await page.locator( `#${ KIVEO.entry } .dp-tl-summary` ).click();
 			await expect(
-				page.locator( `#${ ENTRY.kiveo } .dp-tl-panel` )
+				page.locator( `#${ KIVEO.entry } .dp-tl-panel` )
 			).toBeVisible();
 
 			// The design's whole point: the second one does not close the first.
-			expect( await isOpen( page, ENTRY.lab ) ).toBe( true );
-			expect( await isOpen( page, ENTRY.kiveo ) ).toBe( true );
+			expect( await isOpen( page, LAB.entry ) ).toBe( true );
+			expect( await isOpen( page, KIVEO.entry ) ).toBe( true );
 
-			await page.locator( `#${ ENTRY.lab } .dp-tl-summary` ).click();
+			await page.locator( `#${ LAB.entry } .dp-tl-summary` ).click();
 
-			expect( await isOpen( page, ENTRY.lab ) ).toBe( false );
-			expect( await isOpen( page, ENTRY.kiveo ) ).toBe( true );
+			expect( await isOpen( page, LAB.entry ) ).toBe( false );
+			expect( await isOpen( page, KIVEO.entry ) ).toBe( true );
 
 			// What is open is in the URL, so the state is copyable.
-			expect( page.url() ).toContain( `dp-open=${ ENTRY.kiveo }` );
+			expect( page.url() ).toContain( `dp-open=${ KIVEO.entry }` );
 		} );
 
 		test( 'expand all opens everything, and then offers the opposite', async ( {
@@ -473,9 +348,9 @@ test.describe( 'The timeline', () => {
 			} );
 
 			const ships = page.locator(
-				`[data-dp-lane="${ ENTRY.lab }"] .dp-tl-ships`
+				`[data-dp-lane="${ LAB.entry }"] .dp-tl-ships`
 			);
-			const bare = page.locator( `[data-dp-lane="${ ENTRY.bare }"]` );
+			const bare = page.locator( `[data-dp-lane="${ BARE.entry }"]` );
 
 			await expect( ships ).toBeVisible();
 
@@ -518,7 +393,7 @@ test.describe( 'The timeline', () => {
 			await page.goto( workPage );
 
 			const card = page.locator(
-				`.dp-cards a.dp-card-open[data-dp-entry="${ ENTRY.kiveo }"]`
+				`.dp-cards a.dp-card-open[data-dp-entry="${ KIVEO.entry }"]`
 			);
 
 			await expect( card ).toBeVisible();
@@ -526,10 +401,10 @@ test.describe( 'The timeline', () => {
 			await card.click();
 
 			await expect(
-				page.locator( `#${ ENTRY.kiveo } .dp-tl-panel` )
+				page.locator( `#${ KIVEO.entry } .dp-tl-panel` )
 			).toBeVisible();
 
-			expect( page.url() ).toContain( `dp-open=${ ENTRY.kiveo }` );
+			expect( page.url() ).toContain( `dp-open=${ KIVEO.entry }` );
 		} );
 
 		test( 'a deep link arrives with the entry already open', async ( {
@@ -540,13 +415,13 @@ test.describe( 'The timeline', () => {
 			 * arrival and the test would pass whether or not the server had
 			 * done anything — which is the opposite of what it is for.
 			 */
-			await page.goto( workUrl( { 'dp-open': ENTRY.ops } ) );
+			await page.goto( workUrl( { 'dp-open': OPS.entry } ) );
 
 			await expect(
-				page.locator( `#${ ENTRY.ops } .dp-tl-panel` )
+				page.locator( `#${ OPS.entry } .dp-tl-panel` )
 			).toBeVisible();
 
-			expect( await isOpen( page, ENTRY.kiveo ) ).toBe( false );
+			expect( await isOpen( page, KIVEO.entry ) ).toBe( false );
 		} );
 
 		test( 'the whole chart is operable from the keyboard alone', async ( {
@@ -555,23 +430,23 @@ test.describe( 'The timeline', () => {
 			await page.goto( workPage );
 
 			// No clicks anywhere in this test.
-			await tabTo( page, `#${ ENTRY.bare } .dp-tl-summary` );
+			await tabTo( page, `#${ BARE.entry } .dp-tl-summary` );
 			await page.keyboard.press( 'Enter' );
 
-			expect( await isOpen( page, ENTRY.bare ) ).toBe( true );
+			expect( await isOpen( page, BARE.entry ) ).toBe( true );
 
 			await page.keyboard.press( 'Enter' );
 
-			expect( await isOpen( page, ENTRY.bare ) ).toBe( false );
+			expect( await isOpen( page, BARE.entry ) ).toBe( false );
 
 			// Space is the other disclosure key, and it is not the same code path.
 			await page.keyboard.press( 'Space' );
 
-			expect( await isOpen( page, ENTRY.bare ) ).toBe( true );
+			expect( await isOpen( page, BARE.entry ) ).toBe( true );
 
 			// The focused summary shows a ring rather than nothing.
 			const outline = await page
-				.locator( `#${ ENTRY.bare } .dp-tl-summary` )
+				.locator( `#${ BARE.entry } .dp-tl-summary` )
 				.evaluate(
 					( element ) =>
 						window.getComputedStyle( element ).outlineStyle
@@ -605,11 +480,11 @@ test.describe( 'The timeline', () => {
 		} );
 
 		test( 'the panel has no entrance at all', async ( { page } ) => {
-			await page.goto( workUrl( { 'dp-open': ENTRY.kiveo } ) );
+			await page.goto( workUrl( { 'dp-open': KIVEO.entry } ) );
 
 			expect( await prefersReducedMotion( page ) ).toBe( true );
 
-			const panel = page.locator( `#${ ENTRY.kiveo } .dp-tl-panel` );
+			const panel = page.locator( `#${ KIVEO.entry } .dp-tl-panel` );
 
 			await expect( panel ).toBeVisible();
 
@@ -637,7 +512,7 @@ test.describe( 'The timeline', () => {
 
 			expect( await prefersReducedMotion( page ) ).toBe( true );
 
-			const bar = page.locator( `#${ ENTRY.lab } .dp-tl-bar` );
+			const bar = page.locator( `#${ LAB.entry } .dp-tl-bar` );
 
 			const duration = await bar.evaluate(
 				( element ) =>
@@ -670,15 +545,15 @@ test.describe( 'The timeline', () => {
 
 			expect( await scriptsAreOff( page ) ).toBe( true );
 
-			const detail = page.locator( `#${ ENTRY.lab } .dp-tl-detail` );
+			const detail = page.locator( `#${ LAB.entry } .dp-tl-detail` );
 
 			await expect( detail ).toBeHidden();
 
-			await page.locator( `#${ ENTRY.lab } .dp-tl-summary` ).click();
+			await page.locator( `#${ LAB.entry } .dp-tl-summary` ).click();
 
 			await expect( detail ).toBeVisible();
 
-			await page.locator( `#${ ENTRY.lab } .dp-tl-summary` ).click();
+			await page.locator( `#${ LAB.entry } .dp-tl-summary` ).click();
 
 			await expect( detail ).toBeHidden();
 		} );
@@ -691,9 +566,9 @@ test.describe( 'The timeline', () => {
 			expect( await scriptsAreOff( page ) ).toBe( true );
 
 			const ships = page.locator(
-				`[data-dp-lane="${ ENTRY.lab }"] .dp-tl-ships`
+				`[data-dp-lane="${ LAB.entry }"] .dp-tl-ships`
 			);
-			const bare = page.locator( `[data-dp-lane="${ ENTRY.bare }"]` );
+			const bare = page.locator( `[data-dp-lane="${ BARE.entry }"]` );
 
 			await page
 				.locator( '.dp-tl-filter-link[data-dp-filter="roles"]' )
@@ -709,7 +584,7 @@ test.describe( 'The timeline', () => {
 			await page.waitForURL( /dp-filter=shipped/ );
 
 			await expect( bare ).toBeHidden();
-			await expect( page.locator( `#${ ENTRY.kiveo }` ) ).toBeVisible();
+			await expect( page.locator( `#${ KIVEO.entry }` ) ).toBeVisible();
 		} );
 
 		test( 'expand all still expands everything', async ( { page } ) => {
@@ -736,14 +611,14 @@ test.describe( 'The timeline', () => {
 
 			await page
 				.locator(
-					`.dp-cards a.dp-card-open[data-dp-entry="${ ENTRY.kiveo }"]`
+					`.dp-cards a.dp-card-open[data-dp-entry="${ KIVEO.entry }"]`
 				)
 				.click();
 
-			await page.waitForURL( new RegExp( `dp-open=${ ENTRY.kiveo }` ) );
+			await page.waitForURL( new RegExp( `dp-open=${ KIVEO.entry }` ) );
 
 			await expect(
-				page.locator( `#${ ENTRY.kiveo } .dp-tl-panel` )
+				page.locator( `#${ KIVEO.entry } .dp-tl-panel` )
 			).toBeVisible();
 		} );
 
@@ -751,15 +626,15 @@ test.describe( 'The timeline', () => {
 			await page.goto( workUrl( { 'dp-open': 'all' } ) );
 
 			await expect(
-				page.locator( `#${ ENTRY.kiveo } .dp-tl-headline` )
-			).toHaveText( `${ TITLE.kiveo } — the one line.` );
+				page.locator( `#${ KIVEO.entry } .dp-tl-headline` )
+			).toHaveText( `${ KIVEO.title } — the one line.` );
 
 			await expect(
 				page.locator( '.dp-timeline .dp-tl-legend' )
-			).toContainText( TITLE.lab );
+			).toContainText( LAB.title );
 
 			await expect(
-				page.locator( `#${ ENTRY.lab } .dp-tl-bar` )
+				page.locator( `#${ LAB.entry } .dp-tl-bar` )
 			).toBeVisible();
 		} );
 	} );
