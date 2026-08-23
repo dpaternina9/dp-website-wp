@@ -406,6 +406,46 @@ it.
 `tests/e2e/spacing.spec.ts` now sweeps `dp-work` in both contexts as well as the
 home page, and pins the four numbers above.
 
+### 7.5 Phase 7d — the work page, against the design ✅
+
+The third pass, and the first with the design as the baseline. Phases 7b and 7c
+both leant on `spacing.spec.ts`, which compares the rendered page with the site
+editor's canvas — a real bug class, and both sides of it are the theme, so it
+cannot notice two contexts agreeing on the wrong number. It reported "0
+divergences across 374 elements" over a page whose filter chips were half again
+as tall as the design draws them.
+
+The two defects David could see were both **properties the design never
+declares**, which is why neither earlier pass found them:
+
+- `box-sizing`. The chips carry the design's `min-height: var(--target-min)`, and
+  with no border-box reset the padding and border were added on top of the 36 —
+  a secondary control taller than the 44px primary one, which inverts the
+  hierarchy `_ds/tokens/spacing.css` sets out in prose.
+- `line-height`. `TimelineChart.dc.html` declares one on three elements and on
+  nothing else; `theme.json`'s root is `--lh-relaxed`, so nineteen mono caps
+  labels inherited 1.65 where the design renders about 1.2.
+
+Three more came out of building the harness: the expand-all control losing its
+dashed border to a more specific pill rule, the quiet button variant keeping
+`line-height: 1` from the pill it strips, and a ship's label column giving 16px
+back to a year axis that does not exist in stack mode.
+
+**The harness itself is the deliverable.** `composer design:baseline` reads the
+inline `style` attributes out of `design-source/*.dc.html` and writes them beside
+the theme selector that plays the same role;
+`tests/e2e/design-parity.spec.ts` measures each element, appends a classless
+probe of the same tag carrying the design's declarations verbatim, and compares
+only the longhands those declarations expand to. Both sides are resolved by one
+engine, in one inherited font context, at one width — which is what makes `ch`,
+`em`, `clamp()` of a viewport unit and `color-mix()` assertable rather than
+re-implemented in PHP as numbers that rot. `DP\Tests\Unit\DesignBaselineTest`
+fails the fast gate when the committed baseline and the design have drifted.
+
+The reasoning, what it cannot answer, and the alternatives are in
+`docs/adr/0012-design-parity-harness.md`. The next template review inherits the
+machinery and adds a map, not a mechanism.
+
 ---
 
 ## Phase 8 — Feeds

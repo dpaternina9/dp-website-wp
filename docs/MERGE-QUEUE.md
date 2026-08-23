@@ -507,3 +507,98 @@ Chores it could not do from its lane:
       one for it — it is the one shipped thing `featuredWork` leaves out. If you
       ever mark it featured, give it a `dp_line` first or its card renders with
       an empty sentence.
+
+---
+
+## Phase 7d — the work page, audited against the design (this branch)
+
+Branch: `phase-7d-work-design-parity`. Local, no remote, merges by hand.
+
+The third pass over `dp-work`, and the first one with the design as the baseline
+rather than the site editor's canvas. Two rounds had reported the template
+correct because `spacing.spec.ts` compares the page with the canvas — both sides
+of which are the theme, so two contexts agreeing on the wrong number agree
+perfectly. `docs/adr/0012-design-parity-harness.md` has the full reasoning.
+
+What the audit changed, worst first:
+
+- **The filter chips were 54px against the design's 36.** `min-height:
+  var(--target-min)` is the design's own declaration and `_ds/tokens/spacing.css`
+  says what it is for — "secondary controls such as filter chips meet 36". The
+  theme has no border-box reset, so the 16px of padding and the 2px border were
+  added on top of it, making a secondary control taller than the 44px primary
+  one. The same file settles which box model the design system uses: "Button,
+  IconButton and Input all resolve to `--control-h-md`, so they sit flush when
+  placed side by side."
+- **Every mono caps label in the chart was four pixels too tall.**
+  `TimelineChart.dc.html` declares a line-height on three elements — two
+  paragraphs and the artifact's `<pre>`, all `--lh-relaxed` — and on nothing
+  else, so the rest draw in the browser's `normal` line box. `theme.json`'s root
+  is `--lh-relaxed`, which every one of them inherited. Nineteen labels between
+  the legend and the last stat tile; the open MonsterInsights row lost 10px and
+  a stat tile lost 15.
+- **The expand-all control was drawn solid and in the wrong grey.**
+  `.dp-tl-pill-extra a` is one class and one element; `ul.dp-filter-pills a` is
+  one class and two, so it won `border` and `color`. The design's own note says
+  that control "uses a DASHED border", and its inline style makes it
+  `--text-muted`.
+- **The quiet button variant kept `line-height: 1`** from the pill it otherwise
+  strips. On a control with `height: auto` that collapses the text box to the
+  glyph size, which threw "READ THE SERIES →" off the baseline of the paragraph
+  beside it.
+- **A ship's label column gave 16px back to an axis that was not there.** The
+  rail subtraction exists so ship bars stay true to the year axis; in stack mode
+  there are no bars, so it only left a dead gutter down the right of every row.
+
+### Facts later phases inherit
+
+- **A property the design declines to set is still a value.** Neither of the two
+  things David could see was a wrong number in the theme; both were properties
+  the design never declares — `box-sizing` and `line-height` — where the theme
+  supplied something and the design supplies the browser default. No test that
+  walks the theme's own rules can see that, and no test that compares the theme
+  with itself can either.
+- **`design-source/` is machine-readable.** Every component states its values as
+  inline `style` attributes because the design tool has no stylesheet. Read by a
+  person that is a liability; read by a program it is a complete per-element
+  declaration block. `composer design:baseline` extracts it; `composer
+  design:check` fails when the committed baseline and the design have drifted.
+- **Four of the chart's styles cannot be audited at all.** `legendStyle`,
+  `kindLabelStyle`, `orgStyle` and `headlineStyle` are computed inside the design
+  tool and never reach the export, and the same is true of the open role row's
+  vertical padding and of `.dp-tl-summary`, which have no counterpart at all. The
+  theme has to supply something; nothing pretends it came from the design. Do not
+  spend a day looking for them.
+- **The e2e suite runs in one worker now.** Not for flakiness in general: the
+  work page's featured cards are a global query for three `dp_ship` posts, and
+  three specs publish featured ships into it. Two running at once means each
+  one's page shows the other's cards. The parallel-safe fix is one shared fixture
+  in `global-setup.ts` that nobody owns — a refactor across three files, worth
+  doing on its own.
+
+### For David
+
+- [ ] **The Work page still has no deck** (`dp_lead` is empty on page 61). Phase
+      7c already raised this; the audit confirms it is the single largest
+      difference between the rendered hero and the design's, which is 300px tall
+      with the deck and 199px without. The copy is yours.
+- [ ] **The three cards still have no featured image**, so they are 160px tall
+      where the design draws about 380. Phase 7c's note stands: the theme will
+      not invent a grey box.
+- [ ] **The legend prints an accented lane's name in caps** — "FANXIE LAB" —
+      where the design leaves `lane.org` in title case beside its own hard-coded
+      "ROLES" and "SHIPPED". The theme upper-cases in CSS because those two words
+      are translated strings and a translation may not be upper-case. Left as it
+      is; say the word and the legend's accent labels get their own rule.
+- [ ] **The closing band's content is not held to `--container-lg`.** The design
+      puts the glow on a full-bleed `<section>` and a 1120px column inside it; the
+      theme has one element doing both, because a `max-width` on the band would
+      crop its own glow. Nothing inside reaches 1120px at any size, so nothing
+      moves — but it is a real difference in shape, recorded in the baseline as a
+      skip rather than closed.
+- [ ] **Is the open role row meant to breathe more?** Its detail sits 8px under
+      the label block and closes 16px under the stack line, inside a tint with no
+      vertical padding of its own. Those three numbers are the theme's, not the
+      design's — the row and detail styles are computed in the design tool. If it
+      still reads tight beside the shipped panels below it, say so and it becomes
+      a decision rather than a default.
