@@ -257,13 +257,21 @@ h2.dp-section-head-heading {
 	text-wrap: balance;
 }
 
+/*
+ * `SectionHead.dc.html` gives the kicker, the meta and the action a font-family,
+ * a size, a tracking and a colour, and no line-height at all — so all three are
+ * drawn in the browser's `normal` line box, not in `--lh-normal`, which is a
+ * value this theme supplied. The element name is load-bearing: these are
+ * paragraphs, and `theme.json`'s `core/paragraph` style is `:root :where(p)`,
+ * which outranks a bare class (ADR-0008).
+ */
 p.dp-section-head-kicker,
 p.dp-section-head-meta,
 p.dp-section-head-action {
 	margin: 0;
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
-	line-height: var(--lh-normal);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }
@@ -411,8 +419,29 @@ ul.dp-filter-pills > li::before {
 	content: none;
 }
 
+/*
+ * `min-height: var(--target-min)` is the design's own declaration, and it only
+ * produces the 36px chip the token is named for under two conditions this
+ * theme was not meeting.
+ *
+ * **`box-sizing: border-box`.** The design system's control sizing is
+ * border-box and says so in `spacing.css`: "Button, IconButton and Input all
+ * resolve to --control-h-md, so they sit flush when placed side by side" — three
+ * controls with different padding only sit flush if the declared height is the
+ * whole box. Under `content-box` this chip was 36 + 16 padding + 2 border = 54,
+ * which is taller than the 44px primary button and inverts the hierarchy the
+ * same file describes: "Primary navigation and form controls meet 44; secondary
+ * controls such as filter chips meet 36."
+ *
+ * **`line-height: normal`.** The design declares no line-height here, so its
+ * chip label sits in a `normal` line box; `theme.json`'s root is `--lh-relaxed`
+ * (1.65), which is 19.8px at `--fs-xs` and pushes the content box past 36 on its
+ * own. `normal` is not a value this theme picked — it is the value the design
+ * renders. See the note above `.dp-tl-legend` for the rest of that family.
+ */
 ul.dp-filter-pills a {
 	display: inline-flex;
+	box-sizing: border-box;
 	align-items: center;
 	min-height: var(--target-min);
 	padding: 8px 20px;
@@ -422,6 +451,7 @@ ul.dp-filter-pills a {
 	color: var(--text-secondary);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-decoration: none;
 	text-transform: uppercase;
@@ -687,7 +717,12 @@ p.dp-row-excerpt {
 p.dp-card-year,
 p.dp-card-org {
 	font-size: var(--fs-xs);
-	line-height: var(--lh-relaxed);
+
+	/* The design's meta row declares no line-height, so it draws in `normal`;
+	   `--lh-relaxed` is the root value these paragraphs inherited, and it made
+	   the row 20px tall where the design draws 16. Same family as the section
+	   head's meta and the timeline's labels. */
+	line-height: normal;
 }
 
 p.dp-card-year {
@@ -1877,6 +1912,46 @@ ul.dp-tl-pills {
 	padding-top: 12px;
 }
 
+/*
+ * The label family's line box.
+ *
+ * `TimelineChart.dc.html` declares a line-height on exactly three things — the
+ * two paragraphs and the artifact's `<pre>`, all three `--lh-relaxed` — and on
+ * nothing else. Every mono caps label in the component is therefore drawn in the
+ * browser's `normal` line box. `theme.json`'s root line-height is
+ * `--lh-relaxed` (1.65), so each of those labels inherited a 19.8px line box
+ * where the design draws about 15.6, and the chart carried four extra pixels
+ * per label row — nineteen of them between the legend and the last stat tile.
+ *
+ * `normal` is not a value this theme chose. It is what the design renders, and
+ * restating it is the only way to say "the design declares nothing here" in a
+ * document that has a root line-height. The design's own declared line-heights
+ * stay exactly where they are: `p.dp-tl-prose`, `pre.dp-tl-artifact-body`, and
+ * the bullet row, whose `--fs-xs` marker deliberately inherits the row's
+ * `--lh-relaxed` (TimelineChart.dc.html L100-103).
+ *
+ * `.dp-tl-legend`, `.dp-tl-kind`, `.dp-tl-org` and `h3.dp-tl-headline` are the
+ * four whose design styles are computed in the design tool rather than written
+ * into the markup, so their line-height cannot be read out of the source. They
+ * follow the family they belong to, and `tests/e2e/design-parity.spec.ts`
+ * deliberately does not pin them (ADR-0012).
+ */
+.dp-tl-legend,
+.dp-tl-years,
+.dp-tl-role,
+.dp-tl-range,
+.dp-tl-kind,
+.dp-tl-stack,
+.dp-tl-shipped,
+.dp-tl-fact-label,
+.dp-tl-fact-value,
+.dp-tl-artifact-head,
+.dp-tl-stat-value,
+.dp-tl-stat-label,
+.dp-tl-swipe {
+	line-height: normal;
+}
+
 .dp-tl-legend {
 	display: flex;
 	gap: 8px 20px;
@@ -2072,14 +2147,16 @@ ul.dp-tl-pills {
 }
 
 /* The hairline every shipped thing hangs off. The label column inside it gives
-   the rail's width back, so a ship bar and its role's bar share one axis. */
+   the rail's width back, so a ship bar and its role's bar share one axis — which
+   is the whole of the design's reason for it: "the ship label column subtracts
+   that same padding back out so ship bars stay true to the year axis"
+   (TimelineChart.dc.html, LAYOUT NOTES). It is therefore declared in the two
+   modes that draw a track and in neither the base nor stack mode, where the
+   label is the only column and giving 16px back to an axis that is not there
+   left a dead gutter down the right of every shipped thing. */
 .dp-tl-ships {
 	padding-left: var(--dp-tl-rail);
 	border-left: var(--border-width) solid var(--border-subtle);
-}
-
-.dp-tl-ships .dp-tl-row {
-	--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
 }
 
 .dp-tl-detail {
@@ -2382,6 +2459,10 @@ pre.dp-tl-artifact-body {
 		display: flex;
 	}
 
+	.dp-tl-ships .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
+	}
+
 	.dp-tl-grid {
 		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
 	}
@@ -2435,6 +2516,10 @@ pre.dp-tl-artifact-body {
 
 	.is-mobile-scroll .dp-tl-years {
 		display: flex;
+	}
+
+	.is-mobile-scroll .dp-tl-ships .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
 	}
 
 	.is-mobile-scroll .dp-tl-grid {
