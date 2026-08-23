@@ -28,8 +28,23 @@ against.
 - Three components (`SiteHeader`, `SiteFooter`, `CtaBanner`) embedded the monogram as an
   inline `data:image/png;base64,…` URI. On import that was replaced with
   `assets/dp-mark-gradient-128.png`. Nothing else was altered.
-- Component files were rewritten to keep the markup and the *meaning* of the logic
-  verbatim while dropping the design tool's scaffolding (`<helmet>` link soup, the
-  `ResizeObserver` width probe, `DCLogic` boilerplate). Every number, colour, and rule
-  from the original is preserved in the markup or in a trailing comment block.
-  `dpaternina.dc.html` is untouched and is the tiebreaker if anything disagrees.
+- ~~Component files were rewritten to keep the markup and the *meaning* of the logic
+  verbatim while dropping the design tool's scaffolding.~~ **This claim was false and it
+  cost three failed audits of the work page.**
+
+  Every one of the thirteen component files was imported **without its
+  `<script type="text/x-dc">` block**. That block is where the design computes its own
+  styles — `orgStyle`, `kindLabelStyle`, `legendStyle`, `headlineStyle`, `rowStyle`,
+  `barStyle`, `chevronStyle` — and none of them survived into "the markup or a trailing
+  comment block". Roughly half of each component's declared values were simply gone.
+
+  The damage was not just missing data. `docs/adr/0012-design-parity-harness.md` recorded
+  those styles as "computed inside the design tool and never reach the export" and told
+  future phases not to look for them. They *are* in the export. Nobody had fetched it.
+
+  **Re-fetch, do not re-summarise.** `TimelineChart.logic.js` is the first one restored,
+  verbatim, on 2026-08-23. The other twelve are still truncated — see
+  `docs/MERGE-QUEUE.md`. `dpaternina.dc.html` kept its script block and is complete.
+
+- `Ledger.dc.html` exists in the design project and **was never imported at all**. Phase 7
+  built the résumé ledger block without it.
