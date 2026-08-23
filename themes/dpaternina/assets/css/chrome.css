@@ -199,7 +199,14 @@ input.wp-element-button:active,
 }
 
 /* A link that is a link, not a button: the footer's columns and the design's
-   mono caps "→" affordances. Same block, no chrome. */
+   mono caps "→" affordances. Same block, no chrome.
+
+   It gives back one thing the pill above it needs and a span never has.
+   `line-height: 1` centres a label inside a 44px control; on a control with
+   `height: auto` it collapses the text box to the glyph size, which throws the
+   baseline out in every flex row the design lines one up in — the work page's
+   outro is one. The design declares no leading on any of these, so `normal` is
+   what it renders (tests/e2e/design-parity.spec.ts, outro.action). */
 .dp-button-quiet .wp-block-button__link {
 	height: auto;
 	padding: 0;
@@ -211,6 +218,7 @@ input.wp-element-button:active,
 	font-family: var(--font-body);
 	font-size: var(--fs-sm);
 	font-weight: var(--fw-regular);
+	line-height: normal;
 	letter-spacing: var(--ls-normal);
 	white-space: normal;
 }

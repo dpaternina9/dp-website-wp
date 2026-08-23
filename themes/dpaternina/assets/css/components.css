@@ -702,6 +702,9 @@ p.dp-row-excerpt {
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+
+	/* The design's meta row declares no leading; see p.dp-card-year below. */
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }
@@ -1893,7 +1896,14 @@ ul.dp-tl-pills {
 	margin-bottom: 28px;
 }
 
-.dp-tl-pill-extra a {
+/* `FilterPills.dc.html`: "The trailing 'extra' button (EXPAND ALL / COLLAPSE
+   ALL) uses a DASHED border", and its inline style makes it `--text-muted`
+   rather than the `--text-secondary` the three filters carry. The list is named
+   in the selector because `ul.dp-filter-pills a` is a class and two elements,
+   which outranks a class and one element: without it this rule lost `border` and
+   `color` to the general pill and the control was drawn solid, in the wrong
+   grey, in both contexts. */
+ul.dp-filter-pills .dp-tl-pill-extra a {
 	border-style: dashed;
 	color: var(--text-muted);
 }

@@ -93,15 +93,17 @@ final class CssParser {
 	}
 
 	/**
-	 * Read the custom-property declarations out of a declaration block.
+	 * Read every declaration out of a declaration block, in source order.
 	 *
 	 * Later declarations of the same property win, exactly as the cascade would
-	 * resolve them inside one rule.
+	 * resolve them inside one rule. The block may equally be the contents of a
+	 * `style` attribute, which is the same grammar without the braces — that is
+	 * what makes `design-source/`'s inline-styled components machine-readable.
 	 *
 	 * @param string $body A declaration block, without the braces.
-	 * @return array<string, string> Property name (with the leading `--`) to raw value.
+	 * @return array<string, string> Property name to raw value.
 	 */
-	public static function custom_properties( string $body ): array {
+	public static function declarations( string $body ): array {
 		$body  = (string) preg_replace( '~/\*.*?\*/~s', '', $body );
 		$found = array();
 
@@ -112,16 +114,24 @@ final class CssParser {
 				continue;
 			}
 
-			$name = trim( substr( $declaration, 0, $colon ) );
-
-			if ( ! str_starts_with( $name, '--' ) ) {
-				continue;
-			}
-
-			$found[ $name ] = trim( substr( $declaration, $colon + 1 ) );
+			$found[ trim( substr( $declaration, 0, $colon ) ) ] = trim( substr( $declaration, $colon + 1 ) );
 		}
 
 		return $found;
+	}
+
+	/**
+	 * Read the custom-property declarations out of a declaration block.
+	 *
+	 * @param string $body A declaration block, without the braces.
+	 * @return array<string, string> Property name (with the leading `--`) to raw value.
+	 */
+	public static function custom_properties( string $body ): array {
+		return array_filter(
+			self::declarations( $body ),
+			static fn ( string $name ): bool => str_starts_with( $name, '--' ),
+			ARRAY_FILTER_USE_KEY
+		);
 	}
 
 	/**

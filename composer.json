@@ -54,6 +54,8 @@
     "dump-theme-autoload": "@composer dump-autoload --working-dir=themes/dpaternina --optimize --no-interaction",
     "tokens:build": "php bin/dp-tokens.php",
     "tokens:check": "php bin/dp-tokens.php --check",
+        "design:baseline": "php bin/dp-design-baseline.php",
+        "design:check": "php bin/dp-design-baseline.php --check",
     "lint": "phpcs",
     "lint:fix": "phpcbf",
     "analyse": "phpstan analyse --memory-limit=1G",
