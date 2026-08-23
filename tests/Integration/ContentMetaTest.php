@@ -257,6 +257,7 @@ final class ContentMetaTest extends WP_UnitTestCase {
 		$post_id = $this->post( PostTypes::SHIP );
 
 		$this->assertSame( '', get_post_meta( $post_id, 'dp_headline', true ) );
+		$this->assertSame( '', get_post_meta( $post_id, 'dp_line', true ), 'A card with no line of its own prints nothing, not the detail.' );
 		$this->assertSame( array(), get_post_meta( $post_id, 'dp_bullets', true ) );
 		$this->assertFalse( get_post_meta( $post_id, 'dp_featured', true ) );
 		$this->assertSame( 0, get_post_meta( $post_id, 'dp_role_id', true ) );
@@ -357,7 +358,7 @@ final class ContentMetaTest extends WP_UnitTestCase {
 
 		$properties = $data['schema']['properties']['meta']['properties'];
 
-		foreach ( array( 'dp_headline', 'dp_bullets', 'dp_artifact', 'dp_stat1', 'dp_featured' ) as $key ) {
+		foreach ( array( 'dp_headline', 'dp_line', 'dp_bullets', 'dp_artifact', 'dp_stat1', 'dp_featured' ) as $key ) {
 			$this->assertArrayHasKey( $key, $properties, $key . ' is advertised.' );
 		}
 	}

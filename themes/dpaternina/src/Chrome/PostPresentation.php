@@ -78,8 +78,22 @@ final class PostPresentation {
 	 */
 	private const PUBLIC_FIELDS = array(
 		'dp_role' => array( 'dp_role_title', 'dp_range', 'dp_detail', 'dp_stack' ),
-		'dp_ship' => array( 'dp_range', 'dp_headline', 'dp_detail', 'dp_stack', 'dp_ship_role' ),
+		'dp_ship' => array( 'dp_range', 'dp_headline', 'dp_detail', 'dp_line', 'dp_stack', 'dp_ship_role' ),
 	);
+
+	/**
+	 * The role post type.
+	 *
+	 * Named as a string rather than through `DP\Core\Content\PostTypes`, the way
+	 * the table above already is: a theme that names a plugin's class unguarded
+	 * fatals on a site where the plugin is deactivated.
+	 */
+	private const ROLE_TYPE = 'dp_role';
+
+	/**
+	 * The shipped-work post type.
+	 */
+	private const SHIP_TYPE = 'dp_ship';
 
 	/**
 	 * Attach the hooks.
@@ -127,6 +141,7 @@ final class PostPresentation {
 		return match ( $key ) {
 			'kicker' => $this->kicker( $id ),
 			'tone'   => $this->tone( $id ),
+			'org'    => $this->org( $id ),
 			default  => $this->public_field( $id, $key ),
 		};
 	}
@@ -154,6 +169,42 @@ final class PostPresentation {
 		$value = get_post_meta( $post_id, $key, true );
 
 		return is_string( $value ) ? $value : null;
+	}
+
+	/**
+	 * The organisation a shipped thing came out of.
+	 *
+	 * The design's `WorkCard` prints `org` — "FANXIE LAB", "MONSTERINSIGHTS" —
+	 * beside the year, and its `featuredWork` fixture writes the string out on
+	 * every card. Nothing in the content model repeats it, and deliberately so:
+	 * `DP\Core\Content\Meta`'s own docblock says "`org` is never a meta field",
+	 * because for a role the post title **is** the organisation. Storing it a
+	 * second time on the ship would create two places to rename Fanxie Lab from.
+	 *
+	 * So it is derived: follow `dp_role_id` to the role and print its title.
+	 * A role asked for its own org has nothing to derive — `core/post-title` is
+	 * already the answer — so this key is a shipped thing's only.
+	 *
+	 * Null when there is nothing to print: an orphan ship, or a `dp_role_id`
+	 * pointing at something that is not a role. Null leaves the bound block's own
+	 * content in place, which on the card is empty — better than a stray title.
+	 *
+	 * @param int $post_id The post in the loop.
+	 * @return string|null
+	 */
+	public function org( int $post_id ): ?string {
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post || self::SHIP_TYPE !== $post->post_type ) {
+			return null;
+		}
+
+		$role_id = get_post_meta( $post_id, 'dp_role_id', true );
+		$role    = is_numeric( $role_id ) ? get_post( (int) $role_id ) : null;
+
+		return $role instanceof WP_Post && self::ROLE_TYPE === $role->post_type
+			? $role->post_title
+			: null;
 	}
 
 	/**

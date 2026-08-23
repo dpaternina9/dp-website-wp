@@ -286,6 +286,11 @@ final class Meta {
 				multiline: true
 			),
 			new MetaField(
+				'dp_line',
+				'string',
+				__( 'One short sentence, written for the card above the timeline. Not the same copy as the detail: the card gets a line, the expanded panel gets the paragraph.', 'dp-core' )
+			),
+			new MetaField(
 				'dp_bullets',
 				'array',
 				__( 'The constraints that shaped it. Three is the house maximum.', 'dp-core' )

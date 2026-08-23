@@ -302,12 +302,20 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 	/**
 	 * A `dp_ship`, featured or not.
 	 *
+	 * Four of these fields exist so a test can tell them apart on sight. The
+	 * design's card face carries `year`, `org`, `title` and `line`, and its
+	 * `stack` and `detail` belong to the timeline's expanded panel — so each of
+	 * those two is seeded with a string that names itself. A card printing the
+	 * stack where the org goes is then a failed assertion rather than a thing to
+	 * notice.
+	 *
 	 * @param string $name     The thing's name, which is the post title.
 	 * @param bool   $featured Whether it appears as a WorkCard.
 	 * @param float  $end      The decimal year it shipped.
+	 * @param string $line     The card's own sentence, or '' to leave it unset.
 	 * @return int
 	 */
-	protected function seed_ship( string $name, bool $featured, float $end ): int {
+	protected function seed_ship( string $name, bool $featured, float $end, string $line = '' ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'dp_ship',
@@ -320,7 +328,12 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 		update_post_meta( $post_id, 'dp_featured', $featured );
 		update_post_meta( $post_id, 'dp_end', $end );
 		update_post_meta( $post_id, 'dp_range', (string) (int) $end );
-		update_post_meta( $post_id, 'dp_detail', $name . ' — one line on what it is.' );
+		update_post_meta( $post_id, 'dp_detail', $name . ' — the panel paragraph, not the card line.' );
+		update_post_meta( $post_id, 'dp_stack', 'PANEL STACK · NOT THE ORG' );
+
+		if ( '' !== $line ) {
+			update_post_meta( $post_id, 'dp_line', $line );
+		}
 
 		return $post_id;
 	}

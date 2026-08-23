@@ -44,6 +44,30 @@ final class WorkTest extends TemplateTestCase {
 	private int $page = 0;
 
 	/**
+	 * The role every seeded shipped thing hangs off.
+	 *
+	 * @var int
+	 */
+	private int $role = 0;
+
+	/**
+	 * The shipped things, by name.
+	 *
+	 * @var array<string, int>
+	 */
+	private array $ships = array();
+
+	/**
+	 * The organisation the role carries, which is its post title.
+	 */
+	private const ORG = 'Fanxie Lab';
+
+	/**
+	 * The tail every seeded card line ends with.
+	 */
+	private const LINE_TAIL = 'the sentence written for the card.';
+
+	/**
 	 * Build the page, three shipped things and the roles under them.
 	 *
 	 * @return void
@@ -53,13 +77,15 @@ final class WorkTest extends TemplateTestCase {
 
 		$this->page = $this->seed_page( 'What I have worked on', 'dp-work.html' );
 
-		$role = $this->seed_role( 'Fanxie Lab', 'CTO & founder', 2026.6 );
+		$this->role = $this->seed_role( self::ORG, 'CTO & founder', 2026.6 );
 
 		foreach ( array( 'Kiveo', 'Agency platform & ops' ) as $index => $name ) {
-			$ship = $this->seed_ship( $name, true, 2026.6 - $index );
+			$ship = $this->seed_ship( $name, true, 2026.6 - $index, $name . ' — ' . self::LINE_TAIL );
 
-			update_post_meta( $ship, 'dp_role_id', $role );
+			update_post_meta( $ship, 'dp_role_id', $this->role );
 			update_post_meta( $ship, 'dp_start', 2023.0 );
+
+			$this->ships[ $name ] = $ship;
 		}
 	}
 
@@ -111,6 +137,106 @@ final class WorkTest extends TemplateTestCase {
 
 		$this->assertStringContainsString( 'Kiveo', $html );
 		$this->assertStringNotContainsString( 'Post number 1', $html, 'The card grid fell back to posts.' );
+	}
+
+	/**
+	 * The card's second meta item is the organisation, not the tech stack.
+	 *
+	 * `.dp-card-org` was bound to `dp_stack` — a class called `org` printing
+	 * "SWIFT · SWIFTUI · CLOUDKIT". The design's `featuredWork` fixture carries
+	 * both, and puts `stack` in the timeline's expanded panel and `org` on the
+	 * card, so the two are not interchangeable and nothing in the markup says
+	 * which one is meant. This does.
+	 *
+	 * The org is derived rather than stored: `Meta`'s own rule is that "`org` is
+	 * never a meta field", because a role's post title already is one. So the
+	 * assertion is that the card prints the *role's* title, which is a fact
+	 * about two posts and a `dp_role_id` between them.
+	 *
+	 * @return void
+	 */
+	public function test_a_card_shows_the_organisation_and_never_the_stack(): void {
+		$html = $this->render( $this->permalink( $this->page ), 'page', self::HIERARCHY );
+		$orgs = array();
+
+		preg_match_all( '~<p class="dp-card-org[^"]*">([^<]*)</p>~', $html, $orgs );
+
+		$this->assertCount( 2, $orgs[1], 'Both cards should carry an org line.' );
+
+		foreach ( $orgs[1] as $org ) {
+			$this->assertSame( self::ORG, $org, 'The card prints the title of the role it hangs off.' );
+		}
+
+		$this->assertStringNotContainsString(
+			'PANEL STACK',
+			$this->card_grid( $html ),
+			'The stack belongs to the timeline\'s expanded panel, not to the card face.'
+		);
+		$this->assertStringContainsString(
+			'PANEL STACK',
+			$html,
+			'And it is still on the page, in the panel, where the design puts it.'
+		);
+	}
+
+	/**
+	 * The card prints its own line, not the expanded panel's paragraph.
+	 *
+	 * `.dp-card-line` was bound to `dp_detail`, which is the panel's prose —
+	 * Kiveo's begins "One line on what Kiveo does … copy to come", which is a
+	 * note to the author rather than a card face. `dp_line` is the design's
+	 * `line`, and this is what keeps the two apart.
+	 *
+	 * @return void
+	 */
+	public function test_a_card_shows_its_own_line_and_never_the_panel_paragraph(): void {
+		$html  = $this->render( $this->permalink( $this->page ), 'page', self::HIERARCHY );
+		$lines = array();
+
+		preg_match_all( '~<p class="dp-card-line[^"]*">([^<]*)</p>~', $html, $lines );
+
+		$this->assertCount( 2, $lines[1] );
+
+		foreach ( $lines[1] as $line ) {
+			$this->assertStringEndsWith( self::LINE_TAIL, $line );
+		}
+
+		$this->assertStringNotContainsString(
+			'the panel paragraph, not the card line',
+			$this->card_grid( $html ),
+			'`dp_detail` reached the card face.'
+		);
+		$this->assertStringContainsString(
+			'the panel paragraph, not the card line',
+			$html,
+			'And it is still on the page, in the panel, where the design puts it.'
+		);
+	}
+
+	/**
+	 * A shipped thing with no role prints no organisation at all.
+	 *
+	 * The derivation returns null rather than guessing, and a bound block with a
+	 * null value keeps its own content — which here is nothing. An orphan is a
+	 * real state: `dp_role_id` defaults to 0.
+	 *
+	 * @return void
+	 */
+	public function test_an_orphan_card_prints_no_organisation(): void {
+		foreach ( $this->ships as $ship ) {
+			update_post_meta( $ship, 'dp_role_id', 0 );
+		}
+
+		$html = $this->render( $this->permalink( $this->page ), 'page', self::HIERARCHY );
+		$orgs = array();
+
+		preg_match_all( '~<p class="dp-card-org[^"]*">([^<]*)</p>~', $html, $orgs );
+
+		$this->assertCount( 2, $orgs[1] );
+
+		foreach ( $orgs[1] as $org ) {
+			$this->assertSame( '', $org, 'A ship with no role has no org to print, and inventing one is worse than an empty line.' );
+		}
 	}
 
 	/**
@@ -201,6 +327,29 @@ final class WorkTest extends TemplateTestCase {
 		$this->assertSame( 'defer', $script->extra['strategy'] ?? '', 'CLAUDE.md §1.7: no render-blocking JS.' );
 		$this->assertIsString( $script->src );
 		$this->assertStringStartsWith( get_stylesheet_directory_uri(), $script->src, 'Nothing enqueues from off-origin.' );
+	}
+
+	/**
+	 * Just the card grid, so a negative assertion means what it says.
+	 *
+	 * `dp_stack` and `dp_detail` are both on this page legitimately — the
+	 * timeline's expanded panel is where the design puts them — so "the stack is
+	 * not on the card" cannot be asserted against the whole document. It has to
+	 * be asserted against the cards.
+	 *
+	 * @param string $html The rendered template.
+	 * @return string The `<ul class="dp-cards">` and everything inside it.
+	 */
+	private function card_grid( string $html ): string {
+		$start = strpos( $html, '<ul class="dp-cards' );
+
+		$this->assertIsInt( $start, 'The card grid is not on the page.' );
+
+		$end = strpos( $html, '</ul>', $start );
+
+		$this->assertIsInt( $end, 'The card grid never closes.' );
+
+		return substr( $html, $start, $end - $start );
 	}
 
 	/**

@@ -258,6 +258,46 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Each featured card gets the design's own sentence, not the panel's paragraph.
+	 *
+	 * Kiveo is why the two fields exist. Its `detail` opens "One line on what
+	 * Kiveo does and who it's for — copy to come", which is a note to the author;
+	 * `featuredWork` gives the card "Native iOS, built solo, with nothing leaving
+	 * the device". Both are the design's verbatim copy and both ship, in the two
+	 * different places the design puts them.
+	 *
+	 * "Performance work" is the fourth shipped thing and the one the design does
+	 * not feature. It carries no line, because the fixture gives it none and
+	 * writing one would be inventing copy (digest §8).
+	 *
+	 * @return void
+	 */
+	public function test_each_featured_card_carries_the_designs_own_line(): void {
+		$this->seeder->seed();
+
+		foreach ( array(
+			'Kiveo'                    => 'Native iOS, built solo, with nothing leaving the device.',
+			'Natural-language queries' => 'Ask your analytics a question instead of learning a reporting UI.',
+			'Agency platform & ops'    => 'The plumbing a small agency runs on, kept deliberately boring.',
+		) as $name => $line ) {
+			$ship = $this->find( PostTypes::SHIP, $name );
+
+			$this->assertSame( $line, $this->meta_text( $ship, 'dp_line' ) );
+			$this->assertNotSame(
+				$this->meta_text( $ship, 'dp_detail' ),
+				$this->meta_text( $ship, 'dp_line' ),
+				$name . ' has one string doing two jobs.'
+			);
+		}
+
+		$this->assertSame(
+			'',
+			$this->meta_text( $this->find( PostTypes::SHIP, 'Performance work' ), 'dp_line' ),
+			'The design never writes a card line for the one shipped thing it does not feature.'
+		);
+	}
+
+	/**
 	 * The timeline's dates are the design's decimal years.
 	 *
 	 * @return void

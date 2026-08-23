@@ -169,7 +169,14 @@ final class Fixture {
 	 * `featured` marks the three the design puts above the timeline as WorkCards
 	 * (`featuredWork`); "Performance work" is the one that is not.
 	 *
-	 * @return list<array{key: string, role: string, name: string, start: float, end: float, range: string, headline: string, detail: string, bullets: list<string>, ship_role: string, stack: string, artifact_label: string, artifact: string, stat1: string, stat1_label: string, stat2: string, stat2_label: string, featured: bool}>
+	 * `line` is the card's own sentence, taken verbatim from `featuredWork`, and
+	 * is deliberately not `detail`: the design writes a short line for the card
+	 * face and a longer paragraph for the expanded panel, and Kiveo shows why
+	 * they cannot be the same string — its `detail` opens "One line on what Kiveo
+	 * does … copy to come." "Performance work" carries no `line` because the
+	 * design never gives it one, and inventing one would be inventing copy.
+	 *
+	 * @return list<array{key: string, role: string, name: string, start: float, end: float, range: string, headline: string, detail: string, line: string, bullets: list<string>, ship_role: string, stack: string, artifact_label: string, artifact: string, stat1: string, stat1_label: string, stat2: string, stat2_label: string, featured: bool}>
 	 */
 	public function ships(): array {
 		return array(
@@ -182,6 +189,7 @@ final class Fixture {
 				'range'          => '2025',
 				'headline'       => 'Ask your analytics a question.',
 				'detail'         => 'AI-powered natural language queries that let site owners ask about their traffic in plain English instead of learning a reporting UI.',
+				'line'           => 'Ask your analytics a question instead of learning a reporting UI.',
 				'bullets'        => array(
 					'Ships inside a plugin that updates unattended on 3M+ sites — no breaking changes allowed.',
 					'Answers have to be simple and true at once; a confident wrong number is worse than no answer.',
@@ -206,6 +214,7 @@ final class Fixture {
 				'range'          => '2023 — 2024',
 				'headline'       => 'Analytics that doesn’t slow the site down.',
 				'detail'         => 'Performance optimization and analytics integration across the plugin surface — page weight treated as a feature, not a report.',
+				'line'           => '',
 				'bullets'        => array(
 					'Specific wins and before/after numbers to be filled in.',
 					'Touches caching, script loading, and the REST surface.',
@@ -229,6 +238,7 @@ final class Fixture {
 				'range'          => '2023 — now',
 				'headline'       => 'Native, and nothing phoning home.',
 				'detail'         => 'One line on what Kiveo does and who it’s for — copy to come. Built solo, SwiftUI front to back, no accounts, nothing leaves the device.',
+				'line'           => 'Native iOS, built solo, with nothing leaving the device.',
 				'bullets'        => array(
 					'No third-party analytics SDKs.',
 					'No account required to use the app.',
@@ -253,6 +263,7 @@ final class Fixture {
 				'range'          => '2024 — now',
 				'headline'       => 'The plumbing a small agency runs on.',
 				'detail'         => 'API design, transactional email, R2 storage, server provisioning, and the operational tooling that keeps partner infrastructure boring.',
+				'line'           => 'The plumbing a small agency runs on, kept deliberately boring.',
 				'bullets'        => array(
 					'One command stands up a client site: droplet, DNS, TLS, storage, mail.',
 					'Built so a two-person team can run real infrastructure without an ops hire.',

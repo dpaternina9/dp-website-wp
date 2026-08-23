@@ -287,6 +287,7 @@ final class Seeder {
 					'dp_range'          => $ship['range'],
 					'dp_headline'       => $ship['headline'],
 					'dp_detail'         => $ship['detail'],
+					'dp_line'           => $ship['line'],
 					'dp_bullets'        => $ship['bullets'],
 					'dp_ship_role'      => $ship['ship_role'],
 					'dp_stack'          => $ship['stack'],
