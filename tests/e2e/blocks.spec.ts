@@ -40,6 +40,20 @@ const HOUSE_STYLE_POST = [
 ].join( '\n\n' );
 
 /**
+ * The pages this worker published, so that it can take them away again.
+ *
+ * A published page is not a private fixture on this site: the header's
+ * navigation is `core/page-list`, so every page this file publishes is a link in
+ * everybody's site chrome for as long as it exists. Left behind, they accumulate
+ * two per run — and `timeline.spec.ts` tabs from the top of the document to a
+ * row on the chart, so a nav that grows by two links a run eventually swallows
+ * that budget whole and fails a test that has nothing to do with this file.
+ * ADR-0013 made global-query content nobody's; this is the same lesson for
+ * content the *chrome* queries.
+ */
+const published: number[] = [];
+
+/**
  * Publish the fixture on a page that renders post content.
  *
  * Phase 1's only template is `index`, a query loop of titles and excerpts, so a
@@ -66,8 +80,27 @@ async function publishTheFixture(
 		},
 	} );
 
+	published.push( created.id );
+
 	return created.id;
 }
+
+/*
+ * Only what this worker published, by id. A sweep by title or slug would be the
+ * wrong shape: the two tests that publish can run in two workers at once, and a
+ * sweep in one of them would delete the other's page out from under it.
+ */
+test.afterAll( async ( { requestUtils } ) => {
+	while ( published.length > 0 ) {
+		const id = published.pop();
+
+		await requestUtils.rest( {
+			path: `/wp/v2/pages/${ id }`,
+			method: 'DELETE',
+			params: { force: true },
+		} );
+	}
+} );
 
 /**
  * The rendered `content` of an element's ::before box.

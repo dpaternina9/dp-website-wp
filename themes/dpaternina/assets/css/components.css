@@ -2166,6 +2166,31 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
  * meant to breathe more?" was the design saying yes, in a file nobody had.
  *
  * Stack is the default, so the stack numbers are the ones declared here.
+ *
+ * **The transition names `padding-block`, where the design names `padding`.**
+ * That is a narrowing rather than a divergence: in `rowStyle` the *inline*
+ * padding is constant within a mode — `16px 12px` opens to `16px 12px 18px`,
+ * `6px 16px` opens to `8px 16px 14px` — so the only padding the design ever
+ * animates is the block axis. Naming the whole shorthand costs nothing in a
+ * design tool, which has no stylesheet to arrive late. It costs something here.
+ *
+ * The row bleeds into the card's padding with a negative margin and pays it back
+ * with an equal padding, both read off `--dp-tl-bleed`. They cancel exactly —
+ * but only while they change together. `margin-inline` is not transitioned, so
+ * it snaps; `padding` was, so it crawled. Any style change that gives this
+ * element its padding after it already has a computed style therefore animated
+ * `padding-inline` up from `0` over `--dur-base` with the margin already at its
+ * full negative value, and for those 200ms the row's content box — the grid, the
+ * track, every bar on it — sat up to 16px to the left of the axis in
+ * `.dp-tl-head`, which has no transition and snaps. Measured: `track.left` sweeps
+ * 433 → 449 while `.dp-tl-years` stays at 449 throughout. That is the same
+ * load-time repaint ADR-0013 recorded against the open rows' tint and left open,
+ * seen on the axis this time, and `tests/e2e/timeline.spec.ts` caught it as an
+ * 8px error on an assertion whose tolerance is half a pixel.
+ *
+ * `padding-block` keeps every animation the design asks for — the open row's
+ * breathing is vertical — and makes the horizontal slide impossible, because the
+ * two properties that have to cancel now both snap.
  */
 .dp-tl-row {
 	--dp-tl-label: var(--dp-tl-label-base);
@@ -2175,7 +2200,7 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	border-radius: var(--radius-sm);
 	transition:
 		background var(--dur-base) var(--ease-standard),
-		padding var(--dur-base) var(--ease-standard);
+		padding-block var(--dur-base) var(--ease-standard);
 }
 
 .dp-tl-row-role[open] {

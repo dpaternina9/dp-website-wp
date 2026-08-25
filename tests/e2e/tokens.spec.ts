@@ -21,6 +21,31 @@ const BODY_TEXT = 'rgb(255, 255, 255)'; // --dp-white, via --text-primary.
 const BODY_SIZE = '16px'; // --fs-base.
 const BODY_LEADING = '26.4px'; // --lh-relaxed (1.65) at 16px.
 
+/**
+ * The posts this worker published, so that it can take them away again.
+ *
+ * A published post is not a private fixture: the index template is a query loop
+ * over every published post, so one left behind is a row on the home page and in
+ * the editor's canvas of it for good — and `spacing.spec.ts` renders that canvas
+ * and waits 15 seconds for it. Left uncleaned this file adds one post a run, the
+ * canvas gets slower every time, and eventually a spec that has nothing to do
+ * with this one starts timing out. ADR-0013 settled who owns content a global
+ * query reads; this is the other half of it — what a spec makes, a spec unmakes.
+ */
+const published: number[] = [];
+
+test.afterAll( async ( { requestUtils } ) => {
+	while ( published.length > 0 ) {
+		const id = published.pop();
+
+		await requestUtils.rest( {
+			path: `/wp/v2/posts/${ id }`,
+			method: 'DELETE',
+			params: { force: true },
+		} );
+	}
+} );
+
 test.describe( 'Phase 1 tokens and skeleton', () => {
 	test( 'a page renders on the design ground, in the design type', async ( {
 		page,
@@ -32,6 +57,8 @@ test.describe( 'Phase 1 tokens and skeleton', () => {
 				'<!-- wp:paragraph --><p>Ground truth.</p><!-- /wp:paragraph -->',
 			status: 'publish',
 		} );
+
+		published.push( post.id );
 
 		await page.goto( `/?p=${ post.id }` );
 		await page.evaluate( () => document.fonts.ready );

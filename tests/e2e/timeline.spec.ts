@@ -285,6 +285,66 @@ test.describe( 'The timeline', () => {
 		test.use( { storageState: READER } );
 
 		/**
+		 * Wait until the chart has stopped moving.
+		 *
+		 * `page.goto()` resolves on `load`, which is not the same event as "this
+		 * component has finished deciding what it is". Bars mode is a
+		 * `@container` rule and a container query resolves against a laid-out
+		 * container rather than at parse time; the labels are set in a web font;
+		 * and a style change that lands after the row already has a computed
+		 * style starts a transition on a page nobody has touched — ADR-0013
+		 * recorded that last one against the open rows' tint, and the axis met
+		 * it too. Half a pixel is the whole point of the assertions below, so
+		 * measuring whatever exists the instant `goto()` returns is a race by
+		 * construction.
+		 *
+		 * "Settled" is expressed as agreement rather than as a duration: the
+		 * same geometry, read twice, in two consecutive frames.
+		 * `waitForFunction` polls on `requestAnimationFrame`, so a page that is
+		 * already still costs two frames and a page that is not waits exactly as
+		 * long as it needs to.
+		 *
+		 * @param page The page, already navigated.
+		 */
+		async function hasSettled( page: Page ): Promise< void > {
+			await page
+				.locator( '.dp-tl-years' )
+				.waitFor( { state: 'attached' } );
+			await page.evaluate( () => document.fonts.ready );
+
+			await page.waitForFunction( () => {
+				const years = document.querySelector( '.dp-tl-years' );
+				const track = document.querySelector(
+					'.dp-tl-row-role .dp-tl-track'
+				);
+
+				if ( ! years || ! track ) {
+					return false;
+				}
+
+				const box = ( element: Element ): string => {
+					const rect = element.getBoundingClientRect();
+
+					return `${ rect.left }:${ rect.width }`;
+				};
+
+				const frame = [
+					window.getComputedStyle( years ).display,
+					box( years ),
+					box( track ),
+					...Array.from( years.children ).map( box ),
+				].join( '|' );
+
+				const memo = window as unknown as { dpAxisFrame?: string };
+				const agrees = memo.dpAxisFrame === frame;
+
+				memo.dpAxisFrame = frame;
+
+				return agrees;
+			} );
+		}
+
+		/**
 		 * The axis, its track, and where every label sits inside it.
 		 *
 		 * @param page The page, already on the work page in bars mode.
@@ -328,6 +388,17 @@ test.describe( 'The timeline', () => {
 		} ) => {
 			await page.setViewportSize( DESKTOP );
 			await page.goto( workPage );
+
+			/*
+			 * Bars mode is what is being measured, and it is a container query,
+			 * so asserting it makes "the track has a width" true rather than
+			 * assumed. `.first()` because `axis()` reads the document's first
+			 * role track, and this has to be about the same element.
+			 */
+			await expect(
+				page.locator( '.dp-tl-row-role .dp-tl-track' ).first()
+			).toBeVisible();
+			await hasSettled( page );
 
 			const measured = await axis( page );
 
@@ -379,9 +450,13 @@ test.describe( 'The timeline', () => {
 			for ( const width of [ 1440, 760 ] ) {
 				await page.setViewportSize( { width, height: 900 } );
 				await page.goto( workPage );
+				await hasSettled( page );
 
 				// 760 stacks (the container is under 700), so the axis is only
-				// drawn at widths where the track exists.
+				// drawn at widths where the track exists. Which mode is drawn is
+				// itself a container query, so the question is put to a settled
+				// page — an `isVisible()` the instant `goto()` returns can be
+				// asking before the answer exists.
 				if (
 					! ( await page
 						.locator( '.dp-tl-track' )
@@ -419,6 +494,16 @@ test.describe( 'The timeline', () => {
 		} ) => {
 			await page.setViewportSize( DESKTOP );
 			await page.goto( workPage );
+
+			/*
+			 * The bar and the tick are two different elements, so this
+			 * comparison is exactly as sensitive to an unsettled layout as the
+			 * two above it. `.first()` for the same reason as there.
+			 */
+			await expect(
+				page.locator( '.dp-tl-row-role .dp-tl-track' ).first()
+			).toBeVisible();
+			await hasSettled( page );
 
 			const measured = await axis( page );
 
