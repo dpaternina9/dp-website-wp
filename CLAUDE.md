@@ -8,16 +8,23 @@ companion plugin. Replaces the split between `dpaternina.com` (work) and
 
 ## 1. Non-negotiable rules
 
-### 1.1 All development goes through the agent
-**Every development task in this repo MUST be executed by the
+### 1.1 Substantial development goes through the agent
+**Every substantial development task in this repo MUST be executed by the
 `wordpress-development-expert` agent** via the Agent tool. That includes: PHP, theme
 templates, `theme.json`, block registration, JS/TS, build config, CI workflows,
 tests, and WP-CLI scripts.
 
-The main session's job is: digest requirements, plan, split work into briefs, dispatch
-to `wordpress-development-expert`, review what comes back, and report to David. The main
-session does not write production code itself. Reading files, running read-only
-commands, and asking clarifying questions are fine.
+**The main session may make a small fix directly** when all of these hold: the
+diagnosis is already done, the change is one file and roughly ten lines or fewer, and
+no new behaviour is being designed. A one-line CSS correction, a missing blank line, a
+typo, a wrong constant. Spinning up an agent for those costs a fresh context, a re-read
+of these docs and a full gate run to save nothing. Run the gates the change can affect,
+say what you did, and move on. Anything larger — or anything where the fix is still a
+question — goes to the agent.
+
+The main session's job is otherwise: digest requirements, plan, split work into briefs,
+dispatch to `wordpress-development-expert`, review what comes back, and report to David.
+Reading files, running read-only commands, and asking clarifying questions are fine.
 
 When dispatching, always give the agent: the phase, the exact files it owns, the
 acceptance criteria, and the relevant design-source paths. Never let two agents own the
@@ -83,6 +90,15 @@ npm run test:e2e   # Playwright
 ```
 Never report work as complete without pasting the actual output of the gates you ran.
 "Should pass" is not a result.
+
+**Verify once. Do not commission verification loops.** A gate run is evidence, not a
+ritual. Run each gate once, and re-run only what a change could plausibly have broken.
+**Never ask for "N consecutive green runs"** as an acceptance bar — it is statistically
+weak against an intermittent failure, it costs minutes per iteration, and on a loaded
+machine it manufactures unrelated failures that then get investigated. To prove an
+intermittent bug is fixed, reproduce it once with instrumentation, fix the cause, and
+verify the specific test plus one full suite run. If a failure is genuinely a race, say
+so and name it — do not try to out-sample it.
 
 **Cadence — iterate on the fast five, run e2e once.** `npm run test:e2e` costs more
 wall-clock than the other five combined. Do not re-run it after every correction. Cycle
