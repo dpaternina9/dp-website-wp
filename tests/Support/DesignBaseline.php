@@ -28,6 +28,14 @@ use RuntimeException;
  * where the theme had to supply something anyway the entry carries a `skip` with
  * the reason. See `docs/adr/0012-design-parity-harness.md`.
  *
+ * **Where the theme disagrees with the design on purpose, it says so out loud.**
+ * A `divergence` is not a `skip`: a skip means the design is silent or
+ * self-contradictory and the theme had to pick, a divergence means the design is
+ * perfectly clear and David overrode it. There is exactly one — the year axis,
+ * ADR-0014 — and it is recorded rather than deleted, because an entry that is
+ * not in the fixture cannot fail and a sweep that measures nothing passes.
+ * `assert_recorded()` refuses a divergence whose reason names no ADR.
+ *
  * **An anchor that stops matching is a failure, not a silent gap.** The design
  * moves by re-import, and `composer design:check` fails the moment an element it
  * names has changed shape, which is the signal to re-read the component.
@@ -271,11 +279,61 @@ final class DesignBaseline {
 			$entry['skip'] = $skip;
 		}
 
+		/*
+		 * A property where the theme deliberately does *not* do what the design
+		 * says, because David decided it should not.
+		 *
+		 * This is a stronger statement than `skip`, which says the design is
+		 * ambiguous or contradicts itself and the theme picked a reading. A
+		 * divergence says the design is unambiguous, the theme disagrees with
+		 * it, and CLAUDE.md section 5's "the design wins" was overridden on
+		 * purpose. There is exactly one, and it needs to stay visible: the
+		 * alternative — quietly deleting the entry — leaves a hole shaped
+		 * exactly like the ones the second amendment to ADR-0012 was written
+		 * about, where an unasserted property looked like an asserted one.
+		 *
+		 * Every reason names its ADR, and `assert_recorded()` refuses a
+		 * definition that does not, so a divergence cannot be added in a commit
+		 * message.
+		 */
+		$divergence = self::declarations( $definition, 'divergence' );
+
+		if ( array() !== $divergence ) {
+			$entry['divergence'] = self::assert_recorded( $divergence, self::text( $definition, 'id' ) );
+		}
+
 		if ( isset( $definition['note'] ) ) {
 			$entry['note'] = self::text( $definition, 'note' );
 		}
 
 		return $entry;
+	}
+
+	/**
+	 * A divergence has to point at the decision that authorised it.
+	 *
+	 * @param array<string, string> $divergence Property to reason.
+	 * @param string                $id         The entry, for the message.
+	 * @return array<string, string>
+	 *
+	 * @throws RuntimeException If a reason does not name an ADR.
+	 */
+	private static function assert_recorded( array $divergence, string $id ): array {
+		foreach ( $divergence as $property => $reason ) {
+			if ( ! str_contains( $reason, 'ADR-' ) ) {
+				throw new RuntimeException(
+					sprintf(
+						'%s diverges from the design on "%s" and its reason names no ADR. '
+							. 'A deliberate disagreement with design-source/ is a decision, and a decision '
+							. 'that is only in a fixture is a decision nobody can find.',
+						$id,
+						$property
+					)
+				);
+			}
+		}
+
+		return $divergence;
 	}
 
 	/**
@@ -802,11 +860,37 @@ final class DesignBaseline {
 				'xpath'    => self::styled( 'display: inline-flex; align-items: center; gap: 8px' ),
 			),
 			array(
-				'id'       => 'chart.years',
-				'sweep'    => 'bars',
-				'selector' => '.dp-tl-years',
-				'file'     => $chart,
-				'xpath'    => self::styled( 'display: flex; justify-content: space-between' ),
+				'id'         => 'chart.years',
+				'sweep'      => 'bars',
+				'selector'   => '.dp-tl-years',
+				'file'       => $chart,
+				'xpath'      => self::styled( 'display: flex; justify-content: space-between' ),
+
+				/*
+				 * Keyed by the CSSOM's camelCase property names, the way `skip`
+				 * already is: `divergences()` walks the longhands the probe's
+				 * style declaration expands to, and that is the spelling it has
+				 * them in.
+				 */
+				'divergence' => array(
+					'display'        => 'ADR-0014. The design spreads the year labels with '
+						. '`justify-content: space-between`, which advances 1/12 per label while its own '
+						. 'bars advance 1/13 — `pos(y) = ((y - start) / (end - start + 1)) * 100`. At the '
+						. 'right-hand edge the two scales are 7.7% apart, so a role running to the present '
+						. 'ends at 95.4% against a "2026" label at 100% and reads as stopping a year early. '
+						. 'The theme draws the row as a grid of equal columns instead, which puts label n at '
+						. 'exactly pos(year n). David\'s call, 2026-08-24; not to be round-tripped through '
+						. 'Claude Design.',
+					'justifyContent' => 'ADR-0014. Same decision. On a grid whose columns already fill the '
+						. 'container there is no free space to distribute, so the declaration is dropped '
+						. 'rather than carried across as something that reads as intent and does nothing.',
+				),
+				'note'       => 'The only entry in this fixture where the theme deliberately disagrees with '
+					. 'design-source/. The anchor is unchanged and still has to match exactly one element, so '
+					. 'a re-import that moves this row still fails `composer design:check` — which is the '
+					. 'signal to re-read ADR-0014 rather than to re-run the generator. What the divergence '
+					. 'costs is asserted back in tests/e2e/timeline.spec.ts: every label\'s left edge is '
+					. 'measured against Geometry::position() for the year it names.',
 			),
 			array(
 				'id'       => 'chart.years.label',

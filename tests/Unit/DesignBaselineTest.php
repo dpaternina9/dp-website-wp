@@ -124,6 +124,86 @@ final class DesignBaselineTest extends TestCase {
 	}
 
 	/**
+	 * The one deliberate disagreement with the design is still written down.
+	 *
+	 * `.dp-tl-years` is the only element in this fixture the theme draws
+	 * differently on purpose: the design spreads thirteen year labels with
+	 * `justify-content: space-between`, which is 1/12 per label against the
+	 * bars' 1/13, and the theme puts them on the bars' scale instead. David
+	 * decided that on 2026-08-24 and ADR-0014 records it.
+	 *
+	 * What this test guards is not the decision — it is the shape of the record.
+	 * Deleting the entry would make the sweep pass by measuring nothing, which is
+	 * precisely the failure the second amendment to ADR-0012 spent four days on.
+	 * So: the entry exists, it still carries the design's own declarations, both
+	 * of them are named as diverged, and each names its ADR.
+	 *
+	 * @return void
+	 */
+	public function test_the_axis_divergence_is_recorded_rather_than_dropped(): void {
+		$decoded = json_decode( DesignBaseline::for_repository( dirname( __DIR__, 2 ) )->render(), true );
+
+		$this->assertIsArray( $decoded );
+		$this->assertIsArray( $decoded['entries'] ?? null );
+
+		$years   = null;
+		$diverge = array();
+
+		foreach ( $decoded['entries'] as $entry ) {
+			if ( ! is_array( $entry ) ) {
+				continue;
+			}
+
+			if ( isset( $entry['divergence'] ) ) {
+				$diverge[] = is_string( $entry['id'] ?? null ) ? $entry['id'] : '?';
+			}
+
+			if ( 'chart.years' === ( $entry['id'] ?? null ) ) {
+				$years = $entry;
+			}
+		}
+
+		$this->assertIsArray(
+			$years,
+			'The "chart.years" entry is gone. A divergence from design-source/ is recorded with '
+				. 'its reason, never removed: an entry that is not there cannot fail, and a sweep that '
+				. 'measures nothing passes. See docs/adr/0014-the-year-axis-and-the-bars-share-one-scale.md.'
+		);
+
+		$this->assertSame(
+			array(
+				'display'         => 'flex',
+				'justify-content' => 'space-between',
+			),
+			$years['declarations'] ?? null,
+			'The design has moved. Re-read ADR-0014 before re-running the generator.'
+		);
+
+		$this->assertIsArray( $years['divergence'] ?? null );
+		$this->assertSame(
+			array( 'display', 'justifyContent' ),
+			array_keys( $years['divergence'] ),
+			'Both of the design\'s declarations on this element are diverged from, and each says so.'
+		);
+
+		foreach ( $years['divergence'] as $property => $reason ) {
+			$this->assertIsString( $reason );
+			$this->assertMatchesRegularExpression(
+				'/ADR-\d{4}/',
+				$reason,
+				sprintf( 'The divergence on "%s" names no ADR.', is_string( $property ) ? $property : '?' )
+			);
+		}
+
+		$this->assertSame(
+			array( 'chart.years' ),
+			$diverge,
+			'A second entry diverges from the design. That needs an ADR and a line here before it '
+				. 'needs a fixture.'
+		);
+	}
+
+	/**
 	 * Every sweep the fixture declares has something to measure.
 	 *
 	 * A sweep with no entries is a pass that navigates, waits, and asserts

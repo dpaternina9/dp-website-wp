@@ -275,6 +275,226 @@ final class TimelineGeometryTest extends TestCase {
 	}
 
 	/**
+	 * Every label begins exactly where its own year begins.
+	 *
+	 * This is the invariant the stylesheet has to hold, said in the one place
+	 * that can state it as arithmetic. `.dp-tl-years` is a grid of `span()`
+	 * equal columns, so the `n`th label's left edge is `n / span` of the track;
+	 * `position()` of the `n`th labelled year is `((first + n) - first) / span`,
+	 * which is the same number. The design's own axis is not: it spreads the
+	 * labels with `justify-content: space-between`, which divides by
+	 * `span() - 1` and puts the last label at 100% where its year is at 92.3%.
+	 *
+	 * Asserted over four tracks rather than one, because a formula that is only
+	 * checked at thirteen years is a formula that is checked once.
+	 *
+	 * @return void
+	 */
+	public function test_each_year_label_starts_where_its_own_year_does(): void {
+		foreach ( array( array( 2014, 2026 ), array( 2014, 2027 ), array( 2020, 2024 ), array( 1999, 2000 ) ) as $track ) {
+			$geometry = new Geometry( $track[0], $track[1] );
+			$labels   = $geometry->year_labels();
+			$span     = $geometry->span();
+
+			$this->assertCount( $span, $labels, 'A label per whole year, which is what the columns count.' );
+
+			foreach ( $labels as $index => $year ) {
+				$this->assertEqualsWithDelta(
+					( $index / $span ) * 100.0,
+					$geometry->position( Year::from_float( (float) $year ) ),
+					self::DELTA,
+					sprintf(
+						'Label %d ("%d") on the %d-%d track: the grid puts its left edge at %.4f%%.',
+						$index,
+						$year,
+						$track[0],
+						$track[1],
+						( $index / $span ) * 100.0
+					)
+				);
+			}
+
+			$this->assertEqualsWithDelta(
+				0.0,
+				$geometry->position( Year::from_float( (float) $labels[0] ) ),
+				self::DELTA,
+				'The first label is flush with the left edge of the track.'
+			);
+
+			$this->assertEqualsWithDelta(
+				( ( $span - 1 ) / $span ) * 100.0,
+				$geometry->position( Year::from_float( (float) $labels[ $span - 1 ] ) ),
+				self::DELTA,
+				'The last label occupies the final slot; it does not terminate the axis.'
+			);
+		}
+	}
+
+	/**
+	 * The design's axis and the design's bars disagree, and by how much.
+	 *
+	 * The defect ADR-0014 fixes, pinned as a number so that the ADR's arithmetic
+	 * has something standing behind it. `space-between` divides by twelve
+	 * intervals; `pos()` divides by thirteen years.
+	 *
+	 * @return void
+	 */
+	public function test_the_designs_own_axis_is_on_a_different_scale_from_its_bars(): void {
+		$geometry = Geometry::for_the_design();
+		$last     = $geometry->span() - 1;
+
+		$spread = ( $last / (float) ( $geometry->span() - 1 ) ) * 100.0;
+		$actual = $geometry->position( Year::from_float( 2026.0 ) );
+
+		$this->assertEqualsWithDelta( 100.0, $spread, self::DELTA, 'space-between puts the last label at the far edge.' );
+		$this->assertEqualsWithDelta( 92.3076923, $actual, 0.0000001, 'pos(2026) is twelve thirteenths.' );
+		$this->assertEqualsWithDelta( 7.6923077, $spread - $actual, 0.0000001, 'The two scales are 7.7% apart at the right-hand edge.' );
+
+		// And what David saw: a role running to May 2026 stops short of a label
+		// that the design has already moved to 100%.
+		$this->assertEqualsWithDelta(
+			95.3846154,
+			$geometry->position( Year::from_float( 2026.4 ) ),
+			0.0000001,
+			'A role running to 2026.4 ends at 95.4%, which is why it read as ending in 2025.'
+		);
+	}
+
+	/**
+	 * An unpinned track ends where the calendar is, not where the design stopped.
+	 *
+	 * @return void
+	 */
+	public function test_an_unpinned_track_ends_at_the_current_year(): void {
+		$this->assertSame(
+			range( Geometry::DESIGN_FIRST_YEAR, 2026 ),
+			Geometry::through( null, null, 2026 )->year_labels(),
+			'In 2026 the default track is the design\'s, which is why this change is invisible today.'
+		);
+
+		$this->assertSame(
+			range( Geometry::DESIGN_FIRST_YEAR, 2031 ),
+			Geometry::through( null, null, 2031 )->year_labels(),
+			'firstYear stays the design\'s 2014; only the far end follows the clock.'
+		);
+	}
+
+	/**
+	 * A pinned track is honoured, in both directions.
+	 *
+	 * `lastYear` is how David holds the axis still, and also how he runs it past
+	 * the present for something already scheduled. Both are the same attribute.
+	 *
+	 * @return void
+	 */
+	public function test_a_pinned_track_is_left_alone(): void {
+		$this->assertSame( range( 2014, 2026 ), Geometry::through( null, 2026, 2031 )->year_labels() );
+		$this->assertSame( range( 2014, 2035 ), Geometry::through( null, 2035, 2031 )->year_labels() );
+		$this->assertSame( range( 2018, 2022 ), Geometry::through( 2018, 2022, 2031 )->year_labels() );
+	}
+
+	/**
+	 * A track nobody could draw is resolved, never thrown.
+	 *
+	 * This runs on a public page. An inverted pair — David typing 2010 into a
+	 * block that starts in 2014 — used to fall back to the design's whole track,
+	 * which threw away the half of his intent that was answerable. Now the pin
+	 * that cannot be honoured is discarded and the one that can is kept: the
+	 * track still begins where he said, and ends where the default would.
+	 *
+	 * @return void
+	 */
+	public function test_a_degenerate_track_is_resolved_rather_than_thrown(): void {
+		$this->assertSame( range( 2014, 2031 ), Geometry::through( null, 2010, 2031 )->year_labels() );
+		$this->assertSame( range( 2020, 2031 ), Geometry::through( 2020, 2010, 2031 )->year_labels() );
+		$this->assertSame( range( 2026, 2026 + 1 ), Geometry::through( 2026, 2026, 2026 )->year_labels() );
+
+		// A first year past the present still gets a track, because a chart with
+		// no axis is worse than a chart of two years.
+		$this->assertSame( range( 2040, 2041 ), Geometry::through( 2040, null, 2026 )->year_labels() );
+	}
+
+	/**
+	 * Nothing a block or a clock can hold makes this throw.
+	 *
+	 * @return void
+	 */
+	public function test_nothing_a_block_can_carry_can_fatal_a_page(): void {
+		$wild = array( null, PHP_INT_MIN, PHP_INT_MAX, -1, 0, 1899, 1900, 2026, 2200, 2201 );
+
+		foreach ( $wild as $first ) {
+			foreach ( $wild as $last ) {
+				foreach ( array( PHP_INT_MIN, 1899, 2026, 2201, PHP_INT_MAX ) as $now ) {
+					$geometry = Geometry::through( $first, $last, $now );
+
+					$this->assertGreaterThanOrEqual(
+						2,
+						$geometry->span(),
+						sprintf( 'through(%s, %s, %d) produced a track of one year.', var_export( $first, true ), var_export( $last, true ), $now )
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * The span, and every bar with it, moves on 1 January.
+	 *
+	 * The reason `lastYear` had to stop defaulting to 2026: on the last day of
+	 * the year a role marked "now" reaches 96.9% of a thirteen-year track, and
+	 * on the next morning the track is fourteen years long, the same role reaches
+	 * 90%, and the new label sits at 92.9% — ahead of it, which is what "the year
+	 * has not happened yet" should look like.
+	 *
+	 * @return void
+	 */
+	public function test_the_span_moves_at_a_year_boundary(): void {
+		$before = Geometry::through( null, null, 2026 );
+		$after  = Geometry::through( null, null, 2027 );
+
+		$this->assertSame( 13, $before->span() );
+		$this->assertSame( 14, $after->span() );
+
+		$now = Year::from_float( 2026.6 );
+
+		$this->assertEqualsWithDelta( 96.9230769, $before->position( $now ), 0.0000001 );
+		$this->assertEqualsWithDelta( 90.0, $after->position( $now ), 0.0000001 );
+
+		// Its own year's tick, on both sides of midnight. The bar reaches it.
+		$this->assertGreaterThan( $before->position( Year::from_float( 2026.0 ) ), $before->position( $now ) );
+		$this->assertGreaterThan( $after->position( Year::from_float( 2026.0 ) ), $after->position( $now ) );
+
+		// And the tick for the year that has only just started is ahead of it.
+		$this->assertLessThan( $after->position( Year::from_float( 2027.0 ) ), $after->position( $now ) );
+	}
+
+	/**
+	 * A role dated into the future clamps; it does not stretch the track.
+	 *
+	 * The decision, and it is a decision rather than an omission: the track is
+	 * something David states, and `lastYear` is where he states it. Reading the
+	 * furthest end date out of the content instead would mean one post silently
+	 * rescaling every bar on the chart, with nothing on the page to say which
+	 * post did it — and it would cost a second query, because the geometry is
+	 * built before the lanes are read. `position()` already clamps, so a role
+	 * running past the end draws to the final edge, which is the same thing the
+	 * design does to a role that starts before the track.
+	 *
+	 * @return void
+	 */
+	public function test_a_future_dated_role_clamps_to_the_end_of_the_track(): void {
+		$geometry = Geometry::through( null, null, 2026 );
+
+		$this->assertEqualsWithDelta( 100.0, $geometry->position( Year::from_float( 2030.0 ) ), self::DELTA );
+
+		$bar = $geometry->bar( Year::from_float( 2024.0 ), Year::from_float( 2030.0 ), BarKind::Role );
+
+		$this->assertStringContainsString( 'left:76.9231%', $bar->style() );
+		$this->assertStringContainsString( 'width:23.0769%', $bar->style() );
+		$this->assertStringContainsString( 'max-width:23.0769%', $bar->style(), 'It stops at the edge rather than past it.' );
+	}
+
+	/**
 	 * A different track is measured against itself, not against the design's.
 	 *
 	 * @return void

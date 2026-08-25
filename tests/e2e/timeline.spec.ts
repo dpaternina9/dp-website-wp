@@ -261,6 +261,199 @@ test.describe( 'The timeline', () => {
 		} );
 	} );
 
+	/*
+	 * The year axis, which is the one place the theme deliberately disagrees
+	 * with `design-source/`.
+	 *
+	 * The design lays the labels out as a flex row with
+	 * `justify-content: space-between`. Its bars are on a different scale —
+	 * `pos(y) = ((y - start) / (end - start + 1)) * 100`, so a year owns 1/13 of
+	 * a thirteen-year track and 2026 begins at 92.3% — while thirteen labels
+	 * spread between two edges advance 1/12 and put 2026 at 100%. Seven points
+	 * seven percent apart by the right-hand edge, which is why a role running to
+	 * mid-2026 landed visibly left of its own label and read as ending in 2025.
+	 * David reported exactly that. ADR-0014.
+	 *
+	 * The theme draws the row as a grid of equal columns instead, so label `n`
+	 * begins at `n / span` — which *is* `Geometry::position()` of the year it
+	 * names. `design-parity.spec.ts` records that divergence and stops asserting
+	 * those two properties; these are the assertions that take their place, and
+	 * they are here rather than there because what has to hold is a rendered
+	 * position, not a declaration.
+	 */
+	test.describe( 'the year axis', () => {
+		test.use( { storageState: READER } );
+
+		/**
+		 * The axis, its track, and where every label sits inside it.
+		 *
+		 * @param page The page, already on the work page in bars mode.
+		 */
+		async function axis( page: Page ) {
+			return page.evaluate( () => {
+				const years = document.querySelector( '.dp-tl-years' );
+				const track = document.querySelector(
+					'.dp-tl-row-role .dp-tl-track'
+				);
+
+				if ( ! years || ! track ) {
+					return null;
+				}
+
+				const box = years.getBoundingClientRect();
+
+				return {
+					left: box.left,
+					width: box.width,
+					track: {
+						left: track.getBoundingClientRect().left,
+						width: track.getBoundingClientRect().width,
+					},
+					labels: Array.from( years.children ).map( ( label ) => {
+						const own = label.getBoundingClientRect();
+
+						return {
+							year: ( label.textContent ?? '' ).trim(),
+							left: own.left,
+							right: own.left + own.width,
+							ink: ( label as HTMLElement ).scrollWidth,
+						};
+					} ),
+				};
+			} );
+		}
+
+		test( 'every label begins exactly where its own year does', async ( {
+			page,
+		} ) => {
+			await page.setViewportSize( DESKTOP );
+			await page.goto( workPage );
+
+			const measured = await axis( page );
+
+			expect( measured, 'The axis is not on the page.' ).toBeTruthy();
+
+			const { left, width, labels, track } = measured!;
+
+			// The axis and the bars share a column, which is the premise of
+			// everything below: a percentage of one is a percentage of the other.
+			expect( track.left ).toBeCloseTo( left, 0 );
+			expect( track.width ).toBeCloseTo( width, 0 );
+
+			expect(
+				labels.length,
+				'Thirteen years from 2014 to 2026, or one more per year since.'
+			).toBeGreaterThanOrEqual( 13 );
+
+			const span = labels.length;
+
+			for ( const [ index, label ] of labels.entries() ) {
+				/*
+				 * `pos(year)` for the `index`-th labelled year, said the way the
+				 * grid says it. Under the design's `space-between` this would be
+				 * `index / (span - 1)`, and the last label would be 7.7% out.
+				 */
+				expect(
+					label.left - left,
+					`"${ label.year }" is label ${ index } of ${ span }; ` +
+						`Geometry::position() puts it at ${ (
+							( index / span ) *
+							100
+						).toFixed( 2 ) }% of the track.`
+				).toBeCloseTo( ( index / span ) * width, 0 );
+			}
+		} );
+
+		test( 'the last label stays inside the track and is not clipped', async ( {
+			page,
+		} ) => {
+			/*
+			 * The cost of the change, measured rather than assumed. On the
+			 * design's scale the last label ended at the right-hand edge; on the
+			 * bars' scale it begins at 92.3% and has the final thirteenth to sit
+			 * in — about 36px at the narrowest width bars mode is ever drawn at,
+			 * against four mono characters of roughly 32. That is a real margin
+			 * and a small one, so it is checked at both ends of the range: the
+			 * text must fit its own column, and nothing may overflow the track.
+			 */
+			for ( const width of [ 1440, 760 ] ) {
+				await page.setViewportSize( { width, height: 900 } );
+				await page.goto( workPage );
+
+				// 760 stacks (the container is under 700), so the axis is only
+				// drawn at widths where the track exists.
+				if (
+					! ( await page
+						.locator( '.dp-tl-track' )
+						.first()
+						.isVisible() )
+				) {
+					continue;
+				}
+
+				const measured = await axis( page );
+
+				expect( measured ).toBeTruthy();
+
+				const last = measured!.labels[ measured!.labels.length - 1 ];
+				const column = measured!.width / measured!.labels.length;
+
+				expect(
+					last.ink,
+					`At ${ width }px the last column is ${ column.toFixed(
+						1
+					) }px and "${ last.year }" needs ${ last.ink }px.`
+				).toBeLessThanOrEqual( Math.ceil( column ) );
+
+				expect(
+					last.right,
+					'The axis may not run past the track it labels.'
+				).toBeLessThanOrEqual(
+					measured!.track.left + measured!.track.width + 1
+				);
+			}
+		} );
+
+		test( 'a role that runs to now reaches its own tick', async ( {
+			page,
+		} ) => {
+			await page.setViewportSize( DESKTOP );
+			await page.goto( workPage );
+
+			const measured = await axis( page );
+
+			expect( measured ).toBeTruthy();
+
+			// The label naming the calendar year the shared role ends in. Read
+			// from the fixture rather than typed, so this goes on meaning the
+			// same thing once the axis has grown a column past it.
+			const ends = String( Math.floor( SHARED_ROLE.end ) );
+			const tick = measured!.labels.find(
+				( label ) => label.year === ends
+			);
+
+			expect(
+				tick,
+				`The axis has no "${ ends }" label, so the fixture's role ends off the track.`
+			).toBeTruthy();
+
+			const bar = await page
+				.locator( `#${ LAB.entry } .dp-tl-bar` )
+				.evaluate( ( element ) => {
+					const box = element.getBoundingClientRect();
+
+					return box.left + box.width;
+				} );
+
+			expect(
+				bar,
+				'This is the whole of what David reported: a role running to the ' +
+					'present drew short of the label for its own year, because the ' +
+					'axis was on a different scale from the bars. ADR-0014.'
+			).toBeGreaterThan( tick!.left );
+		} );
+	} );
+
 	test.describe( 'with JavaScript', () => {
 		test.use( { viewport: DESKTOP, storageState: READER } );
 

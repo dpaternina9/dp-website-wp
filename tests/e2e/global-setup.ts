@@ -58,11 +58,21 @@ export const SHARED_BARE_ROLE = {
 	entry: 'dp-role-e2e-shared-backbone',
 } as const;
 
-/** The lane everything hangs off. */
+/**
+ * The lane everything hangs off.
+ *
+ * `end` is exported because the year axis is measured against it: the chart's
+ * last tick follows the site's clock now (ADR-0014), so "the bar reaches its own
+ * year's tick" is a statement about *this* end date and the label that names its
+ * calendar year, not about a hardcoded 2026 that stops being true in January.
+ */
 export const SHARED_ROLE = {
 	slug: 'e2e-shared-lab',
 	title: 'Shared fixture — Fanxie Lab',
 	entry: 'dp-role-e2e-shared-lab',
+	start: 2016,
+	end: 2026.6,
+	range: '2016 — now',
 } as const;
 
 /**
@@ -281,9 +291,9 @@ async function establishSharedContent(
 		menu_order: 2,
 		meta: {
 			dp_role_title: 'CTO & founder',
-			dp_start: 2016,
-			dp_end: 2026.6,
-			dp_range: '2016 — now',
+			dp_start: SHARED_ROLE.start,
+			dp_end: SHARED_ROLE.end,
+			dp_range: SHARED_ROLE.range,
 			dp_detail:
 				'The thread running under everything else, said at enough length ' +
 				'that the paragraph wraps onto a second line.',

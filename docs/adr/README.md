@@ -58,3 +58,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0011](0011-the-brand-mark-is-content-and-spacing-out-specifies-the-block-gap.md) | The brand mark is content, and every spacing rule out-specifies the block gap | Accepted — 2026-08-21 |
 | [0012](0012-design-parity-harness.md) | A template is checked against `design-source/`, not against itself | Accepted — 2026-08-23, amended twice the same day: the design's script blocks were in the export all along |
 | [0013](0013-one-fixture-nobody-owns.md) | E2E content that a global query reads belongs to nobody | Accepted — 2026-08-23 |
+| [0014](0014-the-year-axis-and-the-bars-share-one-scale.md) | The year axis is drawn on the bars' scale, and the track ends now | Accepted — 2026-08-24 |

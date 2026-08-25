@@ -152,6 +152,18 @@ final class TimelineTest extends WP_UnitTestCase {
 			substr_count( $html, '<span>20' ),
 			'The axis is thirteen whole years, 2014 through 2026 — Geometry::span(), not twelve intervals.'
 		);
+
+		$this->assertStringContainsString(
+			'<div class="dp-tl-years" aria-hidden="true"><span>2014</span>',
+			$html,
+			'The axis begins at the first labelled year, flush with the left edge of the track.'
+		);
+
+		$this->assertStringContainsString(
+			'<span>2026</span></div>',
+			$html,
+			'And ends at the last one, which occupies the final slot rather than terminating the axis.'
+		);
 	}
 
 	/**
@@ -208,6 +220,157 @@ final class TimelineTest extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'min-width:64px', $html, 'A role bar may not render below 64px.' );
 		$this->assertStringContainsString( 'min-width:40px', $html, 'A shipped bar may not render below 40px.' );
+	}
+
+	/**
+	 * The axis ends where the calendar is, not where the design stopped.
+	 *
+	 * The bug this closes: `lastYear` defaulted to 2026 in `block.json`, a
+	 * declared default is sent on every render, and nothing moved it. On
+	 * 1 January 2027 the chart would still have ended at 2026 while a role marked
+	 * "now" ran past the final tick — and it would have gone on doing that until
+	 * somebody edited a block attribute.
+	 *
+	 * This is the one test in the file that reads the real clock, and it reads it
+	 * through `wp_date()`, which is the site's timezone rather than the
+	 * container's.
+	 *
+	 * @return void
+	 */
+	public function test_the_axis_ends_at_the_current_year(): void {
+		$html = $this->render( array(), null );
+		$year = (int) wp_date( 'Y' );
+
+		$this->assertStringContainsString(
+			'<span>' . $year . '</span></div>',
+			$html,
+			'The last label on the axis is this year.'
+		);
+
+		$this->assertSame(
+			( $year - Geometry::DESIGN_FIRST_YEAR ) + 1,
+			substr_count( $html, '<span>20' ),
+			'One label per whole year from 2014 to now.'
+		);
+	}
+
+	/**
+	 * The track follows the clock, and `lastYear` is how David stops it.
+	 *
+	 * Both directions of the same attribute: pinning it holds the axis still,
+	 * and pinning it past the present runs the axis out to something already
+	 * scheduled. `firstYear` is untouched by either.
+	 *
+	 * @return void
+	 */
+	public function test_the_track_follows_the_clock_unless_a_pin_holds_it(): void {
+		$moved = $this->render( array(), 2031 );
+
+		$this->assertStringContainsString( '<span>2031</span></div>', $moved );
+		$this->assertSame( 18, substr_count( $moved, '<span>20' ), '2014 through 2031 is eighteen whole years.' );
+
+		$pinned = $this->render( array( 'lastYear' => 2026 ), 2031 );
+
+		$this->assertStringContainsString( '<span>2026</span></div>', $pinned );
+		$this->assertSame( 13, substr_count( $pinned, '<span>20' ), 'A pinned track ignores the clock.' );
+
+		$ahead = $this->render( array( 'lastYear' => 2035 ), 2031 );
+
+		$this->assertStringContainsString( '<span>2035</span></div>', $ahead, 'A pin may also run past the present.' );
+
+		$later = $this->render( array( 'firstYear' => 2020 ), 2031 );
+
+		$this->assertStringContainsString(
+			'aria-hidden="true"><span>2020</span>',
+			$later,
+			'firstYear still says where the track begins.'
+		);
+	}
+
+	/**
+	 * An impossible pair draws a chart instead of a fatal.
+	 *
+	 * `Geometry` throws on an inverted track and this is a public page, so the
+	 * block resolves rather than raises: the pin that cannot be honoured is
+	 * dropped and the one that can — where the track begins — is kept.
+	 *
+	 * @return void
+	 */
+	public function test_an_impossible_track_still_draws(): void {
+		$backwards = $this->render(
+			array(
+				'firstYear' => 2020,
+				'lastYear'  => 2010,
+			),
+			2031
+		);
+
+		$this->assertStringContainsString( 'aria-hidden="true"><span>2020</span>', $backwards );
+		$this->assertStringContainsString( '<span>2031</span></div>', $backwards );
+		$this->assertStringContainsString( 'dp-tl-bar', $backwards, 'And it still has bars on it.' );
+
+		$nonsense = $this->render(
+			array(
+				'firstYear' => 'the nineties',
+				'lastYear'  => array( 2026 ),
+			),
+			2031
+		);
+
+		$this->assertStringContainsString( 'aria-hidden="true"><span>2014</span>', $nonsense );
+		$this->assertStringContainsString( '<span>2031</span></div>', $nonsense );
+	}
+
+	/**
+	 * A role that runs to now reaches the tick for the year it ends in.
+	 *
+	 * This is the whole of what David reported — "the lines don't go all the way
+	 * to the end. In this case they read like they ended sometime in 2025 instead
+	 * of going all the way to 2026." The bar was never wrong; the axis was on a
+	 * different scale, so the label the bar was supposed to reach had been moved
+	 * 7.7% to the right of the year it names.
+	 *
+	 * The axis is now `span()` equal columns, so the label for year `n` begins at
+	 * `Geometry::position()` of that year — which makes this assertable in PHP,
+	 * against the bar's own inline style, without measuring anything. The label
+	 * positions themselves are pinned in the browser by
+	 * `tests/e2e/timeline.spec.ts`.
+	 *
+	 * Asserted on both sides of a year boundary, because "its own tick" has to go
+	 * on meaning the same thing when the track grows a column underneath it.
+	 *
+	 * @return void
+	 */
+	public function test_a_role_running_to_now_reaches_its_own_tick(): void {
+		foreach ( array( 2026, 2027 ) as $now ) {
+			$geometry = Geometry::through( null, null, $now );
+
+			$bar = $geometry->bar(
+				\DP\Core\Content\Year::from_float( 2016.0 ),
+				\DP\Core\Content\Year::from_float( 2026.6 ),
+				\DP\Core\Content\Timeline\BarKind::Role
+			);
+
+			$tick = $geometry->position( \DP\Core\Content\Year::from_float( 2026.0 ) );
+
+			$this->assertGreaterThan(
+				$tick,
+				$bar->left() + $bar->width(),
+				sprintf(
+					'With the track ending in %d, a role running to mid-2026 stops at %.4f%% and the '
+						. '"2026" label begins at %.4f%%. The bar has to reach past its own label.',
+					$now,
+					$bar->left() + $bar->width(),
+					$tick
+				)
+			);
+
+			$this->assertStringContainsString(
+				'style="' . esc_attr( $bar->style() ) . '"',
+				$this->render( array(), $now ),
+				'And that is the bar the chart actually draws.'
+			);
+		}
 	}
 
 	/**
@@ -573,11 +736,22 @@ final class TimelineTest extends WP_UnitTestCase {
 	/**
 	 * Render the block the way `do_blocks()` would.
 	 *
-	 * @param array<string, mixed> $attributes Block attributes.
+	 * The year is injected, and it defaults to the design's, so that everything
+	 * below goes on meaning the same thing after midnight on 31 December. The
+	 * axis follows the clock now (ADR-0014), so a helper that let the real one
+	 * through would make every bar percentage in this file a function of the day
+	 * the suite happened to run — the test would pass all year and fail on New
+	 * Year's Day, which is the worst possible time to find out.
+	 *
+	 * `test_the_axis_ends_at_the_current_year()` is where the real clock is
+	 * asserted, and it is the only place that needs it.
+	 *
+	 * @param array<string, mixed> $attributes   Block attributes.
+	 * @param int|null             $current_year The year to treat as now; null reads the site's clock.
 	 * @return string
 	 */
-	private function render( array $attributes = array() ): string {
-		return ( new Timeline( dirname( __DIR__, 3 ) . '/plugins/dp-core' ) )->render( $attributes );
+	private function render( array $attributes = array(), ?int $current_year = Geometry::DESIGN_LAST_YEAR ): string {
+		return ( new Timeline( dirname( __DIR__, 3 ) . '/plugins/dp-core', $current_year ) )->render( $attributes );
 	}
 
 	/**

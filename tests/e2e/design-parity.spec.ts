@@ -64,6 +64,7 @@ type Entry = {
 	source: { file: string; anchor: string };
 	declarations: Record< string, string >;
 	skip?: Record< string, string >;
+	divergence?: Record< string, string >;
 	omitted?: string[];
 	note?: string;
 };
@@ -214,6 +215,16 @@ async function divergences(
 					continue;
 				}
 
+				/*
+				 * A property the theme deliberately does not take from the
+				 * design. Stronger than a skip, and there is one: the year
+				 * axis. See the named test below, which is what stops this
+				 * becoming a quiet way to switch an assertion off.
+				 */
+				if ( entry.divergence && entry.divergence[ property ] ) {
+					continue;
+				}
+
 				if ( design[ property ] === theme[ property ] ) {
 					continue;
 				}
@@ -341,6 +352,68 @@ test.describe( 'the work template against design-source/', () => {
 				`${ entry.id } names a sweep that does not exist.`
 			).toBeTruthy();
 		}
+	} );
+
+	/*
+	 * The one place the theme deliberately disagrees with the design, asserted
+	 * as a disagreement rather than left as an absence.
+	 *
+	 * `.dp-tl-years` is `display: flex; justify-content: space-between` in
+	 * `TimelineChart.dc.html`, and the theme draws it as a grid of equal
+	 * columns, because the design's own two halves are on different scales: the
+	 * bars advance 1/13 of the track per year and the labels 1/12, so the last
+	 * label ends up 7.7% to the right of the year it names. ADR-0014 has the
+	 * arithmetic and David's decision.
+	 *
+	 * The failure this test exists to prevent is the *quiet* version of that
+	 * change: deleting the entry, so the sweep goes green because nothing is
+	 * measured. The second amendment to ADR-0012 is four days of exactly that.
+	 * So the entry stays, it carries a reason per property, and every reason
+	 * names an ADR — `DesignBaseline::assert_recorded()` refuses one that does
+	 * not, and this asserts the same thing from the side that consumes it.
+	 */
+	test( 'the axis divergence is recorded, not deleted', () => {
+		const years = BASELINE.entries.find(
+			( entry ) => entry.id === 'chart.years'
+		);
+
+		expect(
+			years,
+			'The `chart.years` entry is gone. A divergence from design-source/ is ' +
+				'recorded in the fixture with its reason; it is not removed. ' +
+				'See docs/adr/0014-the-year-axis-and-the-bars-share-one-scale.md.'
+		).toBeTruthy();
+
+		// The design still says what it said. If this stops matching, the design
+		// moved and the divergence needs re-reading rather than re-generating.
+		expect( years?.declarations ).toEqual( {
+			display: 'flex',
+			'justify-content': 'space-between',
+		} );
+
+		expect(
+			Object.keys( years?.divergence ?? {} ).sort(),
+			"Both of the design's declarations on this element are diverged from, " +
+				'and each one says so.'
+		).toEqual( [ 'display', 'justifyContent' ] );
+
+		for ( const [ property, reason ] of Object.entries(
+			years?.divergence ?? {}
+		) ) {
+			expect(
+				reason,
+				`The divergence on ${ property } names no ADR.`
+			).toMatch( /ADR-\d{4}/ );
+		}
+
+		// And nothing else in the fixture has quietly grown one.
+		expect(
+			BASELINE.entries
+				.filter( ( entry ) => entry.divergence )
+				.map( ( entry ) => entry.id ),
+			'A second entry diverges from the design. That is a decision, and it ' +
+				'needs an ADR and a line in this test before it needs a fixture.'
+		).toEqual( [ 'chart.years' ] );
 	} );
 
 	/*

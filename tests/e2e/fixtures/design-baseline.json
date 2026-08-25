@@ -612,7 +612,12 @@
             "declarations": {
                 "display": "flex",
                 "justify-content": "space-between"
-            }
+            },
+            "divergence": {
+                "display": "ADR-0014. The design spreads the year labels with `justify-content: space-between`, which advances 1/12 per label while its own bars advance 1/13 — `pos(y) = ((y - start) / (end - start + 1)) * 100`. At the right-hand edge the two scales are 7.7% apart, so a role running to the present ends at 95.4% against a \"2026\" label at 100% and reads as stopping a year early. The theme draws the row as a grid of equal columns instead, which puts label n at exactly pos(year n). David's call, 2026-08-24; not to be round-tripped through Claude Design.",
+                "justifyContent": "ADR-0014. Same decision. On a grid whose columns already fill the container there is no free space to distribute, so the declaration is dropped rather than carried across as something that reads as intent and does nothing."
+            },
+            "note": "The only entry in this fixture where the theme deliberately disagrees with design-source/. The anchor is unchanged and still has to match exactly one element, so a re-import that moves this row still fails `composer design:check` — which is the signal to re-read ADR-0014 rather than to re-run the generator. What the divergence costs is asserted back in tests/e2e/timeline.spec.ts: every label's left edge is measured against Geometry::position() for the year it names."
         },
         {
             "id": "chart.years.label",

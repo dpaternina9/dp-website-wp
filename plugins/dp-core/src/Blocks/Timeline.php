@@ -106,9 +106,21 @@ final class Timeline {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $plugin_dir Absolute path to the plugin directory, without a trailing slash.
+	 * `$current_year` exists so a test can say what year it is without a clock.
+	 * `Geometry` is deliberately WordPress-free and unit-tested, so it may not
+	 * call one; the merge queue already records that Brain Monkey cannot stand
+	 * in for `time()`. Passing the year in is what makes "the track ends at the
+	 * current year" assertable at a year boundary, in both directions, without
+	 * anything being mocked. `null` means "ask WordPress", which is what the
+	 * plugin does.
+	 *
+	 * @param string   $plugin_dir   Absolute path to the plugin directory, without a trailing slash.
+	 * @param int|null $current_year The year to treat as now, or null to read the site's clock.
 	 */
-	public function __construct( private readonly string $plugin_dir ) {}
+	public function __construct(
+		private readonly string $plugin_dir,
+		private readonly ?int $current_year = null
+	) {}
 
 	/**
 	 * Register the block type.
@@ -291,29 +303,64 @@ final class Timeline {
 	/**
 	 * The track this chart is drawn against.
 	 *
-	 * The design's own numbers are the defaults, declared in `block.json`. They
-	 * are attributes rather than constants so a thirteenth year does not need a
-	 * release — but `Geometry` validates them, and an inverted or impossible
-	 * pair falls back to the design's track rather than throwing on a public
-	 * page.
+	 * `firstYear` is the design's 2014 and stays declared in `block.json`.
+	 * `lastYear` has **no** default there, deliberately: a declared default is
+	 * sent on every render, so a `lastYear` of 2026 in `block.json` would have
+	 * been indistinguishable from David pinning 2026 and the track could never
+	 * have moved on its own. Absent, it means "wherever we are now"; present, it
+	 * means David pinned the track — to hold it still, or to run it past the
+	 * present for something already scheduled.
+	 *
+	 * `Geometry::through()` resolves every degenerate pair rather than throwing,
+	 * because this runs on a public page. It is also pure, so the year has to
+	 * arrive from here.
 	 *
 	 * @param array<string, mixed> $attributes The block's attributes.
 	 * @return Geometry
 	 */
 	private function geometry( array $attributes ): Geometry {
-		$first = isset( $attributes['firstYear'] ) && is_numeric( $attributes['firstYear'] )
-			? (int) $attributes['firstYear']
-			: Geometry::DESIGN_FIRST_YEAR;
+		return Geometry::through(
+			$this->pinned_year( $attributes, 'firstYear' ),
+			$this->pinned_year( $attributes, 'lastYear' ),
+			$this->this_year()
+		);
+	}
 
-		$last = isset( $attributes['lastYear'] ) && is_numeric( $attributes['lastYear'] )
-			? (int) $attributes['lastYear']
-			: Geometry::DESIGN_LAST_YEAR;
+	/**
+	 * One year attribute, or null when the block did not set it.
+	 *
+	 * @param array<string, mixed> $attributes The block's attributes.
+	 * @param string               $name       Which attribute.
+	 * @return int|null
+	 */
+	private function pinned_year( array $attributes, string $name ): ?int {
+		$value = $attributes[ $name ] ?? null;
 
-		try {
-			return new Geometry( $first, $last );
-		} catch ( \InvalidArgumentException ) {
-			return Geometry::for_the_design();
+		return is_numeric( $value ) ? (int) $value : null;
+	}
+
+	/**
+	 * The year it is now, in the site's timezone.
+	 *
+	 * `wp_date()` rather than `gmdate()` or `date()`: the year the axis ends on
+	 * is the year David is living in, and on 31 December a site in Bogotá is
+	 * still five hours short of the UTC one. `date()` would read the container's
+	 * clock instead, which is a third answer nobody chose.
+	 *
+	 * The fallback is UTC rather than `Geometry::DESIGN_LAST_YEAR`, which is the
+	 * whole point of this change: a wrong-by-hours year is a rounding error one
+	 * day a year, and a hardcoded 2026 is a chart that is wrong forever.
+	 *
+	 * @return int
+	 */
+	private function this_year(): int {
+		if ( null !== $this->current_year ) {
+			return $this->current_year;
 		}
+
+		$year = wp_date( 'Y' );
+
+		return is_string( $year ) && is_numeric( $year ) ? (int) $year : (int) gmdate( 'Y' );
 	}
 
 	/**

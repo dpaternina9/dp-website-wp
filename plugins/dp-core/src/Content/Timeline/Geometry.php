@@ -34,6 +34,15 @@ use InvalidArgumentException;
  * occupies the final thirteenth rather than terminating the axis. Dropping it —
  * the obvious "simplification" — would silently shift every bar in the chart.
  *
+ * That `+ 1` is also why the axis is drawn from this class rather than spread
+ * evenly. The design lays its year labels out as a flex row with
+ * `justify-content: space-between`, which advances 1/12 per label against the
+ * bars' 1/13 and leaves the last label 7.7% to the right of the year it names —
+ * so a role that genuinely runs to the present reads as ending a year early.
+ * `themes/dpaternina/assets/css/components.css` puts the labels on this scale
+ * instead: `n` equal columns, so label `n` begins at exactly `position( year )`.
+ * ADR-0014 records the divergence.
+ *
  * Pure, and deliberately free of WordPress: it takes years and returns numbers.
  * Phase 6 renders what this returns and derives nothing of its own, which is the
  * point of computing it here, a phase early, with tests.
@@ -49,6 +58,12 @@ final class Geometry {
 
 	/**
 	 * The last labelled year on the design's track.
+	 *
+	 * This is a fact about `TimelineChart.dc.html`, not a synonym for "now". It
+	 * was the block's default until 2026-08-24, which meant the axis would have
+	 * stopped at 2026 for as long as nobody edited an attribute; `through()` is
+	 * where the default now comes from, and this constant keeps describing the
+	 * design so a re-import has something to disagree with.
 	 *
 	 * @var int
 	 */
@@ -92,6 +107,59 @@ final class Geometry {
 	 */
 	public static function for_the_design(): self {
 		return new self( self::DESIGN_FIRST_YEAR, self::DESIGN_LAST_YEAR );
+	}
+
+	/**
+	 * The track to draw, given what the block asked for and what year it is.
+	 *
+	 * Two things this settles, and neither belongs in the render path.
+	 *
+	 * **An unpinned track ends at the current year, not at the design's.**
+	 * `DESIGN_LAST_YEAR` describes the track `TimelineChart.dc.html` ships and
+	 * goes on describing exactly that; it is not "now". Left as the default it
+	 * would freeze the axis at 2026 while a role marked "now" kept running past
+	 * the final tick — the chart would be wrong on 1 January 2027 and would stay
+	 * wrong until somebody noticed. So the caller passes the year in.
+	 *
+	 * **The year is a parameter, not a clock.** This class is unit-tested with
+	 * no WordPress loaded and stays that way: `wp_date()` is the caller's
+	 * business, and a test that wants a boundary passes the boundary rather than
+	 * mocking `time()` — which the merge queue has already recorded that Brain
+	 * Monkey cannot do.
+	 *
+	 * Nothing here throws. A track is drawn on a public page, so every
+	 * degenerate pair is resolved rather than raised:
+	 *
+	 * - a `first_year` outside what a `Year` can hold is pulled back inside it;
+	 * - a `last_year` at or before `first_year` — David typing 2010 into a block
+	 *   that starts at 2014 — is discarded, and the default is used instead. The
+	 *   pin that *is* answerable is kept: the track still begins where he said.
+	 * - a `last_year` past the calendar's end is clamped to it.
+	 *
+	 * A role dated into the future does **not** extend the track. See
+	 * `docs/adr/0014-the-year-axis-and-the-bars-share-one-scale.md`: the track is
+	 * a decision, `lastYear` is where it is written down, and `position()`
+	 * already clamps a bar that runs past the end onto the final tick.
+	 *
+	 * @param int|null $first_year   What the block pinned as the first year, or null.
+	 * @param int|null $last_year    What the block pinned as the last year, or null.
+	 * @param int      $current_year The year it is now, in the site's timezone.
+	 * @return self
+	 */
+	public static function through( ?int $first_year, ?int $last_year, int $current_year ): self {
+		$first = min(
+			Year::MAX_YEAR - 1,
+			max( Year::MIN_YEAR, $first_year ?? self::DESIGN_FIRST_YEAR )
+		);
+
+		$default = max( $first + 1, min( Year::MAX_YEAR, $current_year ) );
+		$last    = null === $last_year ? $default : min( Year::MAX_YEAR, $last_year );
+
+		if ( $last <= $first ) {
+			$last = $default;
+		}
+
+		return new self( $first, $last );
 	}
 
 	/**

@@ -2092,12 +2092,47 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	background: var(--dp-gold);
 }
 
-/* The axis. Hidden in stack mode, where there is no track for it to label, and
-   hidden from assistive technology always: every row prints its own range as
-   text, which is the same information said properly. */
+/*
+ * The axis. Hidden in stack mode, where there is no track for it to label, and
+ * hidden from assistive technology always: every row prints its own range as
+ * text, which is the same information said properly.
+ *
+ * **This is a deliberate divergence from `design-source/`, and it is the only
+ * one in the chart.** The design draws this row as
+ * `display: flex; justify-content: space-between`, which is a different scale
+ * from the one its own bars are on. `pos(y) = ((y - start) / (end - start + 1))
+ * * 100` gives a year 1/13 of the track and puts 2026 at 92.3%; spreading
+ * thirteen labels between the two edges advances 1/12 and puts 2026 at 100%. By
+ * the right-hand edge the two are 7.7% apart, so a role running to 2026.4 ends
+ * at 95.4% — well left of its own label — and reads as having stopped a year
+ * early. David saw exactly that and called it: "the lines don't go all the way
+ * to the end."
+ *
+ * A grid of equal columns says `pos()` without repeating it. `grid-auto-flow:
+ * column` gives each label a column of its own and `grid-auto-columns: minmax(0,
+ * 1fr)` makes them equal, so with `n` labels the `n`th begins at `n / n_total` —
+ * which *is* `pos( year )`, by construction, with no arithmetic in the
+ * stylesheet and no count that has to be kept in step with the markup. The last
+ * label therefore begins at 92.3% and its four mono characters (about 32px)
+ * finish inside the final thirteenth at every width bars mode is drawn at, so
+ * nothing overflows the track and nothing is clipped; `tests/e2e/timeline.spec.ts`
+ * measures both.
+ *
+ * `justify-content` is gone rather than carried over: on a grid whose columns
+ * already fill the container there is no free space for it to distribute, so
+ * keeping it would be a declaration that reads as intent and does nothing.
+ *
+ * The parity harness records this as a named divergence rather than dropping the
+ * entry — `chart.years` in `tests/e2e/fixtures/design-baseline.json`, generated
+ * from the `divergence` field in `tests/Support/DesignBaseline.php`. The design
+ * still has to keep saying what it says: if `.dp-tl-years`' declarations move in
+ * Claude Design, the anchor stops matching and `composer design:check` fails.
+ * See docs/adr/0014-the-year-axis-and-the-bars-share-one-scale.md.
+ */
 .dp-tl-years {
 	display: none;
-	justify-content: space-between;
+	grid-auto-flow: column;
+	grid-auto-columns: minmax(0, 1fr);
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
@@ -2702,8 +2737,9 @@ pre.dp-tl-artifact-body {
 		padding-block: 0 16px;
 	}
 
+	/* Grid, not flex: the labels sit on the bars' scale. See the base rule. */
 	.dp-tl-years {
-		display: flex;
+		display: grid;
 	}
 
 	.dp-tl-lane {
@@ -2846,7 +2882,7 @@ pre.dp-tl-artifact-body {
 	}
 
 	.is-mobile-scroll .dp-tl-years {
-		display: flex;
+		display: grid;
 	}
 
 	.is-mobile-scroll .dp-tl-lane {
