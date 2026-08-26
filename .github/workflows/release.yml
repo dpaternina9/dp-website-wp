@@ -1,28 +1,26 @@
 name: Release
 
 # Tagging is the whole deploy (CLAUDE.md §4). A push of `theme-v1.2.3` or
-# `core-v1.2.3` runs every gate, builds a ZIP, publishes a GitHub Release with
-# that ZIP attached, and then — and only then — publishes a signed manifest that
-# points at it. The order matters: a manifest that names a URL which does not
-# exist yet would send every site a broken update.
+# `core-v1.2.3` runs every gate and then hands off to the reusable release
+# workflow in fanxie-lab/wordpress-updater, which stages, stamps, zips, signs
+# an Ed25519 manifest, verifies it against the key the build ships, uploads
+# the ZIP to wp-updates.fanxie.cloud, confirms the public package URL
+# resolves, and only then publishes the manifest that points at it. See
+# docs/adr/0015-adopt-the-wp-update-client-library.md.
 #
-# `workflow_dispatch` does everything except publish. It is the way to find out
-# that the signing key is wrong, or that Composer will not run inside the
-# plugin, without minting a tag to discover it.
+# `workflow_dispatch` does everything except publish (`publish: false`). It is
+# the way to find out that the signing key is wrong, or that Composer will not
+# run inside the plugin, without minting a tag to discover it.
 #
 # ## Secrets this workflow needs
 #
-#   DP_UPDATE_SIGNING_KEY   base64 Ed25519 secret key, from
-#                           `php bin/dp-release.php keygen`. Its public half
-#                           must already be committed in PublicKey::COMPILED.
-#   R2_ACCOUNT_ID           Cloudflare account id (the R2 endpoint hostname).
-#   R2_ACCESS_KEY_ID        R2 API token, Object Read & Write on the bucket.
-#   R2_SECRET_ACCESS_KEY    the matching secret.
-#   R2_BUCKET               bucket name served at updates.dpaternina.com.
-#
-# No third-party actions are used for publishing: `gh` and `aws` are both
-# preinstalled on ubuntu-latest, and a release pipeline is a poor place to hand
-# a marketplace action write access to the repository.
+#   DPATERNINA_UPDATE_SIGNING_KEY   base64 Ed25519 secret key from the
+#                                   library's `release.php keygen`. Its public
+#                                   half must already be committed in
+#                                   DP\Core\Update\UpdateKey::COMPILED.
+#   DPATERNINA_UPDATE_UPLOAD_TOKEN  bearer token for the `dpaternina`
+#                                   namespace on the wp-updates.fanxie.cloud
+#                                   write Worker.
 
 on:
   push:
@@ -32,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: 'Which package to build'
+        description: 'Which package to build (dry run — nothing publishes)'
         required: true
         type: choice
         options: [ theme, core ]
@@ -52,7 +50,9 @@ defaults:
 jobs:
   # ---------------------------------------------------------------------------
   # Every gate in CLAUDE.md §1.6, by calling the CI workflow rather than
-  # restating it. A release that skipped a gate is a release nobody trusts.
+  # restating it. The reusable release workflow runs no gates of its own — the
+  # caller's gates are the gates, and a release that skipped one is a release
+  # nobody trusts.
   # ---------------------------------------------------------------------------
   gates:
     name: Quality gates
@@ -60,23 +60,25 @@ jobs:
     permissions:
       contents: read
 
-  build:
-    name: Build, sign and publish
-    needs: gates
+  # ---------------------------------------------------------------------------
+  # Work out what we are releasing. A tag is authoritative; a manual run says
+  # so explicitly and never publishes. `asset_build` stamps the PHP VERSION
+  # constant beside the header — the library's build script stamps the header,
+  # composer.json and readme.txt, but knows nothing about our constants.
+  # ---------------------------------------------------------------------------
+  resolve:
+    name: Resolve the release
     runs-on: ubuntu-latest
-    permissions:
-      # Only the "Publish the GitHub Release" step needs this, and only on a tag.
-      contents: write
+    outputs:
+      type: ${{ steps.r.outputs.type }}
+      slug: ${{ steps.r.outputs.slug }}
+      version: ${{ steps.r.outputs.version }}
+      source_dir: ${{ steps.r.outputs.source_dir }}
+      main_file: ${{ steps.r.outputs.main_file }}
+      asset_build: ${{ steps.r.outputs.asset_build }}
+      publish: ${{ steps.r.outputs.publish }}
     steps:
-      - name: Check out
-        uses: actions/checkout@v4
-
-      # -----------------------------------------------------------------------
-      # Work out what we are releasing. A tag is authoritative; a manual run
-      # says so explicitly and never publishes.
-      # -----------------------------------------------------------------------
-      - name: Resolve the release
-        id: release
+      - id: r
         env:
           REF_NAME: ${{ github.ref_name }}
           EVENT: ${{ github.event_name }}
@@ -87,18 +89,15 @@ jobs:
 
           if [[ "$EVENT" == "push" ]]; then
             case "$REF_NAME" in
-              theme-v*) package=theme; slug=dpaternina; version="${REF_NAME#theme-v}" ;;
-              core-v*)  package=core;  slug=dp-core;    version="${REF_NAME#core-v}"  ;;
+              theme-v*) pkg=theme; version="${REF_NAME#theme-v}" ;;
+              core-v*)  pkg=core;  version="${REF_NAME#core-v}"  ;;
               *) echo "::error::${REF_NAME} is not a release tag."; exit 1 ;;
             esac
             publish=true
-            tag="$REF_NAME"
           else
-            package="$INPUT_PACKAGE"
+            pkg="$INPUT_PACKAGE"
             version="${INPUT_VERSION#v}"
-            slug=$([[ "$package" == "theme" ]] && echo dpaternina || echo dp-core)
             publish=false
-            tag="${package}-v${version}"
           fi
 
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -106,203 +105,52 @@ jobs:
             exit 1
           fi
 
+          if [[ "$pkg" == "theme" ]]; then
+            constant_file=themes/dpaternina/functions.php
+            {
+              echo "type=theme"
+              echo "slug=dpaternina"
+              echo "source_dir=themes/dpaternina"
+              echo "main_file=style.css"
+            } >> "$GITHUB_OUTPUT"
+          else
+            constant_file=plugins/dp-core/dp-core.php
+            {
+              echo "type=plugin"
+              echo "slug=dp-core"
+              echo "source_dir=plugins/dp-core"
+              echo "main_file=dp-core.php"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
           {
-            echo "package=${package}"
-            echo "slug=${slug}"
             echo "version=${version}"
-            echo "tag=${tag}"
             echo "publish=${publish}"
-            echo "manifest_name=$([[ "$package" == "theme" ]] && echo theme.json || echo core.json)"
-            echo "manifest_type=$([[ "$package" == "theme" ]] && echo theme || echo plugin)"
-            echo "package_url=https://github.com/${GITHUB_REPOSITORY}/releases/download/${tag}/${slug}-${version}.zip"
-            echo "release_url=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}"
+            echo "asset_build=sed -i \"s/^const VERSION = '.*';\$/const VERSION = '${version}';/\" ${constant_file}"
           } >> "$GITHUB_OUTPUT"
 
-          echo "Releasing ${slug} ${version} (publish=${publish})"
+          echo "Releasing ${pkg} ${version} (publish=${publish})"
 
-      # -----------------------------------------------------------------------
-      # Refuse early if there is no trust anchor. bin/dp-build.sh checks this
-      # too; doing it here means the failure arrives before Composer and npm.
-      # -----------------------------------------------------------------------
-      - name: Require a compiled-in public key
-        run: |
-          set -euo pipefail
-          if grep -q "public const COMPILED = '';" plugins/dp-core/src/Update/PublicKey.php; then
-            echo "::error::No update signing key is compiled in. Run 'php bin/dp-release.php keygen --write' and commit the result."
-            exit 1
-          fi
-
-      - name: Set up PHP 8.4
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: none
-          extensions: sodium, zip
-          tools: composer:v2
-          ini-values: memory_limit=1G
-
-      - name: Install Composer dependencies
-        uses: ramsey/composer-install@v3
-        with:
-          composer-options: '--prefer-dist'
-
-      # Only pay for Node when there is something for it to compile. The theme
-      # has no build step yet; when it grows one, this starts running by itself.
-      - name: Does anything need building?
-        id: assets
-        run: |
-          set -euo pipefail
-          if grep -q '"build"' package.json; then
-            echo "needed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "needed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Set up Node
-        if: steps.assets.outputs.needed == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: npm
-
-      - name: Install npm dependencies
-        if: steps.assets.outputs.needed == 'true'
-        run: npm ci
-        env:
-          HUSKY: 0
-
-      # -----------------------------------------------------------------------
-      # Build. Note the absence of --allow-unkeyed: a release ZIP is never built
-      # from a tree with no signing key.
-      # -----------------------------------------------------------------------
-      - name: Build the package
-        id: build
-        run: |
-          set -euo pipefail
-          zip_path="$(bash bin/dp-build.sh \
-            --package='${{ steps.release.outputs.package }}' \
-            --version='${{ steps.release.outputs.version }}' \
-            --out="${GITHUB_WORKSPACE}/dist" | tail -n 1)"
-          echo "zip=${zip_path}" >> "$GITHUB_OUTPUT"
-          echo "### Artefact" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          unzip -l "$zip_path" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Check the archive unpacks to one correctly named directory
-        run: |
-          set -euo pipefail
-          roots="$(unzip -Z1 '${{ steps.build.outputs.zip }}' | cut -d/ -f1 | sort -u)"
-          if [[ "$roots" != '${{ steps.release.outputs.slug }}' ]]; then
-            echo "::error::Archive contains '${roots}', expected a single '${{ steps.release.outputs.slug }}' directory."
-            exit 1
-          fi
-
-      # -----------------------------------------------------------------------
-      # Sign. The requires/tested values come out of the headers we just
-      # stamped, so the manifest cannot disagree with the package it describes.
-      # -----------------------------------------------------------------------
-      - name: Sign the manifest
-        env:
-          DP_UPDATE_SIGNING_KEY: ${{ secrets.DP_UPDATE_SIGNING_KEY }}
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${DP_UPDATE_SIGNING_KEY:-}" ]]; then
-            echo "::error::The DP_UPDATE_SIGNING_KEY secret is not set."
-            exit 1
-          fi
-
-          header_file=$([[ '${{ steps.release.outputs.package }}' == 'theme' ]] \
-            && echo themes/dpaternina/style.css \
-            || echo plugins/dp-core/dp-core.php)
-
-          field() {
-            sed -nE "s/^[[:space:]]*\*?[[:space:]]*$1:[[:space:]]*(.*[^[:space:]])[[:space:]]*$/\1/p" \
-              "$header_file" | head -n 1
-          }
-
-          php bin/dp-release.php manifest \
-            --type='${{ steps.release.outputs.manifest_type }}' \
-            --slug='${{ steps.release.outputs.slug }}' \
-            --version='${{ steps.release.outputs.version }}' \
-            --package='${{ steps.release.outputs.package_url }}' \
-            --url='${{ steps.release.outputs.release_url }}' \
-            --requires="$(field 'Requires at least')" \
-            --requires-php="$(field 'Requires PHP')" \
-            --tested="$(field 'Tested up to')" \
-            --out="dist/${{ steps.release.outputs.manifest_name }}"
-
-      # The same Verifier the site runs, against the same key the site ships.
-      # If this step fails, publishing would have shipped a manifest no
-      # installation could ever accept.
-      - name: Verify the manifest with the compiled-in public key
-        run: php bin/dp-release.php verify --manifest="dist/${{ steps.release.outputs.manifest_name }}"
-
-      - name: Keep the artefacts either way
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.release.outputs.slug }}-${{ steps.release.outputs.version }}
-          path: |
-            dist/*.zip
-            dist/*.json
-          retention-days: 14
-
-      - name: Dry run complete
-        if: steps.release.outputs.publish != 'true'
-        run: |
-          echo "Built, signed and verified. Nothing was published — this was a workflow_dispatch run." \
-            >> "$GITHUB_STEP_SUMMARY"
-
-      # -----------------------------------------------------------------------
-      # Publish, tag pushes only. Release first, manifest second: the manifest
-      # names a download URL that has to exist before any site reads it.
-      # -----------------------------------------------------------------------
-      - name: Publish the GitHub Release
-        if: steps.release.outputs.publish == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release create '${{ steps.release.outputs.tag }}' \
-            '${{ steps.build.outputs.zip }}' \
-            --title '${{ steps.release.outputs.slug }} ${{ steps.release.outputs.version }}' \
-            --generate-notes \
-            --verify-tag
-
-      - name: Confirm the package URL resolves before advertising it
-        if: steps.release.outputs.publish == 'true'
-        run: |
-          set -euo pipefail
-          status="$(curl -sSL -o /dev/null -w '%{http_code}' '${{ steps.release.outputs.package_url }}')"
-          if [[ "$status" != "200" ]]; then
-            echo "::error::${{ steps.release.outputs.package_url }} returned ${status}; not publishing a manifest that points at it."
-            exit 1
-          fi
-
-      - name: Publish the manifest to R2
-        if: steps.release.outputs.publish == 'true'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          set -euo pipefail
-
-          for name in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY R2_ACCOUNT_ID R2_BUCKET; do
-            if [[ -z "${!name:-}" ]]; then
-              echo "::error::Secret ${name} is not set."
-              exit 1
-            fi
-          done
-
-          aws s3 cp "dist/${{ steps.release.outputs.manifest_name }}" \
-            "s3://${R2_BUCKET}/${{ steps.release.outputs.manifest_name }}" \
-            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
-            --content-type 'application/json' \
-            --cache-control 'public, max-age=300'
-
-          echo "Published https://updates.dpaternina.com/${{ steps.release.outputs.manifest_name }}" \
-            >> "$GITHUB_STEP_SUMMARY"
+  # ---------------------------------------------------------------------------
+  # Build, sign, verify — and publish only on a tag. The reusable workflow
+  # refuses to build while UpdateKey::COMPILED is empty, uploads the ZIP
+  # before the manifest, and confirms the public package URL resolves in
+  # between, so a manifest can never point at a download that does not exist.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: Build, sign and publish
+    needs: [ gates, resolve ]
+    uses: fanxie-lab/wordpress-updater/.github/workflows/release.yml@main
+    with:
+      type: ${{ needs.resolve.outputs.type }}
+      slug: ${{ needs.resolve.outputs.slug }}
+      namespace: dpaternina
+      version: ${{ needs.resolve.outputs.version }}
+      source_dir: ${{ needs.resolve.outputs.source_dir }}
+      main_file: ${{ needs.resolve.outputs.main_file }}
+      key_file: plugins/dp-core/src/Update/UpdateKey.php
+      asset_build: ${{ needs.resolve.outputs.asset_build }}
+      publish: ${{ needs.resolve.outputs.publish == 'true' }}
+    secrets:
+      signing_key: ${{ secrets.DPATERNINA_UPDATE_SIGNING_KEY }}
+      upload_token: ${{ secrets.DPATERNINA_UPDATE_UPLOAD_TOKEN }}
