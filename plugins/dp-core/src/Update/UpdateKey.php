@@ -21,14 +21,15 @@ namespace DP\Core\Update;
  * prefix), which already implies filesystem access, and exists so a staging
  * site can trust a staging key without shipping a second build.
  *
- * `COMPILED` is empty in the repository on purpose. Running
+ * `COMPILED` was written by
  *
  *     php plugins/dp-core/vendor/fanxielab/wp-update-client/bin/release.php \
  *         keygen --write-to=plugins/dp-core/src/Update/UpdateKey.php
  *
- * writes the real value here and prints the secret half exactly once, for
- * David to paste into the `DPATERNINA_UPDATE_SIGNING_KEY` GitHub secret. An
- * empty key means every update is refused and the refusal is logged, which is
+ * which prints the secret half exactly once; it lives only in the
+ * `DPATERNINA_UPDATE_SIGNING_KEY` GitHub secret. Rotating means running keygen
+ * again, committing the new public half here, and hand-delivering that build
+ * (docs/adr/0015). An empty key means every update is refused and logged, which is
  * the correct failure mode for a missing trust anchor — and the library's
  * `bin/build.sh` refuses to produce a release ZIP while it is empty, so a
  * keyless build cannot reach a site in the first place.
@@ -40,5 +41,5 @@ final class UpdateKey {
 	/**
 	 * Base64 of the 32-byte Ed25519 public key. Written by the library's `release.php keygen`.
 	 */
-	public const COMPILED = '';
+	public const COMPILED = 'xuOOt0dLTZfR+50sZVMzNQBlaSDo/+LpnLHYKyau3Ic=';
 }
