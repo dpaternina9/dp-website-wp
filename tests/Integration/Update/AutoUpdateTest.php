@@ -9,11 +9,17 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Update;
 
-use DP\Core\Update\UpdateClient;
 use WP_UnitTestCase;
 
 /**
  * `auto_update_theme` / `auto_update_plugin`, scoped to our two packages.
+ *
+ * The opt-in itself lives in the library (`UpdateClient::on_auto_update()`),
+ * which is why `docs/plan.md` Phase 2 item 4 — the site takes its own updates
+ * on cron — needs no local code any more. What these tests pin down is that
+ * *our* registration produces the opt-in for *our* two packages and nothing
+ * else: the offer's `id` must be one of our full Update URIs and its identity
+ * field must name our theme or plugin exactly.
  *
  * The offers below are shaped the way `WP_Automatic_Updater::should_update()`
  * shapes them in WordPress 7.1: an object with `id` set from the `Update URI`
@@ -25,6 +31,16 @@ use WP_UnitTestCase;
 final class AutoUpdateTest extends WP_UnitTestCase {
 
 	use SignedManifest;
+
+	/**
+	 * Our theme's Update URI, as core would put it in an offer's `id`.
+	 */
+	private const THEME_ID = 'https://wp-updates.fanxie.cloud/dpaternina/theme-dpaternina';
+
+	/**
+	 * Our plugin's Update URI likewise.
+	 */
+	private const PLUGIN_ID = 'https://wp-updates.fanxie.cloud/dpaternina/plugin-dp-core';
 
 	/**
 	 * Register the client with a real (if throwaway) key.
@@ -68,8 +84,8 @@ final class AutoUpdateTest extends WP_UnitTestCase {
 			null,
 			$this->offer(
 				array(
-					'id'    => 'https://updates.dpaternina.com/theme',
-					'theme' => UpdateClient::THEME_STYLESHEET,
+					'id'    => self::THEME_ID,
+					'theme' => 'dpaternina',
 				)
 			)
 		);
@@ -88,8 +104,8 @@ final class AutoUpdateTest extends WP_UnitTestCase {
 			null,
 			$this->offer(
 				array(
-					'id'     => 'https://updates.dpaternina.com/core',
-					'plugin' => UpdateClient::PLUGIN_FILE,
+					'id'     => self::PLUGIN_ID,
+					'plugin' => 'dp-core/dp-core.php',
 				)
 			)
 		);
@@ -133,20 +149,20 @@ final class AutoUpdateTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Our host is not enough on its own; the item must be one of our two packages.
+	 * Our Update URI is not enough on its own; the item must be our package.
 	 *
 	 * Somebody else's theme carrying our `Update URI` would land on our filter.
 	 * It does not get auto-updates turned on for it.
 	 *
 	 * @return void
 	 */
-	public function test_our_host_alone_does_not_enable_a_stranger(): void {
+	public function test_our_uri_alone_does_not_enable_a_stranger(): void {
 		$decision = apply_filters(
 			'auto_update_theme',
 			null,
 			$this->offer(
 				array(
-					'id'    => 'https://updates.dpaternina.com/theme',
+					'id'    => self::THEME_ID,
 					'theme' => 'somebody-elses-theme',
 				)
 			)
@@ -156,23 +172,33 @@ final class AutoUpdateTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Our slug is not enough on its own either; the offer must come from our host.
+	 * Our slug alone is not enough either; the offer's id must be our full URI.
+	 *
+	 * Both a foreign host and a sibling namespace on our own host fall outside
+	 * `package_for_update_uri()`, so neither gets the opt-in.
 	 *
 	 * @return void
 	 */
 	public function test_our_slug_alone_does_not_enable_a_foreign_offer(): void {
-		$decision = apply_filters(
-			'auto_update_theme',
-			null,
-			$this->offer(
-				array(
-					'id'    => 'https://updates.example.invalid/theme',
-					'theme' => UpdateClient::THEME_STYLESHEET,
-				)
-			)
+		$foreign_ids = array(
+			'https://updates.example.invalid/theme-dpaternina',
+			'https://wp-updates.fanxie.cloud/somebody-else/theme-dpaternina',
 		);
 
-		$this->assertNull( $decision );
+		foreach ( $foreign_ids as $foreign_id ) {
+			$decision = apply_filters(
+				'auto_update_theme',
+				null,
+				$this->offer(
+					array(
+						'id'    => $foreign_id,
+						'theme' => 'dpaternina',
+					)
+				)
+			);
+
+			$this->assertNull( $decision, $foreign_id . ' must not opt anything in.' );
+		}
 	}
 
 	/**

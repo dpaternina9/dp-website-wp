@@ -3,11 +3,18 @@
   "description": "dpaternina.com — block theme + companion plugin monorepo.",
   "type": "project",
   "license": "proprietary",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/fanxie-lab/wordpress-updater"
+    }
+  ],
   "require": {
     "php": "^8.4"
   },
   "require-dev": {
     "brain/monkey": "^2.6",
+    "fanxielab/wp-update-client": "dev-main",
     "php-stubs/wordpress-tests-stubs": "^7.0",
     "phpcompatibility/phpcompatibility-wp": "^2.1",
     "phpstan/phpstan": "^2.1",
@@ -43,14 +50,14 @@
   },
   "scripts": {
     "post-install-cmd": [
-      "@dump-core-autoload",
+      "@install-core-vendor",
       "@dump-theme-autoload"
     ],
     "post-update-cmd": [
-      "@dump-core-autoload",
+      "@install-core-vendor",
       "@dump-theme-autoload"
     ],
-    "dump-core-autoload": "@composer dump-autoload --working-dir=plugins/dp-core --optimize --no-interaction",
+    "install-core-vendor": "@composer install --working-dir=plugins/dp-core --no-interaction --no-progress",
     "dump-theme-autoload": "@composer dump-autoload --working-dir=themes/dpaternina --optimize --no-interaction",
     "tokens:build": "php bin/dp-tokens.php",
     "tokens:check": "php bin/dp-tokens.php --check",
@@ -70,7 +77,7 @@
     "lint": "PHPCS: WordPress-Coding-Standards + PHPCompatibilityWP (PHP 8.4).",
     "analyse": "PHPStan level 9 with szepeviktor/phpstan-wordpress.",
     "test": "PHPUnit: Unit on the host, Integration inside the wp-env tests container.",
-    "dump-core-autoload": "Regenerate plugins/dp-core/vendor/autoload.php so the mounted plugin can boot.",
+    "install-core-vendor": "Install plugins/dp-core/vendor (autoloader + the wp-update-client library) so the mounted plugin can boot.",
     "dump-theme-autoload": "Regenerate themes/dpaternina/vendor/autoload.php so the mounted theme can boot.",
     "tokens:build": "Regenerate the theme's token bridge from design-source/.",
     "tokens:check": "Fail if the committed token bridge is not what design-source/ implies."

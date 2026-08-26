@@ -4,8 +4,15 @@
   "type": "wordpress-plugin",
   "version": "0.1.0",
   "license": "proprietary",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/fanxie-lab/wordpress-updater"
+    }
+  ],
   "require": {
-    "php": "^8.4"
+    "php": "^8.4",
+    "fanxielab/wp-update-client": "dev-main"
   },
   "autoload": {
     "psr-4": {
@@ -13,6 +20,9 @@
     }
   },
   "config": {
-    "optimize-autoloader": true
+    "optimize-autoloader": true,
+    "platform": {
+      "php": "8.4.0"
+    }
   }
 }

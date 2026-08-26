@@ -81,7 +81,7 @@ final class Plugin {
 		( new Blocks\Timeline( plugin_dir_path( $this->file ) ) )->register();
 		Contact\Contact::create( plugin_dir_path( $this->file ) )->register();
 		Resume\Resume::create( plugin_dir_path( $this->file ) )->register();
-		Update\UpdateClient::register();
+		Update\UpdateRegistration::register();
 	}
 
 	/**
