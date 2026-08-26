@@ -113,19 +113,33 @@ Deliberately early. A pipeline built at the end is a pipeline nobody trusts.
 WordPress core has supported third-party updates natively since 5.8 (plugins) and 6.1
 (themes). No updater plugin required.
 
-1. `style.css` carries `Update URI: https://updates.dpaternina.com/theme`;
-   `dp-core.php` carries `Update URI: https://updates.dpaternina.com/core`.
-2. `dp-core` hooks `update_themes_updates.dpaternina.com` and
-   `update_plugins_updates.dpaternina.com`, fetches a signed manifest, verifies it with
-   `sodium_crypto_sign_verify_detached()` against a public key compiled into the
-   plugin, and hands core the version + package URL.
-3. Tagging `theme-v1.2.3` or `core-v1.2.3` triggers GitHub Actions:
-   run every gate → stamp the version from the tag into the headers and `readme.txt` →
-   build production assets → zip without dev deps → publish a GitHub Release with the
-   zip → sign and publish `manifest.json` to Cloudflare R2 behind
-   `updates.dpaternina.com`.
-4. `auto_update_theme` / `auto_update_plugin` return true for our two slugs, so the
-   site takes the update on its own next cron run. `wp cron event run` forces it.
+> **Updated 2026-08-25 (ADR 0015).** The pipeline this phase built in-repo was
+> extracted into the canonical `fanxielab/wp-update-client` library
+> (`github.com/fanxie-lab/wordpress-updater`), and this repo now consumes it.
+> The update host moved from `updates.dpaternina.com` to the existing Fanxie
+> Lab instance at `wp-updates.fanxie.cloud`, namespace `dpaternina`. The
+> mechanism below is unchanged in substance; only where it lives changed.
+
+1. `style.css` carries
+   `Update URI: https://wp-updates.fanxie.cloud/dpaternina/theme-dpaternina`;
+   `dp-core.php` carries
+   `Update URI: https://wp-updates.fanxie.cloud/dpaternina/plugin-dp-core`.
+2. `dp-core` registers the library's `UpdateClient` with our config
+   (`DP\Core\Update\UpdateRegistration`). It hooks
+   `update_themes_wp-updates.fanxie.cloud` / `update_plugins_wp-updates.fanxie.cloud`,
+   fetches each package's signed manifest, verifies it with
+   `sodium_crypto_sign_verify_detached()` against the public key compiled into the
+   plugin (`DP\Core\Update\UpdateKey::COMPILED`), and hands core the version +
+   package URL — pinned inside our namespace on the update host.
+3. Tagging `theme-v1.2.3` or `core-v1.2.3` triggers GitHub Actions: run every gate
+   (`ci.yml`, called from `release.yml`) → hand off to the reusable workflow
+   `fanxie-lab/wordpress-updater/.github/workflows/release.yml@main`, which stamps
+   the version, zips without dev deps, signs the manifest, verifies it against the
+   key the build ships, uploads the ZIP to `wp-updates.fanxie.cloud`, confirms the
+   public URL resolves, and only then publishes the manifest.
+4. The library's client answers `auto_update_theme` / `auto_update_plugin` with true
+   for our two packages, so the site takes the update on its own next cron run.
+   `wp cron event run` forces it.
 
 ### Why not the alternatives
 - **Git Updater plugin** — mature and would work, but it is a fifth plugin doing work
@@ -571,7 +585,7 @@ entirely.
 
 | | |
 |---|---|
-| **Update host** | `updates.dpaternina.com` on Cloudflare R2. |
+| **Update host** | `wp-updates.fanxie.cloud`, namespace `dpaternina`, via the `fanxielab/wp-update-client` library (ADR 0015; originally `updates.dpaternina.com` on our own R2 bucket). |
 | **Plugin count** | No target. The Colophon's "four plugins" was placeholder copy that should never have become a build rule. |
 | **ACF** | Not used. `register_post_meta()` + REST schemas + block bindings. |
 | **Analytics** | Rybbit, installed as its own plugin and configured by David. Not theme code, not `dp-core` code, and we do not enqueue it. The Colophon and Privacy copy describing it is David's to write. |

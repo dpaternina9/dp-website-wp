@@ -17,15 +17,23 @@ namespace DP\Tests\Integration\Update;
 // phpcs:disable WordPress.WP.AlternativeFunctions.json_encode_json_encode
 // phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 
-use DP\Core\Update\Log;
-use DP\Core\Update\ManifestSource;
-use DP\Core\Update\UpdateClient;
-use DP\Core\Update\Verifier;
+use DP\Core\Update\UpdateRegistration;
+use FanxieLab\WpUpdates\Log;
+use FanxieLab\WpUpdates\ManifestSource;
+use FanxieLab\WpUpdates\PackageType;
+use FanxieLab\WpUpdates\UpdateClient;
+use FanxieLab\WpUpdates\UpdateConfig;
+use FanxieLab\WpUpdates\Verifier;
 use LogicException;
 use WP_Error;
 
 /**
  * Everything the update tests need to stand a signed manifest up in front of core.
+ *
+ * The update mechanism belongs to `fanxielab/wp-update-client` and is tested in
+ * that repository; what this harness exists for is *our* wiring of it — the
+ * real `UpdateRegistration` config, the real `Update URI` headers of the
+ * mounted theme and plugin, driven through core's own update functions.
  *
  * A fresh Ed25519 keypair per test, an HTTP layer that answers only the URLs a
  * test names, and a record of every refusal the client logged. Nothing here
@@ -78,17 +86,17 @@ trait SignedManifest {
 
 		/*
 		 * The plugin registers its own update client on `init` when the test
-		 * bootstrap loads dp-core.php, and `WP_UnitTestCase::tear_down()` restores
-		 * a snapshot of $wp_filter taken after that happened — so every test but
-		 * the first starts with those filters already attached. Detaching them is
-		 * what makes the injected key below the only one in play. This only works
-		 * because UpdateClient's callbacks are named rather than closures; see the
-		 * note on that class.
+		 * bootstrap loads dp-core.php, and UpdateClient's registry is static, so
+		 * it outlives whatever WP_UnitTestCase::tear_down() restores in
+		 * $wp_filter. Resetting explicitly, per test, is what makes the key
+		 * injected below the only one in play. This only works because
+		 * UpdateClient's callbacks are named rather than closures; see the note
+		 * on that class in the library.
 		 */
-		UpdateClient::reset();
+		$this->detach_client_filters();
 
 		add_filter( 'pre_http_request', array( $this, 'serve_canned_http' ), 10, 3 );
-		add_action( Log::ACTION, array( $this, 'record_refusal' ), 10, 1 );
+		add_action( $this->test_config()->refused_action(), array( $this, 'record_refusal' ), 10, 1 );
 	}
 
 	/**
@@ -98,10 +106,41 @@ trait SignedManifest {
 	 */
 	private function stop_update_harness(): void {
 		remove_filter( 'pre_http_request', array( $this, 'serve_canned_http' ), 10 );
-		remove_action( Log::ACTION, array( $this, 'record_refusal' ), 10 );
+		remove_action( $this->test_config()->refused_action(), array( $this, 'record_refusal' ), 10 );
 
-		UpdateClient::reset();
+		$this->detach_client_filters();
 		$this->forget_update_state();
+	}
+
+	/**
+	 * Forget every registered client and detach its filters — even re-attached ones.
+	 *
+	 * `UpdateClient::reset()` detaches only the hosts its static registry
+	 * remembers. `WP_UnitTestCase::tear_down()` then restores a `$wp_filter`
+	 * snapshot taken after the plugin booted, which re-attaches the callbacks
+	 * *without* re-populating that registry — so on the next test, `reset()`
+	 * alone would detach nothing. The callbacks are named static callables, so
+	 * they can be removed here by name, whatever the registry believes.
+	 *
+	 * @return void
+	 */
+	private function detach_client_filters(): void {
+		UpdateClient::reset();
+
+		$config = $this->test_config();
+
+		foreach ( array( PackageType::Theme, PackageType::Plugin ) as $type ) {
+			remove_filter(
+				$type->offer_filter( $config->host ),
+				array( UpdateClient::class, 'theme' === $type->value ? 'on_theme_update' : 'on_plugin_update' ),
+				UpdateClient::PRIORITY
+			);
+			remove_filter(
+				$type->auto_update_filter(),
+				array( UpdateClient::class, 'on_auto_update' ),
+				UpdateClient::PRIORITY
+			);
+		}
 	}
 
 	/**
@@ -112,8 +151,41 @@ trait SignedManifest {
 	private function forget_update_state(): void {
 		delete_site_transient( 'update_themes' );
 		delete_site_transient( 'update_plugins' );
-		delete_site_transient( ManifestSource::TRANSIENT_PREFIX . 'theme' );
-		delete_site_transient( ManifestSource::TRANSIENT_PREFIX . 'plugin' );
+
+		$config = $this->test_config();
+
+		foreach ( $config->packages as $package ) {
+			delete_site_transient( ManifestSource::transient_key( $config->hook_prefix, $package ) );
+		}
+	}
+
+	/**
+	 * The production registration, with this test's throwaway public key in it.
+	 *
+	 * @return UpdateConfig
+	 */
+	private function test_config(): UpdateConfig {
+		return UpdateRegistration::config( $this->signing_public );
+	}
+
+	/**
+	 * Where a package's manifest lives, per the production config.
+	 *
+	 * @param string $type 'theme' or 'plugin'.
+	 * @return string
+	 *
+	 * @throws LogicException If no configured package has that type.
+	 */
+	private function manifest_url( string $type ): string {
+		$config = $this->test_config();
+
+		foreach ( $config->packages as $package ) {
+			if ( $package->type->value === $type ) {
+				return $config->manifest_url( $package );
+			}
+		}
+
+		throw new LogicException( 'No configured package of type ' . $type );
 	}
 
 	/**
@@ -122,8 +194,15 @@ trait SignedManifest {
 	 * @return UpdateClient The registered client.
 	 */
 	private function register_client(): UpdateClient {
+		$config = $this->test_config();
+
 		return UpdateClient::register(
-			new ManifestSource( new Verifier( $this->signing_public ), new Log() )
+			$config,
+			new ManifestSource(
+				$config,
+				new Verifier( $this->signing_public, $config->host, $config->namespace ),
+				new Log( $config->hook_prefix )
+			)
 		);
 	}
 
@@ -182,19 +261,6 @@ trait SignedManifest {
 	}
 
 	/**
-	 * Serve a transport failure at a URL, the way an unreachable host looks.
-	 *
-	 * @param string $url Absolute URL.
-	 * @return void
-	 */
-	private function serve_failure( string $url ): void {
-		$this->canned[ $url ] = new WP_Error(
-			'http_request_failed',
-			'cURL error 6: Could not resolve host: updates.dpaternina.com'
-		);
-	}
-
-	/**
 	 * Shape a response the way the WordPress HTTP API does.
 	 *
 	 * @param string $body Response body.
@@ -245,6 +311,10 @@ trait SignedManifest {
 	/**
 	 * A manifest payload for our theme.
 	 *
+	 * The package URL lives inside our namespace on the update host, which is
+	 * the only origin the library's Manifest accepts (URLs are pinned to
+	 * `/{namespace}/packages/{type}-{slug}-{version}.zip`).
+	 *
 	 * @param string               $version   Version to offer.
 	 * @param array<string, mixed> $overrides Fields to replace.
 	 * @return array<string, mixed>
@@ -255,9 +325,8 @@ trait SignedManifest {
 				'type'         => 'theme',
 				'slug'         => 'dpaternina',
 				'version'      => $version,
-				'package'      => 'https://github.com/dpaternina/dp-site/releases/download/theme-v'
-					. $version . '/dpaternina-' . $version . '.zip',
-				'url'          => 'https://github.com/dpaternina/dp-site/releases/tag/theme-v' . $version,
+				'package'      => 'https://wp-updates.fanxie.cloud/dpaternina/packages/theme-dpaternina-' . $version . '.zip',
+				'url'          => '',
 				'requires'     => '6.6',
 				'requires_php' => '8.4',
 				'tested'       => '7.1',
@@ -279,9 +348,8 @@ trait SignedManifest {
 				'type'         => 'plugin',
 				'slug'         => 'dp-core',
 				'version'      => $version,
-				'package'      => 'https://github.com/dpaternina/dp-site/releases/download/core-v'
-					. $version . '/dp-core-' . $version . '.zip',
-				'url'          => 'https://github.com/dpaternina/dp-site/releases/tag/core-v' . $version,
+				'package'      => 'https://wp-updates.fanxie.cloud/dpaternina/packages/plugin-dp-core-' . $version . '.zip',
+				'url'          => '',
 				'requires'     => '6.6',
 				'requires_php' => '8.4',
 				'tested'       => '7.1',
@@ -311,7 +379,7 @@ trait SignedManifest {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
-		$data = get_plugin_data( WP_PLUGIN_DIR . '/' . UpdateClient::PLUGIN_FILE, false, false );
+		$data = get_plugin_data( WP_PLUGIN_DIR . '/dp-core/dp-core.php', false, false );
 
 		return is_string( $data['Version'] ) ? $data['Version'] : '';
 	}

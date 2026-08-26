@@ -15,7 +15,7 @@
  * Author URI:        https://dpaternina.com
  * License:           Proprietary
  * License URI:       https://dpaternina.com
- * Update URI:        https://updates.dpaternina.com/core
+ * Update URI:        https://wp-updates.fanxie.cloud/dpaternina/plugin-dp-core
  * Text Domain:       dp-core
  * Domain Path:       /languages
  */

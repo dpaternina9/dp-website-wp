@@ -48,7 +48,7 @@ reasoning intact — the record of why we believed something is the point.
 | [0001](0001-phase-0-toolchain.md) | Phase 0 toolchain | Accepted — 2026-08-20 |
 | [0002](0002-design-token-naming.md) | One source of truth for design tokens, and the bridge that keeps their names | Accepted — 2026-08-20 |
 | [0003](0003-content-model-edges.md) | The content model's edges | Accepted — 2026-08-20 |
-| [0004](0004-tag-driven-signed-releases.md) | Tag-driven signed releases | Accepted — 2026-08-20 |
+| [0004](0004-tag-driven-signed-releases.md) | Tag-driven signed releases | Accepted — 2026-08-20; implementation superseded by ADR-0015 |
 | [0005](0005-house-style-blocks.md) | The house style: where a block's appearance is written down | Accepted — 2026-08-20 |
 | [0006](0006-chrome-and-derived-destinations.md) | The chrome: two lines of `theme.json`, and where a link's URL comes from | Accepted — 2026-08-20 |
 | [0007](0007-timeline-modes-and-url-state.md) | The timeline: three modes in one render, and its state in the URL | Accepted — 2026-08-20 |
@@ -59,3 +59,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0012](0012-design-parity-harness.md) | A template is checked against `design-source/`, not against itself | Accepted — 2026-08-23, amended twice the same day: the design's script blocks were in the export all along |
 | [0013](0013-one-fixture-nobody-owns.md) | E2E content that a global query reads belongs to nobody | Accepted — 2026-08-23 |
 | [0014](0014-the-year-axis-and-the-bars-share-one-scale.md) | The year axis is drawn on the bars' scale, and the track ends now | Accepted — 2026-08-24 |
+| [0015](0015-adopt-the-wp-update-client-library.md) | The update pipeline is the extracted `wp-update-client` library | Accepted — 2026-08-25 |

@@ -15,22 +15,27 @@ Blocked on: Phases 3 and 4 finishing in the main checkout.
 - [x] `phpcs.xml.dist`: excluded the PHPCompatibility enum false positive (done in main).
       The file-level suppressions in `PackageType.php` (Phase 2) and Phase 3's enums can
       now be deleted — do that at merge.
-- [ ] Preserve mode `100755` on `bin/dp-build.sh`.
+- [ ] ~~Preserve mode `100755` on `bin/dp-build.sh`.~~ Obsolete — the script was
+      deleted when the pipeline moved to `fanxielab/wp-update-client` (ADR 0015).
 - [ ] Phase 2 modified `.github/workflows/ci.yml` (+4 lines: `workflow_call:`) so
       `release.yml` can reuse it rather than restating every gate. Only edit outside its lane.
 
-### David's setup, before any release can happen
-- [ ] `php bin/dp-release.php keygen --write`, put the secret in `DP_UPDATE_SIGNING_KEY`,
-      commit the compiled-in public half, clear scrollback.
-- [ ] GitHub secrets: `DP_UPDATE_SIGNING_KEY`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-      `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`.
-- [ ] Bind the R2 bucket to `updates.dpaternina.com`; confirm it serves `application/json`.
+### David's setup, before any release can happen (updated for ADR 0015)
+- [ ] `php plugins/dp-core/vendor/fanxielab/wp-update-client/bin/release.php keygen
+      --write-to=plugins/dp-core/src/Update/UpdateKey.php`, put the secret in the
+      `DPATERNINA_UPDATE_SIGNING_KEY` GitHub secret, commit the compiled-in public
+      half, clear scrollback.
+- [ ] Have a `dpaternina` namespace token issued on the `wp-updates.fanxie.cloud`
+      instance and store it as the `DPATERNINA_UPDATE_UPLOAD_TOKEN` GitHub secret.
+- [ ] The old `DP_UPDATE_SIGNING_KEY` / `R2_*` secrets and the
+      `updates.dpaternina.com` bucket/DNS are retired; remove them.
 
 ### Still unproven (needs a remote / a real install)
-No tag has ever run the workflow. Untested: `gh release create --verify-tag`, the R2
-upload, DNS/TLS on `updates.dpaternina.com`, WordPress actually unpacking a zip, and the
-`wp_maybe_auto_update` cron path. The full closing sequence is in the Phase 2 agent's
-report — ask for it when you are ready to run it.
+No tag has ever run the workflow. Untested: the reusable workflow call from this repo,
+the upload to `wp-updates.fanxie.cloud`, WordPress actually unpacking a zip, and the
+`wp_maybe_auto_update` cron path. The onboarding runbook is
+`docs/onboarding.md` in `fanxie-lab/wordpress-updater` (steps 8–9: dry run, then a
+scratch tag observed end-to-end on a disposable site).
 
 > **Hazard.** Do **not** run `wp plugin update dp-core` against the normal wp-env site.
 > `.wp-env.json` bind-mounts `plugins/dp-core` and `themes/dpaternina` from the repo. The
@@ -198,7 +203,8 @@ Facts later phases inherit:
   the file stops rendering. Check `wp post list --post_type=wp_template` before
   concluding that a template edit "did nothing".
 - **`*.src.*` is the convention for an asset master.** Nothing links to it and
-  `bin/dp-build.sh` drops it before zipping a release.
+  the release build (the wp-update-client library's `bin/build.sh`) drops it
+  before zipping a release.
 - **`data-dp-destination` is on every link the chrome derives**, resolved or not.
   It is the fastest way to see what a page asked for and what it got.
 

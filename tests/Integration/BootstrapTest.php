@@ -79,7 +79,7 @@ final class BootstrapTest extends WP_UnitTestCase {
 		$header = get_plugin_data( $plugin->file(), false, false );
 
 		$this->assertSame( \DP\Core\VERSION, $header['Version'], 'The header and the constant must not drift.' );
-		$this->assertSame( 'https://updates.dpaternina.com/core', $header['UpdateURI'] );
+		$this->assertSame( 'https://wp-updates.fanxie.cloud/dpaternina/plugin-dp-core', $header['UpdateURI'] );
 	}
 
 	/**
@@ -94,7 +94,7 @@ final class BootstrapTest extends WP_UnitTestCase {
 		$this->assertSame( array(), $theme->errors() ? $theme->errors()->get_error_messages() : array() );
 		$this->assertSame( 'dpaternina', $theme->get_stylesheet() );
 		$this->assertSame(
-			'https://updates.dpaternina.com/theme',
+			'https://wp-updates.fanxie.cloud/dpaternina/theme-dpaternina',
 			$theme->get( 'UpdateURI' ),
 			'The Update URI header drives the Phase 2 release pipeline.'
 		);

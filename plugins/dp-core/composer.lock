@@ -1,0 +1,95 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "343573061c0168f1a233986824f38f52",
+    "packages": [
+        {
+            "name": "fanxielab/wp-update-client",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/fanxie-lab/wordpress-updater.git",
+                "reference": "ab0b253af951ebe11f56eed01244c0b65ecf42db"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/fanxie-lab/wordpress-updater/zipball/ab0b253af951ebe11f56eed01244c0b65ecf42db",
+                "reference": "ab0b253af951ebe11f56eed01244c0b65ecf42db",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-sodium": "*",
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "brain/monkey": "^2.6",
+                "php-stubs/wordpress-tests-stubs": "^7.0",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^9.6",
+                "szepeviktor/phpstan-wordpress": "^2.0",
+                "yoast/phpunit-polyfills": "^2.0"
+            },
+            "suggest": {
+                "ext-zip": "Needed by bin/release.php zip and bin/build.sh (build tooling only, not on sites)"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "FanxieLab\\WpUpdates\\": "client/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "FanxieLab\\WpUpdates\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "@test:unit",
+                    "@test:integration"
+                ],
+                "test:unit": [
+                    "phpunit --testsuite Unit"
+                ],
+                "test:integration": [
+                    "npx wp-env run tests-cli --env-cwd=wp-content/fx-updates-repo vendor/bin/phpunit --testsuite Integration"
+                ],
+                "analyse": [
+                    "phpstan analyse --memory-limit=1G"
+                ]
+            },
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Signed, multi-tenant theme/plugin update client and release tooling for self-hosted WordPress update services on Cloudflare R2.",
+            "homepage": "https://github.com/fanxie-lab/wordpress-updater",
+            "support": {
+                "source": "https://github.com/fanxie-lab/wordpress-updater/tree/main",
+                "issues": "https://github.com/fanxie-lab/wordpress-updater/issues"
+            },
+            "time": "2026-08-25T17:02:43+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "fanxielab/wp-update-client": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": {
+        "php": "^8.4"
+    },
+    "platform-dev": {},
+    "platform-overrides": {
+        "php": "8.4.0"
+    },
+    "plugin-api-version": "2.6.0"
+}

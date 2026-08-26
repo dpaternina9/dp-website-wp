@@ -20,8 +20,9 @@ gradient, and a gradient mark on a gradient ground does not read.
 ## What is not served
 
 `dp-mark-gradient.src.png` is the 2000px master David supplied. It is a build
-input, not an asset: nothing links to it, and `bin/dp-build.sh` drops every
-`*.src.*` file before it zips a release. Regenerate the served size from it:
+input, not an asset: nothing links to it, and the release build (the
+wp-update-client library's `bin/build.sh`) drops every `*.src.*` file before
+it zips a release. Regenerate the served size from it:
 
 ```
 sips -Z 128 --setProperty format png \

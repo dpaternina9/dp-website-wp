@@ -25,18 +25,42 @@ use WP_UnitTestCase;
 use ZipArchive;
 
 /**
- * Runs `bin/dp-build.sh` for real and opens what comes out.
+ * Runs the library's `bin/build.sh` for real, with this repo's arguments, and
+ * opens what comes out.
  *
- * A release pipeline can be green in every other respect and still produce an
- * archive WordPress unpacks to `wp-content/plugins/dp-core-1.2.3/`, beside the
- * copy that is running, updating nothing. There is no way to catch that except
+ * The build script itself is tested in the `fanxielab/wp-update-client`
+ * repository. What only this repo can get wrong is the arguments the release
+ * workflow feeds it — source directory, slug, main file — and whether *these
+ * two packages* stage into an archive WordPress can unpack over the live copy.
+ * An archive whose top-level directory is `dp-core-1.2.3` installs *beside*
+ * the running plugin and updates nothing; there is no way to catch that except
  * by building an archive and looking inside it, so that is what this does.
  *
  * These are integration tests by nature rather than by location: they shell out
  * to Composer and touch the filesystem. They skip rather than fail where the
- * toolchain is absent.
+ * toolchain is absent. Note the plugin build runs `composer install --no-dev`
+ * inside the stage, which resolves `fanxielab/wp-update-client` from the
+ * committed `plugins/dp-core/composer.lock` — it needs network access to
+ * GitHub, like the release workflow it mirrors.
  */
 final class ReleaseArtifactTest extends WP_UnitTestCase {
+
+	/**
+	 * Build-script arguments per package, exactly as the release workflow's
+	 * `resolve` job derives them.
+	 */
+	private const PACKAGES = array(
+		'core'  => array(
+			'source'    => 'plugins/dp-core',
+			'slug'      => 'dp-core',
+			'main_file' => 'dp-core.php',
+		),
+		'theme' => array(
+			'source'    => 'themes/dpaternina',
+			'slug'      => 'dpaternina',
+			'main_file' => 'style.css',
+		),
+	);
 
 	/**
 	 * Repository root.
@@ -44,6 +68,13 @@ final class ReleaseArtifactTest extends WP_UnitTestCase {
 	 * @var string
 	 */
 	private string $root = '';
+
+	/**
+	 * The library's build script, inside the repo's root vendor directory.
+	 *
+	 * @var string
+	 */
+	private string $build_script = '';
 
 	/**
 	 * Temporary output directory for this test's build.
@@ -60,10 +91,11 @@ final class ReleaseArtifactTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		$this->root = dirname( __DIR__, 3 );
+		$this->root         = dirname( __DIR__, 3 );
+		$this->build_script = $this->root . '/vendor/fanxielab/wp-update-client/bin/build.sh';
 
-		if ( ! is_readable( $this->root . '/bin/dp-build.sh' ) ) {
-			$this->markTestSkipped( 'The build script is not reachable from this checkout.' );
+		if ( ! is_readable( $this->build_script ) ) {
+			$this->markTestSkipped( 'The wp-update-client build script is not installed in vendor/.' );
 		}
 
 		if ( ! class_exists( ZipArchive::class ) ) {
@@ -111,12 +143,19 @@ final class ReleaseArtifactTest extends WP_UnitTestCase {
 			$names,
 			'docs/adr/0001 §1: the plugin carries its own autoloader, so the release must run Composer inside it.'
 		);
+		$this->assertContains(
+			'dp-core/vendor/fanxielab/wp-update-client/client/UpdateClient.php',
+			$names,
+			'The update client library ships inside the plugin ZIP; without it the plugin cannot boot.'
+		);
 
 		$bootstrap = $this->read( $archive, 'dp-core/dp-core.php' );
 
 		$this->assertStringContainsString( '* Version:           9.9.9', $bootstrap, 'The header is stamped from the tag.' );
-		$this->assertStringContainsString( "const VERSION = '9.9.9';", $bootstrap, 'And so is the constant beside it.' );
-		$this->assertStringContainsString( 'Update URI:        https://updates.dpaternina.com/core', $bootstrap );
+		$this->assertStringContainsString(
+			'Update URI:        https://wp-updates.fanxie.cloud/dpaternina/plugin-dp-core',
+			$bootstrap
+		);
 
 		$this->assert_no_development_files( $names );
 
@@ -140,7 +179,10 @@ final class ReleaseArtifactTest extends WP_UnitTestCase {
 		$stylesheet = $this->read( $archive, 'dpaternina/style.css' );
 
 		$this->assertStringContainsString( "\nVersion: 9.9.9\n", $stylesheet );
-		$this->assertStringContainsString( 'Update URI: https://updates.dpaternina.com/theme', $stylesheet );
+		$this->assertStringContainsString(
+			'Update URI: https://wp-updates.fanxie.cloud/dpaternina/theme-dpaternina',
+			$stylesheet
+		);
 
 		$this->assert_no_development_files( $names );
 
@@ -171,11 +213,16 @@ final class ReleaseArtifactTest extends WP_UnitTestCase {
 	 * @return ZipArchive
 	 */
 	private function build( string $package, string $version ): ZipArchive {
+		$arguments = self::PACKAGES[ $package ];
+
 		$command = sprintf(
-			'bash %s --package=%s --version=%s --out=%s --allow-unkeyed --skip-assets 2>&1',
-			escapeshellarg( $this->root . '/bin/dp-build.sh' ),
-			escapeshellarg( $package ),
+			'bash %s --source=%s --slug=%s --version=%s --main-file=%s --key-file=%s --out=%s --allow-unkeyed 2>&1',
+			escapeshellarg( $this->build_script ),
+			escapeshellarg( $this->root . '/' . $arguments['source'] ),
+			escapeshellarg( $arguments['slug'] ),
 			escapeshellarg( $version ),
+			escapeshellarg( $arguments['main_file'] ),
+			escapeshellarg( $this->root . '/plugins/dp-core/src/Update/UpdateKey.php' ),
 			escapeshellarg( $this->out )
 		);
 

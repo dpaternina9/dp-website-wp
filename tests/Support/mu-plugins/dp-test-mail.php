@@ -33,7 +33,7 @@ namespace DP\Tests\Support\Mail;
  *
  * It is mapped into `wp-content/mu-plugins` **only** for the wp-env `tests`
  * environment (`.wp-env.json`), and it refuses to act anywhere that is not a
- * local environment. It is not in either shipped package and `bin/dp-build.sh`
+ * local environment. It is not in either shipped package and the release build
  * never sees it.
  */
 

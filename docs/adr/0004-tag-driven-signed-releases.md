@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted — 2026-08-20.
+Accepted — 2026-08-20. **Implementation superseded by ADR-0015** — 2026-08-25:
+the mechanism decided here (signed-envelope manifests, compiled-in key, fail
+closed, tag-driven builds) stands, but it now lives in the extracted
+`fanxielab/wp-update-client` library rather than in this repo, and the update
+host moved from `updates.dpaternina.com` (R2 + GitHub Releases) to
+`wp-updates.fanxie.cloud`.
 
 ## Context
 
