@@ -183,16 +183,18 @@ Theme and plugin are updated by **tagging in GitHub**. Nothing is uploaded by ha
 nothing is edited on the server.
 
 - Semver tags: `theme-v1.2.3` and `core-v1.2.3` (independent versions).
-- Tag push → GitHub Actions runs the full gate suite → builds a production zip (no dev
-  deps, compiled assets, `readme.txt` + version headers stamped from the tag) → publishes
-  a GitHub Release with the zip attached and a signed `update.json` manifest.
+- Tag push → `release.yml` runs the full gate suite, then calls the reusable workflow in
+  `fanxie-lab/wordpress-updater`, which builds a production zip (no dev deps, version
+  headers stamped from the tag), signs an Ed25519 manifest, verifies it, and publishes
+  zip + manifest to `wp-updates.fanxie.cloud` under the `dpaternina` namespace.
 - The site pulls updates through WordPress core's own
-  `update_themes_{$hostname}` / `update_plugins_{$hostname}` filters pointed at that
-  manifest — no third-party updater plugin, no phoning home to a service we don't own.
+  `update_themes_{$hostname}` / `update_plugins_{$hostname}` filters, answered by the
+  `fanxielab/wp-update-client` library (a `dp-core` Composer dependency) with the
+  public key compiled into `DP\Core\Update\UpdateKey` — no third-party updater plugin.
 - WordPress auto-updates stay enabled for both, so a tag is the whole deploy.
 
-Details and the fallback options are in `docs/plan.md`. Until that pipeline exists,
-there is no manual deploy path — building it is a phase, not an afterthought.
+Details are in `docs/plan.md` Phase 2 and `docs/adr/0015`. There is no manual deploy
+path; the break-glass exception is a signing-key rotation, which ships by hand once.
 
 ---
 
