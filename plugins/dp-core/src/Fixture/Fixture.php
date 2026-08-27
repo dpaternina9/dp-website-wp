@@ -65,6 +65,42 @@ final class Fixture {
 				'name'        => 'Photography',
 				'description' => 'One prime lens, the same few streets, and what shows up after a month of looking.',
 			),
+
+			/*
+			 * The sixth is not the design's. `TERM_NAMES` has five and the design
+			 * fills every one of them, so the state its category archive draws for
+			 * an empty term — "Nothing filed here yet." — is unreachable on a
+			 * seeded site, and a state nobody can look at is a state nobody
+			 * reviews. This term stays empty on purpose and says so in its own
+			 * description. `core/categories` hides empty terms, so it is absent
+			 * from the pill row and from the footer; only its own archive shows it.
+			 */
+			array(
+				'token'       => 'PLACEHOLDER',
+				'slug'        => 'nothing-filed',
+				'name'        => 'Placeholder — nothing filed',
+				'description' => 'Placeholder. Seeded empty so the archive\'s empty state can be looked at. Delete it on the real site.',
+			),
+		);
+	}
+
+	/**
+	 * A second series, so the archive is not a one-term special case.
+	 *
+	 * The design ships one series and the theme used to be able to assume it.
+	 * `DP\Theme\Chrome\Destinations::featured_series()` picks the series with the
+	 * most published parts, and a fixture with one term would never exercise the
+	 * comparison — so this exists, it is visibly placeholder, and it is seeded
+	 * with three published parts against the design series' two, which is what
+	 * makes the choice a real one to assert on.
+	 *
+	 * @return array{slug: string, title: string, deck: string}
+	 */
+	public function extra_series(): array {
+		return array(
+			'slug'  => 'placeholder-series',
+			'title' => 'Placeholder series',
+			'deck'  => 'Placeholder. A second series so the series archive, the part navigation and the featured-series nomination all have more than one term to run against. Delete it on the real site.',
 		);
 	}
 
@@ -371,72 +407,70 @@ final class Fixture {
 	/**
 	 * The four planned parts, from the entries in `SERIES.parts` that have no slug.
 	 *
-	 * They seed as **draft posts** carrying the series term — plan section 3.1.
-	 * `part` continues the numbering the two published parts started, so
-	 * `menu_order` puts the whole series in one sequence whichever list a part is
-	 * currently in.
+	 * They seed as **draft posts** carrying the series term — plan section 3.1 —
+	 * and they carry nothing a draft does not already have. The `note` is the
+	 * post's excerpt; the title is the title; the date is what puts them in the
+	 * order the years run, because that is the field "Still to come" sorts on.
+	 * They have no number: the design labels every planned row `DRAFT`, and its
+	 * own deck says they get a number when they go up (ADR-0016).
 	 *
-	 * @return list<array{key: string, title: string, years: string, note: string, part: int}>
+	 * @return list<array{key: string, title: string, date: string, note: string}>
 	 */
 	public function planned_parts(): array {
 		return array(
 			array(
 				'key'   => 'before-a-job',
 				'title' => 'Before any of it was a job',
-				'years' => '1995 — 2007',
+				'date'  => '2026-01-05 09:00:00',
 				'note'  => 'A borrowed computer, a dial-up connection, and no idea this was work people paid for.',
-				'part'  => 3,
 			),
 			array(
 				'key'   => 'learning-hard-way',
 				'title' => 'Learning the hard way',
-				'years' => '2008 — 2010',
+				'date'  => '2026-01-06 09:00:00',
 				'note'  => 'School, detours, and the first time I shipped something a stranger used.',
-				'part'  => 4,
 			),
 			array(
 				'key'   => 'first-office',
 				'title' => 'The first office',
-				'years' => '2011',
+				'date'  => '2026-01-07 09:00:00',
 				'note'  => 'What I accepted as normal, because I had nothing to compare it to.',
-				'part'  => 5,
 			),
 			array(
 				'key'   => 'exhausting-year',
 				'title' => 'The exhausting year',
-				'years' => '2011 — 2012',
+				'date'  => '2026-01-08 09:00:00',
 				'note'  => 'The part I put off writing the longest.',
-				'part'  => 6,
 			),
 		);
 	}
 
 	/**
-	 * The seven sample posts, from `POSTS`, with captions from `CAPTIONS`.
+	 * The seven sample posts, from `POSTS`.
 	 *
 	 * Dates: the fixture prints a month and a year ("AUG 2026"); posts are seeded
 	 * on the fifteenth of it, which reproduces the order the design lists them in
-	 * without inventing a precision the design does not have.
+	 * without inventing a precision the design does not have. The date is also
+	 * what numbers a series part now, so the two life-story posts come out as
+	 * part 1 and part 2 without either of them saying so.
 	 *
-	 * Tone follows the design's own derivation at the point it renders a kicker:
-	 * a post in a series is pink, everything else teal.
+	 * **The standfirst is the first paragraph of the body.** It used to be a meta
+	 * field the editor had no control for; the words are the design's either way,
+	 * and this way they are in the post, where David can edit them (ADR-0016).
 	 *
-	 * @return list<array{slug: string, title: string, date: string, category: string, read_time: string, excerpt: string, lead: string, caption: string, tone: string, part: int, body: list<FixtureBlock>}>
+	 * @return list<array{slug: string, title: string, date: string, category: string, series: string, excerpt: string, body: list<FixtureBlock>}>
 	 */
 	public function posts(): array {
 		return array(
 			array(
-				'slug'      => 'house-style',
-				'title'     => 'The house style, and every piece of it',
-				'date'      => '2026-08-15 09:00:00',
-				'category'  => 'dev',
-				'read_time' => '6 MIN READ',
-				'excerpt'   => 'Every block this blog can render, in one post, so I stop reinventing them.',
-				'lead'      => 'This is the reference post. Every element I let myself use in writing here appears once, in the order I usually reach for it.',
-				'caption'   => 'THE REFERENCE POST — EVERY BLOCK ONCE',
-				'tone'      => 'teal',
-				'part'      => 0,
-				'body'      => array(
+				'slug'     => 'house-style',
+				'title'    => 'The house style, and every piece of it',
+				'date'     => '2026-08-15 09:00:00',
+				'category' => 'dev',
+				'series'   => '',
+				'excerpt'  => 'Every block this blog can render, in one post, so I stop reinventing them.',
+				'body'     => array(
+					self::p( 'This is the reference post. Every element I let myself use in writing here appears once, in the order I usually reach for it.' ),
 					self::p( "The rule is that a post is text first. Everything below exists because a paragraph could not do the job — a quote carries someone else's voice, a list carries a set, code carries an exact string. If a block is decoration, it is not in the system." ),
 					self::h2( 'Headings run three deep' ),
 					self::p( 'Level two splits a post into parts. It is the only heading most posts need, and it sits far enough from body copy that you can scan for it.' ),
@@ -489,17 +523,14 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'workaholic-years',
-				'title'     => 'The workaholic years, and why I stopped',
-				'date'      => '2026-03-15 09:00:00',
-				'category'  => 'my-life-story',
-				'read_time' => '9 MIN READ',
-				'excerpt'   => 'Hardly anyone would use that word about me today. That took work.',
-				'lead'      => 'In the previous part I covered one of the most exhausting moments of my life. This one is about the years after — the ones I mostly spent at a desk.',
-				'caption'   => 'THE DESK I BARELY LEFT, 2013',
-				'tone'      => 'pink',
-				'part'      => 2,
-				'body'      => array(
+				'slug'     => 'workaholic-years',
+				'title'    => 'The workaholic years, and why I stopped',
+				'date'     => '2026-03-15 09:00:00',
+				'category' => 'my-life-story',
+				'series'   => 'design',
+				'excerpt'  => 'Hardly anyone would use that word about me today. That took work.',
+				'body'     => array(
+					self::p( 'In the previous part I covered one of the most exhausting moments of my life. This one is about the years after — the ones I mostly spent at a desk.' ),
 					self::p( "We're in 2012 now. For the first time I was working somewhere that felt like it actually cared about the people doing the work. We had the tools we needed. I had a title I was proud of. And I responded to all of that the only way I knew how: by working every hour I had." ),
 					self::p( "It's funny, because if you asked people about me today, hardly anyone would use the word \"workaholic\". That's because I changed. Not gracefully, and not because I read the right book — because I had to." ),
 					self::h2( 'The line I still repeat' ),
@@ -509,17 +540,14 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'ai-features-users',
-				'title'     => 'Shipping AI features without betraying your users',
-				'date'      => '2026-02-15 09:00:00',
-				'category'  => 'dev',
-				'read_time' => '7 MIN READ',
-				'excerpt'   => 'What plain-English analytics taught me about privacy as a constraint.',
-				'lead'      => 'I spent a year building a feature that answers questions about a site in plain English. The hard part was never the model.',
-				'caption'   => 'THE QUERY BOX, MID-REWRITE',
-				'tone'      => 'teal',
-				'part'      => 0,
-				'body'      => array(
+				'slug'     => 'ai-features-users',
+				'title'    => 'Shipping AI features without betraying your users',
+				'date'     => '2026-02-15 09:00:00',
+				'category' => 'dev',
+				'series'   => '',
+				'excerpt'  => 'What plain-English analytics taught me about privacy as a constraint.',
+				'body'     => array(
+					self::p( 'I spent a year building a feature that answers questions about a site in plain English. The hard part was never the model.' ),
 					self::p( 'The brief sounded simple: let someone type "which posts grew last month" and get a real answer. Every interesting version of that feature wants to send your data somewhere, and every version worth shipping refuses to.' ),
 					self::p( 'So privacy became the constraint I designed against instead of the disclaimer I wrote afterwards. Aggregate before you leave the server. Send shapes, not rows. Make the prompt auditable by the person whose data it describes.' ),
 					self::h2( 'What it cost' ),
@@ -528,17 +556,14 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'espresso-shot',
-				'title'     => 'Three years of chasing the same espresso shot',
-				'date'      => '2026-01-15 09:00:00',
-				'category'  => 'food',
-				'read_time' => '5 MIN READ',
-				'excerpt'   => 'A dial-in log, a grinder I regret, and one very good morning.',
-				'lead'      => 'I have a spreadsheet of grind settings going back to 2023. I am aware of what that says about me.',
-				'caption'   => 'DIAL-IN NOTES AND THE MACHINE',
-				'tone'      => 'teal',
-				'part'      => 0,
-				'body'      => array(
+				'slug'     => 'espresso-shot',
+				'title'    => 'Three years of chasing the same espresso shot',
+				'date'     => '2026-01-15 09:00:00',
+				'category' => 'food',
+				'series'   => '',
+				'excerpt'  => 'A dial-in log, a grinder I regret, and one very good morning.',
+				'body'     => array(
+					self::p( 'I have a spreadsheet of grind settings going back to 2023. I am aware of what that says about me.' ),
 					self::p( 'The shot I keep chasing happened in a small place in Medellín — Colombian beans, roasted maybe five days earlier, and a barista who clearly was not measuring anything. Mine has been measured to the tenth of a gram for three years and has not landed there yet.' ),
 					self::p( 'What did improve: I stopped buying equipment to solve technique problems. The grinder I regret was a shortcut. The habit that worked was pulling one shot a day and writing down one variable.' ),
 					self::h2( 'The current recipe' ),
@@ -546,17 +571,14 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'amp-sims',
-				'title'     => 'Too many amp sims, one guitar',
-				'date'      => '2025-12-15 09:00:00',
-				'category'  => 'music',
-				'read_time' => '4 MIN READ',
-				'excerpt'   => 'On collecting tools instead of practicing, and what finally broke the loop.',
-				'lead'      => 'At one point I owned nine amp simulators and could play four songs. The ratio was the problem.',
-				'caption'   => 'ONE GUITAR, NINE PLUGINS LATER',
-				'tone'      => 'teal',
-				'part'      => 0,
-				'body'      => array(
+				'slug'     => 'amp-sims',
+				'title'    => 'Too many amp sims, one guitar',
+				'date'     => '2025-12-15 09:00:00',
+				'category' => 'music',
+				'series'   => '',
+				'excerpt'  => 'On collecting tools instead of practicing, and what finally broke the loop.',
+				'body'     => array(
+					self::p( 'At one point I owned nine amp simulators and could play four songs. The ratio was the problem.' ),
 					self::p( 'Buying a plugin feels like progress. It has a version number, it changes the sound, it takes an afternoon to explore. Practicing feels like nothing for weeks and then feels like everything at once.' ),
 					self::p( 'What broke the loop was deleting all of them and keeping one preset for a month. The playing got better because there was nothing else to adjust.' ),
 					self::quote( 'Every tool I bought was a way of not sitting down with the instrument.', '' ),
@@ -564,17 +586,14 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'city-you-stopped-noticing',
-				'title'     => 'Shooting a city you have stopped noticing',
-				'date'      => '2025-11-15 09:00:00',
-				'category'  => 'photography',
-				'read_time' => '6 MIN READ',
-				'excerpt'   => 'A month of walking the same six blocks with one prime lens.',
-				'lead'      => 'I gave myself one lens, six blocks, and thirty days. The rule was that I could not go anywhere new.',
-				'caption'   => 'DAY 26 — THE WALL OPPOSITE MY BUILDING',
-				'tone'      => 'teal',
-				'part'      => 0,
-				'body'      => array(
+				'slug'     => 'city-you-stopped-noticing',
+				'title'    => 'Shooting a city you have stopped noticing',
+				'date'     => '2025-11-15 09:00:00',
+				'category' => 'photography',
+				'series'   => '',
+				'excerpt'  => 'A month of walking the same six blocks with one prime lens.',
+				'body'     => array(
+					self::p( 'I gave myself one lens, six blocks, and thirty days. The rule was that I could not go anywhere new.' ),
 					self::p( 'The first week was terrible. I photographed the obvious things — the mural, the fruit cart, the dog outside the bakery — and got a folder of postcards nobody needed.' ),
 					self::p( 'Week three is when it turned. Once the subjects run out you start seeing light instead of objects: the ten minutes when the wall opposite my building goes orange, the reflection that only works after rain.' ),
 					self::h2( 'What I kept' ),
@@ -582,22 +601,114 @@ final class Fixture {
 				),
 			),
 			array(
-				'slug'      => 'care-looks-like',
-				'title'     => 'The job that taught me what care looks like',
-				'date'      => '2025-10-15 09:00:00',
-				'category'  => 'my-life-story',
-				'read_time' => '8 MIN READ',
-				'excerpt'   => 'For the first time I worked somewhere that gave me what I needed.',
-				'lead'      => 'Part five: the year I found out that most of what I had accepted as normal at work was not normal.',
-				'caption'   => 'THE OFFICE THAT SAID YES',
-				'tone'      => 'pink',
-				'part'      => 1,
-				'body'      => array(
+				'slug'     => 'care-looks-like',
+				'title'    => 'The job that taught me what care looks like',
+				'date'     => '2025-10-15 09:00:00',
+				'category' => 'my-life-story',
+				'series'   => 'design',
+				'excerpt'  => 'For the first time I worked somewhere that gave me what I needed.',
+				'body'     => array(
+					self::p( 'Part five: the year I found out that most of what I had accepted as normal at work was not normal.' ),
 					self::p( 'They bought the machine I asked for. Nobody made a speech about it. That was the whole thing — the request went in on Monday and the answer was yes, and I sat there recalibrating years of assumptions.' ),
 					self::p( 'It also raised the bar in a way I did not expect. When the environment stops being the obstacle, the only thing left in the way of the work is you.' ),
 					self::quote( 'Care at work is mostly logistics. It looks like the thing you asked for showing up.', '' ),
 					self::p( 'This is the chapter right before the one where I overcorrected and worked myself into the ground. Read them in order if you want the full picture.' ),
 				),
+			),
+		);
+	}
+
+	/**
+	 * The filler posts, which are not the design's and say so.
+	 *
+	 * The design's fixture is seven posts. Three of the states this theme has to
+	 * draw need more than that and cannot be judged without them: the pager needs
+	 * enough posts for three pages, the range line needs a page that is neither
+	 * the first nor the last, and the end-of-archive panel needs a last page to
+	 * appear on. `posts_per_page` is ten, and the blog index holds its featured
+	 * post back, so twenty-four published posts is the smallest number that gives
+	 * all three.
+	 *
+	 * **Nothing here reads like something David wrote.** CLAUDE.md section 6 is
+	 * explicit that inventing plausible copy to fill a gap is worse than leaving
+	 * the gap visible, and a folder of invented blog posts would be exactly that.
+	 * Every one of these announces what it is, in its title, its excerpt and its
+	 * body, so a seeded site reads as a seeded site. The first paragraph of each
+	 * body is its standfirst, which is the whole of what `dp_lead` used to be.
+	 *
+	 * Two of them carry the second series, which is what gives the part navigation
+	 * a neighbour to find outside the design's own series.
+	 *
+	 * @return list<array{slug: string, title: string, date: string, category: string, series: string, excerpt: string, body: list<FixtureBlock>}>
+	 */
+	public function filler_posts(): array {
+		$categories = array( 'dev', 'dev', 'food', 'music', 'photography', 'dev', 'food', 'music', 'photography', 'dev', 'dev', 'food', 'music', 'photography', 'dev', 'dev', 'food', 'dev', 'dev', 'dev' );
+		$posts      = array();
+
+		foreach ( $categories as $index => $category ) {
+			$number = $index + 1;
+			$month  = 9 - ( intdiv( $index, 3 ) );
+			$year   = $month > 0 ? 2025 : 2024;
+			$month  = $month > 0 ? $month : $month + 12;
+
+			$posts[] = array(
+				'slug'     => sprintf( 'placeholder-post-%02d', $number ),
+				'title'    => sprintf( 'Placeholder post %02d', $number ),
+				'date'     => sprintf( '%04d-%02d-%02d 09:00:00', $year, $month, 20 - ( $index % 18 ) ),
+				'category' => $category,
+				'excerpt'  => 'Placeholder. Seed filler, so the archive has enough entries to paginate.',
+				'series'   => '',
+				'body'     => array(
+					self::p( 'Placeholder. `wp dp seed` writes this post so the pager, the range line and the end-of-archive panel have something to run against.' ),
+					self::p( 'Placeholder. This post is seed filler and carries no content of its own. Delete it, or write over it, on the real site.' ),
+				),
+			);
+		}
+
+		/*
+		 * Two, not three. The featured series is derived — the one with the most
+		 * published parts, term ID ascending on a tie (ADR-0016) — and the design's
+		 * series has two published parts, so a placeholder series with three would
+		 * quietly take the blog index's "read my life story in order" link away
+		 * from the one the design points it at. Two makes it a tie, the design's
+		 * term is created first, and the tie is the state a real two-series site
+		 * is in anyway.
+		 */
+		$parts = array(
+			array( 'First placeholder part', 'It opens the placeholder series.' ),
+			array( 'Second placeholder part', 'It closes the published half of the placeholder series, and gives the part navigation a neighbour to find.' ),
+		);
+
+		foreach ( $parts as $index => $part ) {
+			$posts[] = array(
+				'slug'     => sprintf( 'placeholder-part-%d', $index + 1 ),
+				'title'    => $part[0],
+				'date'     => sprintf( '2026-0%d-10 09:00:00', $index + 4 ),
+				'category' => 'my-life-story',
+				'excerpt'  => 'Placeholder. ' . $part[1],
+				'series'   => 'extra',
+				'body'     => array(
+					self::p( 'Placeholder. Part of the seeded second series; it exists so the series archive and the part navigation have more than one term to run against.' ),
+					self::p( 'Placeholder. This part is seed filler and carries no content of its own.' ),
+				),
+			);
+		}
+
+		return $posts;
+	}
+
+	/**
+	 * The one part the placeholder series has not written yet.
+	 *
+	 * @return list<array{key: string, title: string, date: string, note: string}>
+	 */
+	public function extra_planned_parts(): array {
+		return array(
+			array(
+				'key'   => 'placeholder-part-4',
+				'title' => 'Fourth placeholder part',
+				'date'  => '2026-01-09 09:00:00',
+				'note'  => 'Placeholder. Drafted rather than published, so "Still to come" has a row on this archive too.',
 			),
 		);
 	}

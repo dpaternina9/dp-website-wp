@@ -183,11 +183,28 @@ parts: [
 The series page renders the first group as "Start with these" and the second as "Still
 to come". The question was where the planned entries live.
 
-**Decision: a planned part is a draft `post`** carrying the `dp_series` term,
-`dp_series_part`, and two extra meta fields the design needs — `dp_series_years`
-("1995 — 2007") and `dp_series_note`. Ordering is `menu_order`. The series template runs
-two queries against the same term, one `publish` and one `draft`, and the draft query
-selects **title and meta only** — never content, never a permalink.
+**Decision: a planned part is a draft `post`** carrying the `dp_series` term, and
+nothing else. The series template runs two queries against the same term, one
+`publish` and one `draft`, and the draft query selects **title and excerpt only** —
+never content, never a permalink.
+
+**Amended 2026-08-26 — [ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md).**
+This section originally added three meta fields to that draft — `dp_series_part`,
+`dp_series_years` and `dp_series_note` — and ordered the series by `menu_order`. All
+four are gone:
+
+- **Ordering is the publish date, ascending.** `post` does not declare
+  `page-attributes`, so the Order box is not on the post editor and `menu_order` was
+  zero on every post; the date tiebreak that sat beside it was doing the whole sort
+  already.
+- **A part is numbered by its position** among the published posts in the term, so the
+  number and the order the page draws in cannot disagree.
+- **The note is the draft's excerpt**, which is a core field with a sidebar box David
+  can actually type into. It must be read as the *stored* excerpt: `get_the_excerpt()`
+  falls back to trimming `post_content`, which would publish the opening of an
+  unfinished post under a public heading.
+- **The years are dropped.** The design labels every planned row `DRAFT`, flat, and
+  says in its own deck that a part gets its number when it goes up.
 
 Why this over the alternatives:
 
@@ -195,9 +212,12 @@ Why this over the alternatives:
   list to the other, in the right position, with no second object to delete. A
   `dp_series_stub` post type would require deleting the stub when the real post lands —
   a manual step that gets forgotten and shows the same part twice.
-- **The editing UI is free.** Drafts already have a title, an order, and a place in the
-  admin. A stub type means another menu item; term meta holding a JSON array means
-  building a bespoke repeater and having nothing queryable at the end of it.
+- **The editing UI is free.** Drafts already have a title, an excerpt, a date and a
+  place in the admin. A stub type means another menu item; term meta holding a JSON
+  array means building a bespoke repeater and having nothing queryable at the end of
+  it. This was the strongest argument for the decision and it was the one the original
+  implementation then walked away from, by adding three fields with no UI on top of the
+  four core ones that had it.
 - **It is testable.** `WP_Query` with an explicit `post_status`, asserted directly.
 
 The cost is real and worth naming: **draft titles in this series become public.** That
@@ -459,6 +479,108 @@ assertions, and the harness measured no closed row at all until then.
 The reasoning, what it cannot answer, and the alternatives are in
 `docs/adr/0012-design-parity-harness.md`. The next template review inherits the
 machinery and adds a map, not a mechanism.
+
+### 7.6 Phase 7e — the four writing templates, against the design ✅
+
+The same kind of pass as 7d, over `home`, `single`, `category` and
+`taxonomy-dp_series`. Twenty-eight divergences from `design-source/`, and the
+three worth remembering are the three that had been invisible from every
+direction the suite was looking:
+
+- **`p.dp-row-excerpt` matched nothing.** `core/post-excerpt` renders a `<div>`
+  wrapping a `<p>`, so every list row had been drawing its excerpt at
+  `--fs-base` with no measure and core's 24px block gap on top. It also hid the
+  design's deliberate inversion — `PostRow.logic.js` gives the **compact**
+  variant the larger `--fs-base` and the list variant `--fs-sm`, and flags it
+  "not a typo in the export" — because both were rendering at the same size.
+- **`:first-child` is a pseudo-class.** Core's flow-layout rule
+  `:root :where(.is-layout-flow) > :first-child` is *two* units of specificity,
+  not the one its `:where()` makes it look like, so it beats a one-class rule
+  outright rather than on load order. That is a corner of ADR-0008's hazard the
+  earlier notes had not reached, and it is why the pill row's 24px top margin
+  was silently zero.
+- **The series deck was never on the page.** The design's `SERIES.deck` was
+  `dp_series_deck` term meta at the time; the template rendered
+  `core/term-description`, which was a different field. The block was in the
+  template, the value was in the database, and nothing connected them. The gap
+  was closed from the other side a day later — the deck is the description now,
+  and the second amendment below says why.
+
+Four things a template cannot say are now derived rather than dropped — counts,
+page state, a dead pager step, and two links whose target is content rather than
+a route. ADR-0015 has the reasoning. `theme.json` was not opened.
+
+**Amended 2026-08-26 — [ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md).**
+Two of the mechanisms this phase built rested on meta fields that had no editor
+control, which is a thing none of its tests could see. `dp_series_featured` — the
+term David was supposed to flag to nominate a series — had no term-edit field, so
+on any site with more than one series the blog index's "read my life story in
+order" link was permanently inert and there was nothing he could do about it. It
+is derived now: the series with the most published parts, lowest term ID on a
+tie. `%dp-part%` still substitutes a part number into the navigation label, but
+the number is the post's position in its series rather than a stored field.
+
+The same pass deleted the other eight fields on `post` for the same reason, and
+gave `dp_series_deck` — which survived that round, and which ADR-0015's own
+closing note flagged as needing a panel — the twenty-line term-edit field it had
+been missing since Phase 3. `theme.json` was not opened for any of it.
+
+**Amended 2026-08-26 — a series' deck is its description.** That term-edit field
+lasted a day. A `dp_series` term already had a textarea for one or two sentences
+about itself, on both of the screens the new control drew on, with a column in the
+terms list table, a REST property and a place in a WXR export: **`description`**.
+Core has shipped it since taxonomies existed. The duplication had been visible in
+the read path the whole time and nobody read it that way —
+`DP\Theme\Query\ArchiveFacts::deck()` returned the meta if it was set and *fell
+back to `$term->description`* if it was not, written as a courtesy and in fact an
+admission that the two fields held the same thing. What it produced on the term
+screen was two adjacent textareas asking for the same sentence, where the one that
+worked was the one core drew and the one that was ours was the one the design
+named.
+
+So: `dp_series_deck` is unregistered, `SeriesDeckField` and its test are deleted,
+`ArchiveFacts::deck()` reads `$term->description` and nothing else, and the seeder
+writes each fixture series' deck into the description when it creates the term.
+`dp-core` now registers no term meta at all, and `MetaAuth::term_meta()` went with
+it. The design's word for it is still "deck"; the label on the screen is core's,
+and a filter on the taxonomy's labels is not worth the indirection to rename one
+field on one screen.
+
+What it costs is that `description` is a field other code may reach for — an SEO
+plugin seeding a meta description from it will now see the deck. That is the
+normal condition of a core field, and the trade is worth it: a private key nobody
+else can find is only an advantage until it is the reason nobody can edit it
+either. `description` also permits limited HTML where the meta field was
+`sanitize_textarea_field`; the deck is bound into a `core/paragraph`, and
+`WP_Block::replace_html()` runs a rich-text binding through `wp_kses_post()`, so
+this changes what can be stored rather than what can be rendered.
+
+Existing `termmeta` rows are left inert, exactly as ADR-0016 left the `postmeta`
+ones and for the same reason. `wp dp seed --fresh` clears them. The standing rule
+this leaves behind: **before registering a field, check whether the object already
+has one.**
+
+The seed grew from seven posts to twenty-nine, and the additions announce
+themselves as filler in every field they have: three pages of pagination, a
+middle page, an end-of-archive panel, a second series, a term with nothing in it
+and a captioned lead image are all states the design draws and a seven-post
+fixture could not reach.
+
+**What is still open.** The design-parity harness (ADR-0012) was **not** extended
+to these four templates in this pass, and it should be next. Two blockers, both
+concrete: the blog index's URL comes from Settings → Reading, which
+`chrome.spec.ts` mutates inside a serial block, so a parallel sweep over it is a
+race; and the shared fixture (ADR-0013) has no post carrying a category, a
+series, a read time or a featured image, so the post view has nothing to measure.
+Both are fixture work in `tests/e2e/global-setup.ts`, not new mechanism.
+
+**"BROWSE BY CATEGORY →" is cut. 2026-08-25.** The design's blog index carries two
+mono links above the list; only the series one ships. The second one's handler is
+`openArchive('MY LIFE STORY')` — it opens one *named category archive*, which §5.1
+forbids the theme from hardcoding, and neither the design nor the site has a
+categories index to point at instead. The row's geometry is identical with one
+link. David's call; do not re-add it, and do not build a `dp-categories` template
+to justify it.
 
 ---
 

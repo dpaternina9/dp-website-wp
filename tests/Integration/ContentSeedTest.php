@@ -78,13 +78,34 @@ final class ContentSeedTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'categories'    => 5,
-				'series'        => 1,
+
+				/*
+				 * Six, not the design's five. The sixth is seeded empty so that
+				 * the state a category archive draws for a term with nothing in
+				 * it is reachable; the design fills all five of its own, so that
+				 * state had never been looked at.
+				 */
+				'categories'    => 6,
+
+				/*
+				 * Two, not the design's one. The second is placeholder, and it
+				 * exists because "the only series" is a special case the theme
+				 * used to be able to rely on: with one term, "the series this
+				 * post is in" and "the series" cannot be told apart.
+				 */
+				'series'        => 2,
 				'roles'         => 6,
 				'shipped'       => 4,
 				'videos'        => 6,
-				'posts'         => 7,
-				'planned_parts' => 4,
+
+				/*
+				 * Seven from the design, twenty-two of filler that says so.
+				 * `posts_per_page` is ten and the index holds one post back, so
+				 * this is what makes three pages, a middle page, and an
+				 * end-of-archive panel reachable at all.
+				 */
+				'posts'         => 29,
+				'planned_parts' => 5,
 				'pages'         => 3,
 
 				/*
@@ -352,6 +373,10 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	/**
 	 * The two published parts are filed under the series, in order.
 	 *
+	 * Order is the publish date, oldest first, so the numbering the design prints
+	 * — part 1 then part 2 — falls out of the dates the fixture already had. The
+	 * seed writes no part numbers because there are none to write (ADR-0016).
+	 *
 	 * @return void
 	 */
 	public function test_the_series_is_wired_up(): void {
@@ -362,7 +387,8 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertInstanceOf( WP_Term::class, $term );
 		$this->assertStringContainsString(
 			'The long version of how I got here',
-			$this->term_text( $term->term_id, 'dp_series_deck' )
+			$term->description,
+			"The fixture's deck is seeded into the term description, which is where a series' deck lives."
 		);
 
 		$parts     = new SeriesParts();
@@ -376,8 +402,7 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertSame( 'The workaholic years, and why I stopped', get_the_title( $published[1] ) );
 
 		$this->assertSame( 'Before any of it was a job', $planned[0]->title );
-		$this->assertSame( '1995 — 2007', $planned[0]->years );
-		$this->assertSame( 3, $planned[0]->part, 'Planned parts continue the numbering, they do not restart it.' );
+		$this->assertStringContainsString( 'A borrowed computer', $planned[0]->note, "The note is the draft's own excerpt." );
 		$this->assertSame( 'The exhausting year', $planned[3]->title );
 	}
 
@@ -560,9 +585,15 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertSame( count( $this->fixture->roles() ), $report->count( 'roles' ) );
 		$this->assertSame( count( $this->fixture->ships() ), $report->count( 'shipped' ) );
 		$this->assertSame( count( $this->fixture->videos() ), $report->count( 'videos' ) );
-		$this->assertSame( count( $this->fixture->posts() ), $report->count( 'posts' ) );
+		$this->assertSame(
+			count( $this->fixture->posts() ) + count( $this->fixture->filler_posts() ),
+			$report->count( 'posts' )
+		);
 		$this->assertSame( count( $this->fixture->pages() ), $report->count( 'pages' ) );
-		$this->assertSame( count( $this->fixture->planned_parts() ), $report->count( 'planned_parts' ) );
+		$this->assertSame(
+			count( $this->fixture->planned_parts() ) + count( $this->fixture->extra_planned_parts() ),
+			$report->count( 'planned_parts' )
+		);
 		$this->assertSame( count( $this->fixture->categories() ), $report->count( 'categories' ) );
 	}
 
@@ -596,21 +627,6 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		}
 
 		return (float) $value;
-	}
-
-	/**
-	 * Read a term meta value that should be text.
-	 *
-	 * @param int    $term_id  The term.
-	 * @param string $meta_key The field.
-	 * @return string
-	 */
-	private function term_text( int $term_id, string $meta_key ): string {
-		$value = get_term_meta( $term_id, $meta_key, true );
-
-		$this->assertIsString( $value, $meta_key . ' is text.' );
-
-		return $value;
 	}
 
 	/**

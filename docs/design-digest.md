@@ -96,12 +96,19 @@ The design ships a complete fixture. This is what it implies.
 Categories exactly as in `TERM_NAMES`: **Dev · My life story · Food · Music ·
 Photography**. Each has a description used on its archive (`TERMS`).
 
-Post fields beyond core:
-- `dp_kicker` / tone — the coloured category token on the hero and in `PostRow`.
-- `dp_read_time` — "6 MIN READ". Computed, stored, overridable.
-- `dp_lead` — the standfirst paragraph above the body.
-- `dp_hero_caption` — mono caps caption under the lead image (`CAPTIONS`).
-- Series membership + part number (see below).
+**A post carries no fields of ours.** This list used to name five, and
+[ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md) deleted all of them: none had
+an editor control, so none could hold anything David put there. What the design draws
+is derived at render:
+
+| The design's | Where it comes from now |
+|---|---|
+| the coloured token on the hero and in `PostRow` | the series part if there is one, else the first category |
+| its tone | pink in a series, teal outside one |
+| "6 MIN READ" | the body, counted at 200 words a minute |
+| the standfirst above the body | the post's own first paragraph |
+| the mono caps caption under the lead image (`CAPTIONS`) | the attachment's caption, set in the media library |
+| the part number | the post's position among the published posts in its series |
 
 ### 3.2 Series — taxonomy `dp_series`
 `SERIES` in the fixture: slug `life-story`, title "My life story", a deck, and an
@@ -109,9 +116,14 @@ ordered `parts` array. Two kinds of entry:
 - **published** — `{ part: 2, slug: 'workaholic-years' }` → resolves to a real post.
 - **planned** — `{ title, years, note }` → no post yet, renders in "Still to come".
 
-So the taxonomy needs term meta for the deck, post meta `dp_series_part` for ordering,
-and somewhere to keep the planned parts. Term meta holding a list is the cheap answer;
-a `dp_series_stub` post type is the honest one. **Open decision — see plan Phase 5.**
+**Settled.** The taxonomy carries **no meta of ours**. The deck is the term's own
+`description`, which core already draws on the Add Series and Edit Series screens
+and which survives a WXR export; `dp_series_deck` and the term-edit control built
+for it are gone. A planned part is a **draft
+post** carrying the term (plan §3.1); its note is the draft's excerpt and its position
+is the draft's date. Nothing stores a part number: it is the post's index among the
+published parts, oldest first
+([ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md)).
 
 ### 3.3 Roles — CPT `dp_role`
 The timeline lanes. From `LANES`:

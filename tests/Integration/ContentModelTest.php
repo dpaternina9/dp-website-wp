@@ -355,17 +355,25 @@ final class ContentModelTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The term meta behind a series deck is registered the same way.
+	 * A series carries no registered meta of ours either.
+	 *
+	 * `dp_series_deck` was the last one, and a `dp_series` term already had a
+	 * core field for the sentence it held: `description`, with a textarea on both
+	 * term screens, a column in the list table and a place in a WXR export. The
+	 * meta is unregistered and the deck is the description, and this is the
+	 * mirror of the guard ADR-0016 left on the post type — the assertion that
+	 * stops a term field growing back.
 	 *
 	 * @return void
 	 */
-	public function test_the_series_deck_is_registered_term_meta(): void {
+	public function test_a_series_carries_no_registered_meta_of_ours(): void {
 		$registered = get_registered_meta_keys( 'term', Taxonomies::SERIES );
 
-		$this->assertArrayHasKey( 'dp_series_deck', $registered );
-		$this->assertSame( 'string', $registered['dp_series_deck']['type'] );
-		$this->assertIsCallable( $registered['dp_series_deck']['auth_callback'] );
-		$this->assertIsArray( $registered['dp_series_deck']['show_in_rest'] );
+		$this->assertArrayNotHasKey( 'dp_series_deck', $registered );
+
+		foreach ( array_keys( $registered ) as $key ) {
+			$this->assertStringStartsNotWith( 'dp_', (string) $key, sprintf( '"%s" is registered on the series taxonomy again.', $key ) );
+		}
 	}
 
 	/**
@@ -390,9 +398,10 @@ final class ContentModelTest extends WP_UnitTestCase {
 	 * No two fields are registered under the same key with different meanings.
 	 *
 	 * `dp_start`, `dp_range` and `dp_detail` are deliberately shared between roles
-	 * and shipped things, and `dp_lead` between posts and pages. Each of those is
-	 * the same field on two types, which is fine. A key that meant two different
-	 * things would not be.
+	 * and shipped things, and `dp_tone` between videos and nothing else now that
+	 * the native `post` type carries no fields at all (ADR-0016). Each of those is
+	 * the same field on the types that have it, which is fine. A key that meant
+	 * two different things would not be.
 	 *
 	 * @return void
 	 */
@@ -416,6 +425,26 @@ final class ContentModelTest extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( 'dp_start', $types );
 		$this->assertArrayHasKey( 'dp_lead', $types );
+	}
+
+	/**
+	 * The native `post` type is registered with no meta fields at all.
+	 *
+	 * Eight of them used to live here — a kicker, a tone, a read time, a
+	 * standfirst, a hero caption, a part number, a year range and a note — and
+	 * every one was derivable from the post's own content, its terms, its date or
+	 * the attachment behind its featured image. None had an editor control, so
+	 * none could ever hold a value David put there. ADR-0016 deletes them, and
+	 * this is the assertion that stops one growing back by habit.
+	 *
+	 * @return void
+	 */
+	public function test_a_post_carries_no_registered_meta_of_ours(): void {
+		$this->assertArrayNotHasKey( 'post', ( new Meta( new MetaAuth() ) )->post_fields() );
+
+		foreach ( array_keys( get_registered_meta_keys( 'post', 'post' ) ) as $key ) {
+			$this->assertStringStartsNotWith( 'dp_', (string) $key, sprintf( '"%s" is registered on the post type again.', $key ) );
+		}
 	}
 
 	/**

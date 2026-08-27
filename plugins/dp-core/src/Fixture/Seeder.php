@@ -100,9 +100,18 @@ final class Seeder {
 		try {
 			$categories = $this->seed_categories();
 			$series     = $this->seed_series();
+			$extra      = $this->seed_extra_series();
 			$roles      = $this->seed_roles();
-			$posts      = $this->seed_posts( $categories, $series );
-			$planned    = $this->seed_planned_parts( $series );
+			$lead       = $this->lead_image();
+			$posts      = $this->seed_posts(
+				$categories,
+				array(
+					'design' => $series,
+					'extra'  => $extra,
+				),
+				$lead
+			);
+			$planned    = $this->seed_planned_parts( $series, $extra );
 			$pages      = $this->seed_pages();
 			$ships      = $this->seed_ships( $roles, $posts );
 			$videos     = $this->seed_videos();
@@ -115,7 +124,7 @@ final class Seeder {
 		return new SeedReport(
 			array(
 				'categories'    => count( $categories ),
-				'series'        => $series > 0 ? 1 : 0,
+				'series'        => ( $series > 0 ? 1 : 0 ) + ( $extra > 0 ? 1 : 0 ),
 				'roles'         => count( $roles ),
 				'shipped'       => count( $ships ),
 				'videos'        => count( $videos ),
@@ -198,21 +207,39 @@ final class Seeder {
 	/**
 	 * The one series term, with its deck.
 	 *
+	 * The deck goes in the term's description, which is where a series' deck
+	 * lives. The fixture still calls it a deck because the design does; only the
+	 * column it lands in changed.
+	 *
 	 * @return int Term ID.
 	 */
 	private function seed_series(): int {
-		$series  = $this->fixture->series();
-		$term_id = $this->upsert_term(
+		$series = $this->fixture->series();
+
+		return $this->upsert_term(
 			'series:' . $series['slug'],
 			Taxonomies::SERIES,
 			$series['title'],
 			$series['slug'],
-			''
+			$series['deck']
 		);
+	}
 
-		update_term_meta( $term_id, 'dp_series_deck', $series['deck'] );
+	/**
+	 * The placeholder second series.
+	 *
+	 * @return int Term ID.
+	 */
+	private function seed_extra_series(): int {
+		$series = $this->fixture->extra_series();
 
-		return $term_id;
+		return $this->upsert_term(
+			'series:' . $series['slug'],
+			Taxonomies::SERIES,
+			$series['title'],
+			$series['slug'],
+			$series['deck']
+		);
 	}
 
 	/**
@@ -341,29 +368,34 @@ final class Seeder {
 	}
 
 	/**
-	 * The seven sample posts.
+	 * The design's posts, and the filler that makes its states reachable.
+	 *
+	 * Both lists go through one loop because they are the same kind of object and
+	 * the only difference is where the words came from — which the filler says
+	 * about itself, in every field it has.
+	 *
+	 * A post carries no meta at all. Everything the design prints above and around
+	 * one — the kicker, the tone, the read time, the standfirst, the lead image's
+	 * caption and the part number — is derived from the content, the terms, the
+	 * date or the attachment (ADR-0016), so the only thing to write here is the
+	 * post.
 	 *
 	 * @param array<string, int> $categories Slug to term ID.
-	 * @param int                $series     The series term ID.
+	 * @param array<string, int> $series     Fixture series key to term ID.
+	 * @param int                $lead       Attachment ID for the lead image, or 0.
 	 * @return array<string, int> Post slug to post ID.
 	 */
-	private function seed_posts( array $categories, int $series ): array {
+	private function seed_posts( array $categories, array $series, int $lead ): array {
 		$ids = array();
 
-		foreach ( $this->fixture->posts() as $post ) {
+		foreach ( array_merge( $this->fixture->posts(), $this->fixture->filler_posts() ) as $post ) {
 			$post_id = $this->upsert_post(
 				'post:' . $post['slug'],
 				'post',
 				$post['title'],
 				'publish',
-				$post['part'],
-				array(
-					'dp_lead'         => $post['lead'],
-					'dp_read_time'    => $post['read_time'],
-					'dp_hero_caption' => $post['caption'],
-					'dp_tone'         => $post['tone'],
-					'dp_series_part'  => $post['part'],
-				),
+				0,
+				array(),
 				slug: $post['slug'],
 				excerpt: $post['excerpt'],
 				content: $this->markup->render( $post['body'] ),
@@ -376,8 +408,14 @@ final class Seeder {
 				wp_set_post_terms( $post_id, array( $category_id ), 'category', false );
 			}
 
-			if ( $post['part'] > 0 && $series > 0 ) {
-				wp_set_post_terms( $post_id, array( $series ), Taxonomies::SERIES, false );
+			$series_id = '' === $post['series'] ? 0 : ( $series[ $post['series'] ] ?? 0 );
+
+			if ( $series_id > 0 ) {
+				wp_set_post_terms( $post_id, array( $series_id ), Taxonomies::SERIES, false );
+			}
+
+			if ( $lead > 0 ) {
+				set_post_thumbnail( $post_id, $lead );
 			}
 
 			$ids[ $post['slug'] ] = $post_id;
@@ -393,32 +431,40 @@ final class Seeder {
 	 * the series, which is what makes their titles public; a draft without the
 	 * term stays invisible.
 	 *
-	 * @param int $series The series term ID.
+	 * The line under the title is the draft's own excerpt, which is a core field
+	 * with a sidebar box, and the order they appear in is their date. Neither is
+	 * meta any more (ADR-0016), which is why nothing is written here but the post.
+	 *
+	 * @param int $series The design's series term ID.
+	 * @param int $extra  The placeholder series term ID.
 	 * @return array<string, int> Fixture key to post ID.
 	 */
-	private function seed_planned_parts( int $series ): array {
-		$ids = array();
+	private function seed_planned_parts( int $series, int $extra ): array {
+		$ids   = array();
+		$lists = array(
+			$series => $this->fixture->planned_parts(),
+			$extra  => $this->fixture->extra_planned_parts(),
+		);
 
-		foreach ( $this->fixture->planned_parts() as $part ) {
-			$post_id = $this->upsert_post(
-				'planned:' . $part['key'],
-				'post',
-				$part['title'],
-				'draft',
-				$part['part'],
-				array(
-					'dp_series_part'  => $part['part'],
-					'dp_series_years' => $part['years'],
-					'dp_series_note'  => $part['note'],
-					'dp_tone'         => 'pink',
-				)
-			);
+		foreach ( $lists as $term_id => $parts ) {
+			foreach ( $parts as $part ) {
+				$post_id = $this->upsert_post(
+					'planned:' . $part['key'],
+					'post',
+					$part['title'],
+					'draft',
+					0,
+					array(),
+					excerpt: $part['note'],
+					date: $part['date']
+				);
 
-			if ( $series > 0 ) {
-				wp_set_post_terms( $post_id, array( $series ), Taxonomies::SERIES, false );
+				if ( $term_id > 0 ) {
+					wp_set_post_terms( $post_id, array( (int) $term_id ), Taxonomies::SERIES, false );
+				}
+
+				$ids[ $part['key'] ] = $post_id;
 			}
-
-			$ids[ $part['key'] ] = $post_id;
 		}
 
 		return $ids;
@@ -453,6 +499,61 @@ final class Seeder {
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * One attachment, captioned, used as every seeded post's lead image.
+	 *
+	 * The design's post view draws a `<figure>` with a 16/9 picture and a mono
+	 * caps caption under it, and neither half of that renders on a post with no
+	 * featured image — so the whole path went unreviewed on a seeded site.
+	 *
+	 * The picture is the theme's own monogram, which is the only image this
+	 * repository ships and is obviously not a photograph. That is the point: a
+	 * seeded lead image should look like a placeholder, and inventing photographs
+	 * for David's posts is the same mistake as inventing his copy.
+	 *
+	 * The attachment carries a caption of its own, and after ADR-0016 that is the
+	 * only place a lead image's caption comes from: the media library captions the
+	 * file once, and every post using it prints the same line. On a seeded site
+	 * that means one caption on every post, which is exactly what one attachment
+	 * shared by every post should look like.
+	 *
+	 * The file arrives through `dp_seed_lead_image_path`, the same seam
+	 * `dp_brand_logo_path` is: CLAUDE.md section 5.1's rule — the plugin does not
+	 * reach into the theme — applies to assets as much as to routes. With no
+	 * theme answering, posts get no lead image and everything else seeds
+	 * normally.
+	 *
+	 * @return int The attachment ID, or 0 when there is nothing to attach.
+	 */
+	private function lead_image(): int {
+		/**
+		 * Filters the absolute path to the image seeded posts use as a lead image.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param string $path Absolute path to an image file, or '' for none.
+		 */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- `dp_` is this project's public filter prefix; WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
+		$path = apply_filters( 'dp_seed_lead_image_path', '' );
+
+		if ( ! is_string( $path ) || '' === $path || ! is_readable( $path ) ) {
+			return 0;
+		}
+
+		$attachment_id = $this->attachment( 'attachment:lead-image', $path );
+
+		if ( $attachment_id > 0 ) {
+			wp_update_post(
+				array(
+					'ID'           => $attachment_id,
+					'post_excerpt' => 'PLACEHOLDER — THE THEME\'S OWN MARK, STANDING IN FOR A LEAD IMAGE',
+				)
+			);
+		}
+
+		return $attachment_id;
 	}
 
 	/**
@@ -500,7 +601,7 @@ final class Seeder {
 			return 0;
 		}
 
-		$attachment_id = $this->brand_attachment( $path );
+		$attachment_id = $this->attachment( 'attachment:brand-mark', $path );
 
 		if ( 0 === $attachment_id ) {
 			return 0;
@@ -512,13 +613,13 @@ final class Seeder {
 	}
 
 	/**
-	 * The attachment holding the theme's mark, made once and reused after that.
+	 * An attachment made from a file the theme ships, made once and reused after.
 	 *
+	 * @param string $key  The fixture key it is recorded against.
 	 * @param string $path Absolute path to the image the theme ships.
 	 * @return int The attachment ID, or 0 when WordPress refused to make one.
 	 */
-	private function brand_attachment( string $path ): int {
-		$key      = 'attachment:brand-mark';
+	private function attachment( string $key, string $path ): int {
 		$existing = $this->index['posts'][ $key ] ?? 0;
 
 		if ( $existing > 0 && get_post( $existing ) instanceof WP_Post ) {

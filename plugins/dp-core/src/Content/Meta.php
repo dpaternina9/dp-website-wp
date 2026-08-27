@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace DP\Core\Content;
 
 /**
- * Registers digest section 3 as typed, REST-exposed, authorised post and term meta.
+ * Registers digest section 3 as typed, REST-exposed, authorised post meta.
  *
  * This is what stands in for ACF (`docs/plan.md`): `register_post_meta()` with an
  * explicit JSON-schema per field, so the editor, the REST API, the block bindings
@@ -29,6 +29,23 @@ namespace DP\Core\Content;
  * - **`org` is never a meta field.** For a role the post title *is* the
  *   organisation, for a shipped thing it is the thing's name. Duplicating either
  *   into meta would create two places to rename it from.
+ *
+ * **The native `post` type is absent from this table on purpose.** Digest
+ * section 3.1 once listed eight fields on it — a kicker, a tone, a read time, a
+ * standfirst, a hero caption, a part number, a year range and a planned-part
+ * note — and every one of them was already knowable from the post's own content,
+ * its terms, or the attachment behind its featured image. None of the eight ever
+ * had an editor control, so the only thing they could do on a post David wrote
+ * by hand was be empty. They are derived now, at the point of render, and the
+ * places that derive them are named in ADR-0016.
+ *
+ * **No taxonomy appears here either.** The one term field this plugin ever
+ * registered was `dp_series_deck`, the standfirst under a series title — and a
+ * `dp_series` term already had a core field for one or two sentences about
+ * itself: `description`, with a textarea on both term screens, a column in the
+ * list table, a REST property and a place in a WXR export. The deck is that
+ * field now, which is why `register_term_meta()` is not called from this file.
+ * Before registering anything here, check whether the object already has it.
  */
 final class Meta {
 
@@ -46,10 +63,10 @@ final class Meta {
 	 */
 	public function register(): void {
 		/*
-		 * The two argument arrays are written out here rather than returned from
-		 * a shared builder. A helper returning `array<string, mixed>` would make
-		 * both calls unverifiable: static analysis can only check these against
-		 * `register_post_meta()`'s declared shape while they are literals.
+		 * The argument array is written out here rather than returned from a
+		 * shared builder. A helper returning `array<string, mixed>` would make the
+		 * call unverifiable: static analysis can only check this against
+		 * `register_post_meta()`'s declared shape while it is a literal.
 		 */
 		foreach ( $this->post_fields() as $post_type => $fields ) {
 			foreach ( $fields as $field ) {
@@ -68,24 +85,6 @@ final class Meta {
 				);
 			}
 		}
-
-		foreach ( $this->term_fields() as $taxonomy => $fields ) {
-			foreach ( $fields as $field ) {
-				register_term_meta(
-					$taxonomy,
-					$field->key,
-					array(
-						'type'              => $field->type,
-						'description'       => $field->description,
-						'single'            => true,
-						'default'           => $field->default_value(),
-						'sanitize_callback' => $this->sanitizer( $field ),
-						'auth_callback'     => $this->auth->term_meta( ... ),
-						'show_in_rest'      => array( 'schema' => $this->schema( $field ) ),
-					)
-				);
-			}
-		}
 	}
 
 	/**
@@ -95,29 +94,10 @@ final class Meta {
 	 */
 	public function post_fields(): array {
 		return array(
-			'post'           => $this->post_type_post_fields(),
 			'page'           => $this->page_fields(),
 			PostTypes::ROLE  => $this->role_fields(),
 			PostTypes::SHIP  => $this->ship_fields(),
 			PostTypes::VIDEO => $this->video_fields(),
-		);
-	}
-
-	/**
-	 * The term meta table, keyed by taxonomy.
-	 *
-	 * @return array<string, list<MetaField>>
-	 */
-	public function term_fields(): array {
-		return array(
-			Taxonomies::SERIES => array(
-				new MetaField(
-					'dp_series_deck',
-					'string',
-					__( 'The standfirst under the series title on its archive.', 'dp-core' ),
-					multiline: true
-				),
-			),
 		);
 	}
 
@@ -129,69 +109,13 @@ final class Meta {
 	public function all_keys(): array {
 		$keys = array();
 
-		foreach ( array( $this->post_fields(), $this->term_fields() ) as $table ) {
-			foreach ( $table as $fields ) {
-				foreach ( $fields as $field ) {
-					$keys[] = $field->key;
-				}
+		foreach ( $this->post_fields() as $fields ) {
+			foreach ( $fields as $field ) {
+				$keys[] = $field->key;
 			}
 		}
 
 		return array_values( array_unique( $keys ) );
-	}
-
-	/**
-	 * Fields on the native `post` type. Digest section 3.1.
-	 *
-	 * @return list<MetaField>
-	 */
-	private function post_type_post_fields(): array {
-		return array(
-			new MetaField(
-				'dp_kicker',
-				'string',
-				__( 'Overrides the coloured token above the title. Empty means derive it: the series part if there is one, otherwise the category.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_tone',
-				'string',
-				__( 'Which hue the kicker and the badge take.', 'dp-core' ),
-				allowed: Tone::meta_values()
-			),
-			new MetaField(
-				'dp_read_time',
-				'string',
-				__( 'Reading time as it is printed, e.g. "6 MIN READ". Computed on save, stored, and overridable by hand.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_lead',
-				'string',
-				__( 'The standfirst paragraph above the body.', 'dp-core' ),
-				multiline: true
-			),
-			new MetaField(
-				'dp_hero_caption',
-				'string',
-				__( 'Mono caps caption under the lead image.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_series_part',
-				'integer',
-				__( 'Which part of its series this post is. 0 when it belongs to none.', 'dp-core' ),
-				minimum: 0.0
-			),
-			new MetaField(
-				'dp_series_years',
-				'string',
-				__( 'The years a planned part will cover, e.g. "1995 — 2007". Planned parts only.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_series_note',
-				'string',
-				__( 'One line describing a planned part, shown under "Still to come". Planned parts only.', 'dp-core' ),
-				multiline: true
-			),
-		);
 	}
 
 	/**
