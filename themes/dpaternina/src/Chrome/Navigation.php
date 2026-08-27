@@ -1,6 +1,6 @@
 <?php
 /**
- * Which nav item is lit, and where the "Get in touch" button goes.
+ * Which nav item is lit while writing is being read.
  *
  * @package DP\Theme
  */
@@ -9,13 +9,12 @@ declare( strict_types=1 );
 
 namespace DP\Theme\Chrome;
 
-use DP\Core\Resume\ResumePdf;
 use WP_HTML_Tag_Processor;
 use WP_Taxonomy;
 use WP_Term;
 
 /**
- * Two corrections to core's chrome, both derived rather than configured.
+ * One correction to core's chrome, and one answer to a question `dp-core` asks.
  *
  * **The blog reads as active for more than the blog.** Digest section 2.1: "Blog
  * reads as active for `blog`, `post`, `series`, and `category`, which is derived
@@ -30,103 +29,25 @@ use WP_Term;
  * without this file knowing either name, keeps working if David renames the
  * series rewrite, and would cover a taxonomy a later phase adds.
  *
- * **The contact button has no href in the markup.** CLAUDE.md section 5.1 forbids
- * one, and the same section names the legal alternative: the page David assigned
- * the `dp-contact` template to. A button carrying `dp-to-contact` gets that URL
- * at render time.
+ * It also adds a class rather than replacing anything: an item's `href` is
+ * whatever David set it to, and nothing here reads it except to compare. That is
+ * the whole of ADR-0018's third rule, and this file is what is left of it.
  *
- * **A destination that does not resolve leaves the button in place, inert.**
- * ADR-0006 originally dropped the whole block, and ADR-0008 reverses that: a
- * button that renders in the site editor and is absent from the front end is
- * indistinguishable from a bug, and it hid one — a stale cache in
- * `Destinations` silently removed four buttons from the home page for a day.
- * The link now loses its `href`, gains `aria-disabled` and a class, and names
- * the destination it wanted in `data-dp-destination`, so the editor and the
- * front end show the same thing and the failure says what it is.
+ * **What used to be here is gone.** `resolve_destination()` matched a
+ * destination class on a `core/button` and wrote the `href` in, unconditionally
+ * — so an href David set in the site editor was shown in the editor and
+ * discarded on the front end, triggered by a class nothing in the markup
+ * explained. ADR-0018 deletes the mechanism: a link to a page David made is a
+ * link he sets once, on an ordinary `core/button`, and the three URLs nobody can
+ * type became `DP\Theme\Blocks\SeriesPartsLink`, `ResumeDownload` and
+ * `FeedLink`.
  */
 final class Navigation {
 
 	/**
-	 * The prefix on a class that asks for a destination.
-	 */
-	public const DESTINATION_PREFIX = 'dp-to-';
-
-	/**
-	 * The class a link gets when the destination it asked for does not exist yet.
-	 *
-	 * The stylesheet dims it and takes the pointer away. It is also the hook
-	 * David has for finding every one of them at once, and the thing the
-	 * integration suite asserts on.
-	 */
-	public const UNRESOLVED_CLASS = 'dp-destination-unset';
-
-	/**
-	 * The destinations that resolve through an assigned custom template.
-	 *
-	 * The template names are this theme's own, declared in its own theme.json,
-	 * which is precisely the branch CLAUDE.md section 5.1 prescribes: "branch on
-	 * the assigned template (`get_page_template_slug()`) … never on a slug".
-	 * A page carrying `dp-contact` *is* the contact page, by David's decision,
-	 * whatever he called it and wherever he moved it.
-	 *
-	 * They are written without the `.html` extension because that is what
-	 * WordPress stores. A block theme's custom templates are offered to the
-	 * admin — and validated by the REST API — under their slugs, so a page
-	 * assigned Contact from the dropdown carries `dp-contact` in
-	 * `_wp_page_template`. `Destinations` normalises either form anyway, since
-	 * a page imported from elsewhere may well carry the file name.
-	 *
-	 * `uses` and `colophon` are here for a reason worth stating, because the
-	 * merge queue said the opposite until this phase. The design's footer links
-	 * both pages and neither is derivable any other way: WordPress has a
-	 * Reading setting for the posts index and a Privacy setting for the privacy
-	 * page, and nothing at all for "which page is Uses". The alternative was a
-	 * navigation menu, and a menu cannot be named from a template file — `ref`
-	 * is a post ID — so the block editor would draw a different menu from the
-	 * one the front end renders, which is the divergence ADR-0008 exists to
-	 * stop. `templates/dp-uses.html` and `dp-colophon.html` are therefore
-	 * byte-identical to `page.html`: assigning one changes nothing about how
-	 * the page renders, and the assignment *is* the nomination. ADR-0011.
-	 *
-	 * @var array<string, string>
-	 */
-	public const TEMPLATES = array(
-		'contact'  => 'dp-contact',
-		'work'     => 'dp-work',
-		'about'    => 'dp-about',
-		'resume'   => 'dp-resume',
-		'uses'     => 'dp-uses',
-		'colophon' => 'dp-colophon',
-	);
-
-	/**
-	 * The destinations a link may ask for, by the name after the prefix.
-	 *
-	 * Each is derived from something David controls rather than from a path this
-	 * theme invented: a Reading setting, core's own feed link, or the page
-	 * carrying a template he assigned. Adding one means finding another thing of
-	 * that kind — not adding an href.
-	 *
-	 * @var list<string>
-	 */
-	public const DESTINATIONS = array(
-		'posts',
-		'feed',
-		'home',
-		'privacy',
-		'contact',
-		'work',
-		'about',
-		'resume',
-		'resume-pdf',
-		'uses',
-		'colophon',
-	);
-
-	/**
 	 * Constructor.
 	 *
-	 * @param Destinations $destinations Resolves the URLs.
+	 * @param Destinations $destinations Reads Settings → Reading.
 	 */
 	public function __construct( private readonly Destinations $destinations ) {}
 
@@ -137,22 +58,23 @@ final class Navigation {
 	 */
 	public function register(): void {
 		add_filter( 'render_block_core/navigation', $this->mark_writing_active( ... ), 10, 2 );
-		add_filter( 'render_block_core/button', $this->resolve_destination( ... ), 10, 2 );
 		add_filter( 'dp_destination_url', $this->answer_destination( ... ), 10, 2 );
 	}
 
 	/**
-	 * Answer `dp-core` when it asks where a named destination is.
+	 * Answer `dp-core` when it asks where the posts index is.
 	 *
-	 * `dp-core` renders two links this theme cannot reach into — the contact
-	 * panel's "read something" after a message has been sent, and the résumé's
-	 * PDF link — and CLAUDE.md section 5.1 forbids the plugin from knowing which
-	 * page is which. This filter is the seam: the plugin asks for a destination
-	 * by name, the theme answers from the same Reading setting and the same
-	 * assigned templates the chrome uses, and neither side names a class in the
-	 * other. With the theme switched off nothing answers and the plugin renders
-	 * no link — which is the plugin's own decision about its own markup, and is
-	 * not the treatment this theme's buttons get (see `resolve_destination()`).
+	 * `dp-core` renders one link this theme cannot reach into — the contact
+	 * panel's "read something" after a message has been sent — and it may not
+	 * decide for itself which page that is. This filter is the seam: the plugin
+	 * asks by name, the theme answers from the Reading setting, and neither side
+	 * names a class in the other. With the theme switched off nothing answers
+	 * and the plugin renders no link.
+	 *
+	 * `posts` is the only name left. The rest of the destinations went with the
+	 * class-triggered resolver (ADR-0018), and this one survives because it is
+	 * not a slug anybody invented: it is `page_for_posts`, a setting WordPress
+	 * keeps, which no author can type into a link and expect to stay right.
 	 *
 	 * @param mixed $url         Whatever an earlier filter decided.
 	 * @param mixed $destination The destination's name.
@@ -163,11 +85,7 @@ final class Navigation {
 			return $url;
 		}
 
-		if ( ! is_string( $destination ) || ! in_array( $destination, self::DESTINATIONS, true ) ) {
-			return null;
-		}
-
-		return $this->url_for( $destination );
+		return 'posts' === $destination ? $this->destinations->posts_index() : null;
 	}
 
 	/**
@@ -209,161 +127,6 @@ final class Navigation {
 		}
 
 		return $processor->get_updated_html();
-	}
-
-	/**
-	 * Give a link the URL its class asked for.
-	 *
-	 * The block markup carries no href at all, which is the point: CLAUDE.md
-	 * section 5.1 forbids one, so the template says *what* it is linking to and
-	 * this says where that is today.
-	 *
-	 * A destination that does not exist yet — no contact page, because David
-	 * has not made one — leaves the button where it is and takes its `href`
-	 * away. It is still not a link to a 404, which was ADR-0006's whole point,
-	 * but it is also no longer invisible: the site editor draws this block from
-	 * the saved markup, which has no href either, so the two contexts now agree
-	 * exactly, and "the button is missing on the front end" stops being a thing
-	 * that can happen without anything saying so. ADR-0008 has the rest.
-	 *
-	 * @param string               $content The rendered button.
-	 * @param array<string, mixed> $block   The parsed block.
-	 * @return string
-	 */
-	public function resolve_destination( string $content, array $block ): string {
-		$attributes = $block['attrs'] ?? array();
-		$class_name = is_array( $attributes ) && isset( $attributes['className'] ) ? $attributes['className'] : '';
-
-		if ( ! is_string( $class_name ) ) {
-			return $content;
-		}
-
-		$wanted = null;
-
-		foreach ( self::DESTINATIONS as $destination ) {
-			if ( $this->has_class( $class_name, self::DESTINATION_PREFIX . $destination ) ) {
-				$wanted = $destination;
-
-				break;
-			}
-		}
-
-		if ( null === $wanted ) {
-			return $content;
-		}
-
-		$url       = $this->url_for( $wanted );
-		$processor = new WP_HTML_Tag_Processor( $content );
-
-		if ( ! $processor->next_tag( array( 'tag_name' => 'A' ) ) ) {
-			return $content;
-		}
-
-		$processor->set_attribute( 'data-dp-destination', $wanted );
-
-		if ( null === $url ) {
-			/*
-			 * An <a> with no href has no implicit role and is not focusable, so
-			 * it is already inert to the keyboard. `role` and `aria-disabled`
-			 * are what make it announce as an unavailable link rather than as
-			 * a stray run of text.
-			 */
-			$processor->remove_attribute( 'href' );
-			$processor->set_attribute( 'role', 'link' );
-			$processor->set_attribute( 'aria-disabled', 'true' );
-			$processor->add_class( self::UNRESOLVED_CLASS );
-
-			return $processor->get_updated_html();
-		}
-
-		$processor->set_attribute( 'href', $url );
-
-		return $processor->get_updated_html();
-	}
-
-	/**
-	 * Where one named destination points right now.
-	 *
-	 * @param string $destination One of self::DESTINATIONS.
-	 * @return string|null Null when nothing answers to that name yet.
-	 */
-	public function url_for( string $destination ): ?string {
-		if ( 'posts' === $destination ) {
-			return $this->destinations->posts_index();
-		}
-
-		if ( 'feed' === $destination ) {
-			return get_feed_link();
-		}
-
-		/*
-		 * The site root is not a page and is not David's to move, so it is the
-		 * one destination that always resolves. It is here rather than written
-		 * into the markup for the same reason as the rest: a template that says
-		 * where it is going, and one place that knows where that is today.
-		 */
-		if ( 'home' === $destination ) {
-			return home_url( '/' );
-		}
-
-		/*
-		 * Settings to Privacy, which is the same kind of thing as Settings to
-		 * Reading: a page David nominated, recorded by core, under any slug he
-		 * likes. `get_privacy_policy_url()` returns an empty string when he has
-		 * not chosen one, or when the page he chose is no longer published —
-		 * both of which mean "no privacy page", and both of which have to read
-		 * as null here rather than as a link to the site root.
-		 */
-		if ( 'privacy' === $destination ) {
-			$url = get_privacy_policy_url();
-
-			return '' === $url ? null : $url;
-		}
-
-		if ( 'resume-pdf' === $destination ) {
-			return $this->resume_pdf();
-		}
-
-		return isset( self::TEMPLATES[ $destination ] )
-			? $this->destinations->by_template( self::TEMPLATES[ $destination ] )
-			: null;
-	}
-
-	/**
-	 * The URL that downloads the résumé, when there is a résumé to download.
-	 *
-	 * Two things have to be true, and either can be false on a working site.
-	 * David has to have assigned the `dp-resume` template to a page — this
-	 * theme's half — and `dp-core` has to be active, because the query variable
-	 * the download hangs off is the plugin's and only the plugin knows its name.
-	 * Naming that class unguarded would fatal the theme on a site with the
-	 * plugin deactivated, which is exactly what `composer test:integration`
-	 * leaves behind (ADR-0006 section 5). Either miss leaves the button in
-	 * place and inert, which is what every unresolved destination does.
-	 *
-	 * @return string|null
-	 */
-	private function resume_pdf(): ?string {
-		if ( ! class_exists( ResumePdf::class ) ) {
-			return null;
-		}
-
-		$page_id = $this->destinations->id_by_template( self::TEMPLATES['resume'] );
-
-		return null === $page_id ? null : ResumePdf::download_url( $page_id );
-	}
-
-	/**
-	 * Whether a class attribute carries one exact class.
-	 *
-	 * @param string $attribute The class attribute's value.
-	 * @param string $wanted    The class to look for.
-	 * @return bool
-	 */
-	private function has_class( string $attribute, string $wanted ): bool {
-		$classes = preg_split( '~\s+~', trim( $attribute ) );
-
-		return is_array( $classes ) && in_array( $wanted, $classes, true );
 	}
 
 	/**

@@ -3,68 +3,86 @@
 <!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
 <main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-series-hero","layout":{"type":"default"}} -->
 <section class="wp-block-group dp-series-hero"><!-- wp:group {"className":"dp-series-hero-inner","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-series-hero-inner"><!-- wp:paragraph {"className":"dp-badge is-tone-pink"} -->
+<div class="wp-block-group dp-series-hero-inner"><!-- wp:group {"className":"dp-series-hero-badges","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-series-hero-badges"><!-- wp:paragraph {"className":"dp-badge is-tone-pink"} -->
 <p class="dp-badge is-tone-pink">Series</p>
 <!-- /wp:paragraph -->
 
+<!-- wp:paragraph {"className":"dp-series-written","metadata":{"bindings":{"content":{"source":"dpaternina/archive","args":{"key":"series-written"}}}}} -->
+<p class="dp-series-written"></p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
 <!-- wp:query-title {"type":"archive","showPrefix":false,"level":1,"className":"dp-series-hero-title"} /-->
 
-<!-- wp:term-description /--></div>
+<!-- wp:paragraph {"className":"dp-series-hero-deck","metadata":{"bindings":{"content":{"source":"dpaternina/archive","args":{"key":"deck"}}}}} -->
+<p class="dp-series-hero-deck"></p>
+<!-- /wp:paragraph --></div>
 <!-- /wp:group --></section>
 <!-- /wp:group -->
 
-<!-- wp:group {"tagName":"section","className":"dp-section dp-series-section","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-section dp-series-section"><!-- wp:heading -->
-<h2 class="wp-block-heading">Start with these</h2>
+<!-- wp:group {"tagName":"section","className":"dp-section dp-series-published","layout":{"type":"default"}} -->
+<section class="wp-block-group dp-section dp-series-published"><!-- wp:heading {"className":"dp-series-section-title"} -->
+<h2 class="wp-block-heading dp-series-section-title">Start with these</h2>
 <!-- /wp:heading -->
 
-<!-- wp:paragraph -->
-<p>The parts that are finished, newest last. Each one reads on its own, so it does not matter much where you start.</p>
+<!-- wp:paragraph {"className":"dp-series-section-deck"} -->
+<p class="dp-series-section-deck">The parts that are finished, newest last. Each one reads on its own, so it does not matter much where you start.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:query {"queryId":0,"query":{"perPage":20,"pages":0,"offset":0,"postType":"post","order":"asc","orderBy":"date","inherit":true},"className":"dp-query"} -->
-<div class="wp-block-query dp-query"><!-- wp:post-template {"className":"dp-rows"} -->
-<!-- wp:group {"className":"dp-row dp-row-compact","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row dp-row-compact"><!-- wp:group {"className":"dp-row-body","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row-body"><!-- wp:post-title {"level":3,"isLink":true,"className":"dp-row-title"} /-->
-
-<!-- wp:post-excerpt {"moreText":"","showMoreOnNewLine":false,"excerptLength":22,"className":"dp-row-excerpt"} /--></div>
-<!-- /wp:group -->
-
-<!-- wp:group {"className":"dp-row-aside","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-row-aside"><!-- wp:paragraph {"className":"dp-row-cat","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"kicker"}}}}} -->
-<p class="dp-row-cat"></p>
+<div class="wp-block-query dp-query"><!-- wp:post-template {"className":"dp-parts","layout":{"type":"default"}} -->
+<!-- wp:group {"className":"dp-part-row","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-part-row"><!-- wp:group {"className":"dp-part-index","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-part-index"><!-- wp:paragraph {"className":"dp-part-number","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"part"}}}}} -->
+<p class="dp-part-number"></p>
 <!-- /wp:paragraph -->
 
-<!-- wp:post-date {"format":"M j, Y","className":"dp-row-date"} /--></div>
+<!-- wp:group {"className":"dp-part-meta","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-part-meta"><!-- wp:post-date {"format":"M j, Y","className":"dp-part-when"} /-->
+
+<!-- wp:paragraph {"className":"dp-part-read","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"read-time"}}}}} -->
+<p class="dp-part-read"></p>
+<!-- /wp:paragraph --></div>
 <!-- /wp:group --></div>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"dp-part-body","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-part-body"><!-- wp:post-title {"level":3,"isLink":true,"className":"dp-part-title"} /-->
+
+<!-- wp:post-excerpt {"moreText":"","showMoreOnNewLine":false,"excerptLength":26,"className":"dp-part-note"} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:read-more {"content":"Read it →","className":"dp-part-status"} /--></div>
 <!-- /wp:group -->
 <!-- /wp:post-template -->
 
 <!-- wp:query-no-results -->
-<!-- wp:paragraph -->
-<p>Nothing published in this series yet.</p>
+<!-- wp:paragraph {"className":"dp-archive-empty"} -->
+<p class="dp-archive-empty">Nothing published in this series yet.</p>
 <!-- /wp:paragraph -->
 <!-- /wp:query-no-results --></div>
 <!-- /wp:query --></section>
 <!-- /wp:group -->
 
-<!-- wp:group {"tagName":"section","className":"dp-section dp-series-section","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-section dp-series-section"><!-- wp:heading -->
-<h2 class="wp-block-heading">Still to come</h2>
+<!-- wp:group {"tagName":"section","className":"dp-section dp-series-planned-section","layout":{"type":"default"}} -->
+<section class="wp-block-group dp-section dp-series-planned-section"><!-- wp:heading {"className":"dp-series-section-title"} -->
+<h2 class="wp-block-heading dp-series-section-title">Still to come</h2>
 <!-- /wp:heading -->
 
-<!-- wp:paragraph -->
-<p>Drafted, in the order the years run. They get a number when they go up.</p>
+<!-- wp:paragraph {"className":"dp-series-section-deck dp-series-section-deck-tight"} -->
+<p class="dp-series-section-deck dp-series-section-deck-tight">Drafted, in the order the years run. They get a number when they go up.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:dpaternina/series-planned /-->
 
-<!-- wp:buttons -->
-<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-posts dp-button-secondary"} -->
-<div class="wp-block-button dp-to-posts dp-button-secondary"><a class="wp-block-button__link wp-element-button">All writing</a></div>
+<!-- wp:group {"className":"dp-series-outro","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-series-outro"><!-- wp:buttons {"className":"dp-series-outro-action"} -->
+<div class="wp-block-buttons dp-series-outro-action"><!-- wp:button {"className":"dp-button-secondary"} -->
+<div class="wp-block-button dp-button-secondary"><a class="wp-block-button__link wp-element-button">All writing</a></div>
 <!-- /wp:button --></div>
-<!-- /wp:buttons --></section>
+<!-- /wp:buttons --></div>
+<!-- /wp:group --></section>
 <!-- /wp:group --></main>
 <!-- /wp:group -->
 

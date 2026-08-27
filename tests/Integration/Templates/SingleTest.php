@@ -9,15 +9,17 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Theme\Blocks\SeriesPartsLink;
+
 /**
  * The post: kicker, lead, series footer, and the two navigations under it.
  *
- * The kicker is the interesting one. `dp_kicker`'s registered description says
- * an empty value means derive it, and the design derives it in one line —
+ * The kicker is the interesting one. The design derives it in one line —
  * `p.part ? 'SERIES · PART ' + p.part : p.cat` — with the tone following the
- * same condition. Neither a template nor a block binding can express a choice
- * between two fields, so both come from the theme's own bindings source, and
- * both are asserted here rather than trusted.
+ * same condition, and nothing is stored: the part number is the post's position
+ * among the published posts in its series (ADR-0016). Neither a template nor a
+ * block binding can express any of that, so it comes from the theme's own
+ * bindings source, and it is asserted here rather than trusted.
  */
 final class SingleTest extends TemplateTestCase {
 
@@ -62,52 +64,79 @@ final class SingleTest extends TemplateTestCase {
 	/**
 	 * A post in a series takes its part number, in pink.
 	 *
+	 * The number is the position, so the third of three posts filed under the
+	 * series — the oldest, because `seed_posts()` dates them newest first — is
+	 * part 1 and the newest is part 3.
+	 *
 	 * @return void
 	 */
 	public function test_a_post_in_a_series_is_kickered_by_its_part(): void {
 		$this->seed_categories();
 		$this->seed_series();
-		$this->seed_posts( 1 );
-		$this->file_under_series( $this->posts[0], 2 );
 
-		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+		$posts = $this->seed_posts( 3 );
+
+		$this->file_under_series( $posts[0] );
+		$this->file_under_series( $posts[1] );
+		$this->file_under_series( $posts[2] );
+
+		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
 
 		$this->assertMatchesRegularExpression( '~<p class="dp-badge[^"]*is-tone-pink[^"]*"[^>]*>Series · Part 2</p>~', $html );
 	}
 
 	/**
-	 * `dp_kicker` overrides the derivation, which is what it is for.
+	 * The standfirst is the post's first paragraph, and the read time is counted.
+	 *
+	 * Both used to be meta fields with no editor control, so both were blank on
+	 * any post David wrote by hand (ADR-0016). What is asserted is unchanged: the
+	 * words are above the body and the byline carries a duration.
 	 *
 	 * @return void
 	 */
-	public function test_a_stored_kicker_wins_over_the_derivation(): void {
+	public function test_the_standfirst_and_the_read_time_are_printed(): void {
 		$this->seed_categories();
-		$this->seed_posts( 1 );
 
-		update_post_meta( $this->posts[0], 'dp_kicker', 'Field note' );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'    => 'A post that opens on its standfirst',
+				'post_content'  => '<!-- wp:paragraph --><p>The standfirst above the body.</p><!-- /wp:paragraph -->'
+					. '<!-- wp:paragraph --><p>' . implode( ' ', array_fill( 0, 900, 'word' ) ) . '</p><!-- /wp:paragraph -->',
+				'post_category' => array( $this->categories['dev'] ),
+			)
+		);
 
-		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+		$this->assertIsInt( $post_id );
 
-		$this->assertStringContainsString( '>Field note</p>', $html );
-		$this->assertStringNotContainsString( '>Dev</p>', $html );
+		$html = $this->render( $this->permalink( $post_id ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'The standfirst above the body.', $html );
+		$this->assertStringContainsString( '5 min read', $html, '904 words at 200 a minute rounds up to five.' );
+		$this->assertStringNotContainsString( 'dp-post-standfirst', $html, 'The standfirst is the first paragraph, not a block of its own.' );
 	}
 
 	/**
-	 * The standfirst and the read time come from meta.
+	 * A post with no body claims no read time rather than nought minutes.
 	 *
 	 * @return void
 	 */
-	public function test_the_lead_and_the_read_time_are_printed(): void {
+	public function test_an_empty_post_prints_no_read_time(): void {
 		$this->seed_categories();
-		$this->seed_posts( 1 );
 
-		update_post_meta( $this->posts[0], 'dp_lead', 'The standfirst above the body.' );
-		update_post_meta( $this->posts[0], 'dp_read_time', '9 MIN READ' );
+		$post_id = self::factory()->post->create(
+			array(
+				'post_title'    => 'Nothing written yet',
+				'post_content'  => '',
+				'post_category' => array( $this->categories['dev'] ),
+			)
+		);
 
-		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+		$this->assertIsInt( $post_id );
 
-		$this->assertStringContainsString( 'The standfirst above the body.', $html );
-		$this->assertStringContainsString( '9 MIN READ', $html );
+		$html = $this->render( $this->permalink( $post_id ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'dp-post-read', $html );
+		$this->assertStringNotContainsString( 'min read', $html );
 	}
 
 	/**
@@ -122,9 +151,9 @@ final class SingleTest extends TemplateTestCase {
 		$posts = $this->seed_posts( 3 );
 
 		// seed_posts() dates them newest first, so posts[2] is the oldest.
-		$this->file_under_series( $posts[2], 1 );
-		$this->file_under_series( $posts[1], 2 );
-		$this->file_under_series( $posts[0], 3 );
+		$this->file_under_series( $posts[2] );
+		$this->file_under_series( $posts[1] );
+		$this->file_under_series( $posts[0] );
 
 		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
 
@@ -206,5 +235,288 @@ final class SingleTest extends TemplateTestCase {
 		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
 
 		$this->assertStringNotContainsString( 'aria-current="page"', $html );
+	}
+
+	/**
+	 * The byline is the design's row: a mark, a name, a date, a read time.
+	 *
+	 * The monogram and the two middle dots are generated content, because both
+	 * are `alt=""`/`aria-hidden` decoration in the design. What the markup owes
+	 * them is the class the rule hangs off and one element per fact, in order.
+	 *
+	 * @return void
+	 */
+	public function test_the_byline_carries_a_name_a_date_and_a_read_time_in_order(): void {
+		$this->seed_categories();
+		$this->seed_posts( 1 );
+
+		/*
+		 * `core/post-author-name` renders the empty string for a post whose
+		 * author has no display name, and the post factory leaves `post_author`
+		 * at zero. Giving the post an author is what makes the byline a byline.
+		 */
+		$author = self::factory()->user->create( array( 'display_name' => 'David Paternina' ) );
+
+		$this->assertIsInt( $author );
+
+		wp_update_post(
+			array(
+				'ID'          => $this->posts[0],
+				'post_author' => $author,
+			)
+		);
+
+		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'dp-post-byline', $html );
+
+		$author = strpos( $html, 'dp-post-author' );
+		$when   = strpos( $html, 'dp-post-when' );
+		$read   = strpos( $html, 'dp-post-read' );
+
+		$this->assertIsInt( $author );
+		$this->assertIsInt( $when );
+		$this->assertIsInt( $read );
+		$this->assertGreaterThan( $author, $when );
+		$this->assertGreaterThan( $when, $read );
+		$this->assertStringContainsString( '1 min read', $html );
+	}
+
+	/**
+	 * The lead image is captioned from the attachment, which is the only source.
+	 *
+	 * `dp_hero_caption` sat in front of this and had no editor control anywhere,
+	 * so the media library's own caption box was in practice the only one anybody
+	 * could fill in (ADR-0016). Now it is the only one that is read.
+	 *
+	 * @return void
+	 */
+	public function test_the_lead_image_takes_its_caption_from_the_attachment(): void {
+		$this->seed_categories();
+		$this->seed_posts( 1 );
+
+		set_post_thumbnail( $this->posts[0], $this->seed_attachment( 'A caption on the file itself.' ) );
+
+		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( '<figcaption class="dp-post-lead-caption">A caption on the file itself.</figcaption>', $html );
+	}
+
+	/**
+	 * A post with neither caption gets a figure and no figcaption.
+	 *
+	 * @return void
+	 */
+	public function test_an_uncaptioned_lead_image_gets_no_empty_figcaption(): void {
+		$this->seed_categories();
+		$this->seed_posts( 1 );
+
+		set_post_thumbnail( $this->posts[0], $this->seed_attachment( '' ) );
+
+		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'dp-post-lead-image', $html );
+		$this->assertStringNotContainsString( 'dp-post-lead-caption', $html );
+	}
+
+	/**
+	 * The series footer is a kicker, a title, a way to the archive, and two cards.
+	 *
+	 * The build drew the term list *as* the title, in the kicker's pink, which
+	 * collapsed three of the design's elements into one — and it had no link to
+	 * the series archive beside them at all.
+	 *
+	 * @return void
+	 */
+	public function test_the_series_footer_separates_the_kicker_the_title_and_the_link(): void {
+		$this->seed_categories();
+		$this->seed_series();
+
+		$posts = $this->seed_posts( 3 );
+
+		$this->file_under_series( $posts[2] );
+		$this->file_under_series( $posts[1] );
+		$this->file_under_series( $posts[0] );
+
+		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
+
+		$series_link = get_term_link( $this->series );
+
+		$this->assertIsString( $series_link );
+
+		$this->assertMatchesRegularExpression( '~<p class="dp-series-footer-kicker[^"]*">Series · Part 2</p>~', $html );
+		$this->assertStringContainsString( 'dp-series-footer-title', $html );
+		$this->assertStringContainsString( 'data-dp-destination="' . SeriesPartsLink::DESTINATION . '"', $html );
+		$this->assertStringContainsString( '>All parts →</a>', $html );
+		$this->assertSame(
+			2,
+			substr_count( $html, 'href="' . esc_url( $series_link ) . '"' ),
+			'The title and the action both point at the archive.'
+		);
+	}
+
+	/**
+	 * Each part card is labelled with the number of the part it points at.
+	 *
+	 * The design writes "← PART 1" and "PART 3 →". Core's navigation block takes
+	 * a fixed `label`, so the number arrives through `previous_post_link` /
+	 * `next_post_link`, which hand over the adjacent post core already found.
+	 *
+	 * @return void
+	 */
+	public function test_the_part_cards_are_labelled_with_their_own_part_numbers(): void {
+		$this->seed_categories();
+		$this->seed_series();
+
+		$posts = $this->seed_posts( 3 );
+
+		$this->file_under_series( $posts[2] );
+		$this->file_under_series( $posts[1] );
+		$this->file_under_series( $posts[0] );
+
+		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( '<span class="post-navigation-link__label">← Part 1</span>', $html );
+		$this->assertStringContainsString( '<span class="post-navigation-link__label">Part 3 →</span>', $html );
+		$this->assertStringNotContainsString( '%dp-part%', $html, 'The token never reaches the page.' );
+	}
+
+	/**
+	 * A neighbour outside any series takes no number with it.
+	 *
+	 * @return void
+	 */
+	public function test_the_neighbouring_post_cards_are_labelled_newer_and_older(): void {
+		$this->seed_categories();
+
+		$posts = $this->seed_posts( 3 );
+
+		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( '<span class="post-navigation-link__label">← Newer</span>', $html );
+		$this->assertStringContainsString( '<span class="post-navigation-link__label">Older →</span>', $html );
+	}
+
+	/**
+	 * "Keep reading" is three cards: same category first, never this post.
+	 *
+	 * The design states the rule in its own comment — "same category first, then
+	 * whatever is newest, never the post you are on" — and `dpLoop: related`
+	 * implements it as an explicit list, because it is a preference between two
+	 * result sets rather than a sort of one.
+	 *
+	 * @return void
+	 */
+	public function test_keep_reading_puts_the_same_category_first_and_never_this_post(): void {
+		$this->seed_categories();
+
+		$food = $this->seed_posts( 1, 'food' );
+		$dev  = $this->seed_posts( 4, 'dev' );
+
+		$html = $this->render( $this->permalink( $dev[3] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'dp-keep-reading', $html );
+		$this->assertSame( 3, substr_count( $html, 'dp-related-card' ), 'Three cards, as the design draws.' );
+
+		$this->assertSame(
+			0,
+			substr_count( $html, 'href="' . esc_url( $this->permalink( $dev[3] ) ) . '"' ),
+			'Never the post you are on.'
+		);
+
+		foreach ( array_slice( $dev, 0, 3 ) as $sibling ) {
+			$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $sibling ) ) . '"', $html );
+		}
+
+		$this->assertStringNotContainsString(
+			'href="' . esc_url( $this->permalink( $food[0] ) ) . '"',
+			$html,
+			'Three in the same category fill the grid before anything else does.'
+		);
+	}
+
+	/**
+	 * With fewer siblings than cards, the rest of the newest posts fill in.
+	 *
+	 * @return void
+	 */
+	public function test_keep_reading_falls_back_to_the_newest_when_the_category_is_thin(): void {
+		$this->seed_categories();
+
+		$dev  = $this->seed_posts( 2, 'dev' );
+		$food = $this->seed_posts( 3, 'food' );
+
+		$html = $this->render( $this->permalink( $dev[0] ), 'single', self::HIERARCHY );
+
+		$this->assertSame( 3, substr_count( $html, 'dp-related-card' ) );
+		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $dev[1] ) ) . '"', $html );
+		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $food[0] ) ) . '"', $html );
+	}
+
+	/**
+	 * The only post on the site gets a section head and no cards.
+	 *
+	 * The guard that matters: an empty `post__in` is *ignored* by `WP_Query`, so
+	 * a related loop that resolved to nothing would quietly draw the three
+	 * newest posts on the site, one of which is the post being read.
+	 *
+	 * @return void
+	 */
+	public function test_keep_reading_draws_nothing_when_there_is_nothing_else(): void {
+		$this->seed_categories();
+		$this->seed_posts( 1 );
+
+		$html = $this->render( $this->permalink( $this->posts[0] ), 'single', self::HIERARCHY );
+
+		$this->assertStringNotContainsString( 'dp-related-card', $html );
+	}
+
+	/**
+	 * A card's kicker is the short form, without the word SERIES in front of it.
+	 *
+	 * @return void
+	 */
+	public function test_a_related_card_takes_the_short_kicker(): void {
+		$this->seed_categories();
+		$this->seed_series();
+
+		$posts = $this->seed_posts( 2 );
+
+		$this->file_under_series( $posts[0] );
+
+		$html = $this->render( $this->permalink( $posts[1] ), 'single', self::HIERARCHY );
+
+		$this->assertMatchesRegularExpression( '~<p class="dp-related-kicker[^"]*">Part 1</p>~', $html );
+		$this->assertDoesNotMatchRegularExpression( '~<p class="dp-related-kicker[^"]*">Series · Part 1</p>~', $html );
+	}
+
+	/**
+	 * An attachment carrying a caption, or not.
+	 *
+	 * @param string $caption The caption, or '' for none.
+	 * @return int
+	 */
+	private function seed_attachment( string $caption ): int {
+		/*
+		 * A real upload, not `attachment->create()`. `core/post-featured-image`
+		 * renders nothing at all when `wp_get_attachment_image()` cannot build a
+		 * tag, and it cannot build one for an attachment with no file behind it —
+		 * so an attachment without a file would test the caption by asserting on
+		 * a figure that was never drawn.
+		 */
+		$attachment_id = self::factory()->attachment->create_upload_object(
+			dirname( __DIR__, 3 ) . '/themes/dpaternina/assets/img/dp-mark-white-128.png'
+		);
+
+		$this->assertIsInt( $attachment_id );
+
+		wp_update_post(
+			array(
+				'ID'           => $attachment_id,
+				'post_excerpt' => $caption,
+			)
+		);
+
+		return $attachment_id;
 	}
 }

@@ -275,6 +275,98 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * No block markup the theme ships links a page on this site.
+	 *
+	 * The static scan above reads PHP, JS and TS. The theme's templates, parts
+	 * and patterns are none of those, and they are where a link lives — so a
+	 * `href="/contact"` typed into `parts/footer.html` would pass every other
+	 * assertion in this file.
+	 *
+	 * It is deliberately narrower than the rule it replaces. ADR-0006 §2 asserted
+	 * that no shipped markup contained an href *at all*, which is stronger than
+	 * §5.1 asks for and had a real cost: with an author-set link defined out of
+	 * existence, the destination filter could overwrite one without anybody
+	 * noticing it was overwriting anything (ADR-0018). What §5.1 actually forbids
+	 * is the theme deciding David's slugs, so a fragment, a `mailto:` and a link
+	 * off this site all pass, and a path here does not.
+	 *
+	 * @return void
+	 */
+	public function test_no_shipped_block_markup_links_a_page_on_this_site(): void {
+		$files = $this->markup_files();
+		$host  = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		$this->assertGreaterThan(
+			10,
+			count( $files ),
+			'The scan found almost no markup, so it would pass vacuously.'
+		);
+
+		$findings = array();
+
+		foreach ( $files as $relative => $markup ) {
+			preg_match_all( '~href="([^"]*)"~', $markup, $hrefs );
+
+			foreach ( $hrefs[1] as $href ) {
+				if ( '' === $href || str_starts_with( $href, '#' ) ) {
+					continue;
+				}
+
+				$scheme = wp_parse_url( $href, PHP_URL_SCHEME );
+
+				if ( is_string( $scheme ) && ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+					continue;
+				}
+
+				$found = wp_parse_url( $href, PHP_URL_HOST );
+
+				if ( null === $found || false === $found || $found === $host ) {
+					$findings[] = $relative . ' → ' . $href;
+				}
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$findings,
+			"Shipped markup links a page on this site. CLAUDE.md §5.1: David creates every page and\n"
+			. "picks its slug, so the theme ships the words and he sets the link once, in the site\n"
+			. 'editor. Found: ' . implode( ', ', $findings )
+		);
+	}
+
+	/**
+	 * Every template, part and pattern the theme ships, keyed by path.
+	 *
+	 * @return array<string, string>
+	 */
+	private function markup_files(): array {
+		$root  = $this->repository_root() . '/themes/dpaternina/';
+		$found = array();
+
+		foreach ( array( 'templates/*.html', 'parts/*.html', 'patterns/*.php' ) as $pattern ) {
+			$paths = glob( $root . $pattern );
+
+			if ( ! is_array( $paths ) ) {
+				continue;
+			}
+
+			foreach ( $paths as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test.
+				$markup = file_get_contents( $path );
+
+				if ( is_string( $markup ) ) {
+					$found[ substr( $path, strlen( $this->repository_root() ) + 1 ) ] = $markup;
+				}
+			}
+		}
+
+		ksort( $found );
+
+		return $found;
+	}
+
+	/**
 	 * Findings that are permitted, as `relative/path.php:pattern-name`.
 	 *
 	 * Empty, and meant to stay that way. An entry here is a documented exception

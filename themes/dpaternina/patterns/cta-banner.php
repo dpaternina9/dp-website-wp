@@ -21,8 +21,8 @@
 <!-- /wp:group -->
 
 <!-- wp:buttons -->
-<div class="wp-block-buttons"><!-- wp:button {"className":"dp-to-contact dp-button-secondary"} -->
-<div class="wp-block-button dp-to-contact dp-button-secondary"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Get in touch', 'dpaternina' ); ?></a></div>
+<div class="wp-block-buttons"><!-- wp:button {"className":"dp-button-secondary"} -->
+<div class="wp-block-button dp-button-secondary"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Get in touch', 'dpaternina' ); ?></a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons --></div>
 <!-- /wp:group -->

@@ -2,28 +2,38 @@
 
 <!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->
 <main class="wp-block-group"><!-- wp:group {"tagName":"section","className":"dp-archive-head","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-archive-head"><!-- wp:buttons {"className":"dp-crumbs"} -->
-<div class="wp-block-buttons dp-crumbs"><!-- wp:button {"className":"dp-to-posts dp-button-quiet"} -->
-<div class="wp-block-button dp-to-posts dp-button-quiet"><a class="wp-block-button__link wp-element-button">Writing</a></div>
+<section class="wp-block-group dp-archive-head"><!-- wp:group {"className":"dp-crumbs","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-crumbs"><!-- wp:buttons {"className":"dp-crumb-home"} -->
+<div class="wp-block-buttons dp-crumb-home"><!-- wp:button {"className":"dp-button-quiet"} -->
+<div class="wp-block-button dp-button-quiet"><a class="wp-block-button__link wp-element-button">Writing</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons -->
 
+<!-- wp:paragraph {"className":"dp-crumb-here"} -->
+<p class="dp-crumb-here">Category</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group -->
+
 <!-- wp:query-title {"type":"archive","showPrefix":false,"level":1,"className":"dp-archive-title"} /-->
 
-<!-- wp:term-description /--></section>
+<!-- wp:term-description /-->
+
+<!-- wp:paragraph {"className":"dp-archive-count","metadata":{"bindings":{"content":{"source":"dpaternina/archive","args":{"key":"count","text":"%s · Newest first"}}}}} -->
+<p class="dp-archive-count"></p>
+<!-- /wp:paragraph --></section>
 <!-- /wp:group -->
 
 <!-- wp:group {"tagName":"section","className":"dp-section dp-archive","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-section dp-archive"><!-- wp:pattern {"slug":"dpaternina/post-row-list"} /--></section>
+<section class="wp-block-group dp-section dp-archive"><!-- wp:pattern {"slug":"dpaternina/post-row-archive"} /--></section>
 <!-- /wp:group -->
 
 <!-- wp:group {"tagName":"section","align":"full","className":"dp-band dp-category-band","layout":{"type":"default"}} -->
 <section class="wp-block-group alignfull dp-band dp-category-band"><!-- wp:group {"className":"dp-section","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-section"><!-- wp:heading -->
-<h2 class="wp-block-heading">Other categories</h2>
+<div class="wp-block-group dp-section"><!-- wp:heading {"className":"dp-category-band-title"} -->
+<h2 class="wp-block-heading dp-category-band-title">Other categories</h2>
 <!-- /wp:heading -->
 
-<!-- wp:categories {"showPostCounts":true} /--></div>
+<!-- wp:categories {"showPostCounts":true,"className":"dp-category-pills"} /--></div>
 <!-- /wp:group --></section>
 <!-- /wp:group --></main>
 <!-- /wp:group -->

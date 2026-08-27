@@ -37,6 +37,17 @@ final class FilterPills {
 	public const PILLS_CLASS = 'dp-filter-pills';
 
 	/**
+	 * The class a `core/categories` block carries to become the archive's band.
+	 *
+	 * The design's "Other categories" pill is a box holding two spans — the name
+	 * and, in `--text-muted`, the count. `core/categories` writes the count as a
+	 * bare text node after the anchor, ` (3)`, which is outside the pill and
+	 * cannot be coloured separately from the name. So it is moved inside the
+	 * anchor and given an element of its own.
+	 */
+	public const COUNTS_CLASS = 'dp-category-pills';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Destinations $destinations Resolves the posts index.
@@ -50,6 +61,7 @@ final class FilterPills {
 	 */
 	public function register(): void {
 		add_filter( 'render_block_core/categories', $this->add_all_pill( ... ), 10, 2 );
+		add_filter( 'render_block_core/categories', $this->wrap_the_counts( ... ), 10, 2 );
 	}
 
 	/**
@@ -85,5 +97,39 @@ final class FilterPills {
 		);
 
 		return substr_replace( $content, $pill, $opening + 1, 0 );
+	}
+
+	/**
+	 * Move each count inside its pill and give it an element to be muted by.
+	 *
+	 * A string rewrite rather than `WP_HTML_Tag_Processor`, because what moves is
+	 * a **text node** and the processor addresses tags. The pattern is anchored
+	 * on the anchor core writes and on the parentheses core writes around the
+	 * number, and it is applied only to a block that asked for it by class, so
+	 * the blast radius is one list on one template.
+	 *
+	 * A category list with counts switched off matches nothing and is returned
+	 * untouched, which is the state every other `core/categories` on the site is
+	 * in.
+	 *
+	 * @param string               $content The rendered list.
+	 * @param array<string, mixed> $block   The parsed block.
+	 * @return string
+	 */
+	public function wrap_the_counts( string $content, array $block ): string {
+		$attributes = $block['attrs'] ?? array();
+		$class_name = is_array( $attributes ) && isset( $attributes['className'] ) ? $attributes['className'] : '';
+
+		if ( ! is_string( $class_name ) || ! str_contains( ' ' . $class_name . ' ', ' ' . self::COUNTS_CLASS . ' ' ) ) {
+			return $content;
+		}
+
+		$rewritten = preg_replace(
+			'~(<a\b[^>]*>)([^<]*)</a>\s*\(([^()<]+)\)~',
+			'$1$2<span class="dp-cat-count">$3</span></a>',
+			$content
+		);
+
+		return is_string( $rewritten ) ? $rewritten : $content;
 	}
 }

@@ -11,7 +11,8 @@ namespace DP\Tests\Integration\Templates;
 
 use DP\Core\Contact\ContactForm;
 use DP\Core\Resume\ResumePdf;
-use DP\Theme\Chrome\Navigation;
+use DP\Theme\Blocks\DerivedLink;
+use DP\Theme\Blocks\ResumeDownload;
 
 /**
  * 404, the generic page, About, Contact and the résumé, as a request renders them.
@@ -31,9 +32,10 @@ use DP\Theme\Chrome\Navigation;
  * **The two blocks are placed.** They were registered by `f7dc576` and put
  * nowhere, which is a feature that exists and cannot be reached.
  *
- * **Nothing points at a page by name.** Every link on these templates goes
- * through `dp-to-*`, so the assertion is about what resolves and what visibly
- * does not — CLAUDE.md section 5.1 and ADR-0008.
+ * **Nothing points at a page by name.** These templates ship the design's words
+ * and no URLs; David sets the links in the site editor (ADR-0018). The one link
+ * on them that nobody could type — the résumé's PDF — is a named block, and it
+ * is the assertion about what resolves and what visibly does not.
  */
 final class PagesTest extends TemplateTestCase {
 
@@ -103,7 +105,16 @@ final class PagesTest extends TemplateTestCase {
 		$html = $this->render( home_url( '/nothing-here/' ), '404', self::NOT_FOUND );
 
 		$this->assertStringContainsString( 'dp-brand-white', $html );
-		$this->assertStringContainsString( home_url( '/' ), $html );
+
+		/*
+		 * The mark is `core/site-title`, and core links it home itself. That is
+		 * the whole of the way out of this page now: the four buttons under it
+		 * are links David sets, and until he does they are words rather than
+		 * links (ADR-0018). This assertion used to pass because the "Back to
+		 * home" button was given `home_url( '/' )` by a filter.
+		 */
+		$this->assertStringContainsString( 'rel="home"', $html );
+		$this->assertStringContainsString( 'href="' . esc_url( home_url() ) . '"', $html );
 	}
 
 	/**
@@ -118,51 +129,45 @@ final class PagesTest extends TemplateTestCase {
 	}
 
 	/**
-	 * Every link on it names a destination rather than a path.
+	 * It offers the four ways out the design draws, and invents no URL for them.
 	 *
 	 * @return void
 	 */
-	public function test_the_404_links_name_destinations_and_never_slugs(): void {
+	public function test_the_404_offers_the_designs_four_ways_out(): void {
 		$html = $this->render( home_url( '/nothing-here/' ), '404', self::NOT_FOUND );
 
-		foreach ( array( 'home', 'contact', 'work', 'posts' ) as $destination ) {
-			$this->assertStringContainsString(
-				'data-dp-destination="' . $destination . '"',
-				$html,
-				$destination
-			);
+		foreach ( array( 'Back to home', 'Report the link', 'The work', 'The writing' ) as $label ) {
+			$this->assertStringContainsString( $label, $html, $label );
 		}
+
+		$this->assertStringNotContainsString(
+			DerivedLink::UNRESOLVED_CLASS,
+			$html,
+			'None of these is a computed link, so none of them can be an unresolved one.'
+		);
 	}
 
 	/**
-	 * A destination with no page behind it stays visible and inert.
+	 * A link David sets on one of them is the link that renders.
 	 *
-	 * ADR-0008: a button that renders in the site editor and is absent from the
-	 * front end is indistinguishable from a bug, and it hid one.
-	 *
-	 * @return void
-	 */
-	public function test_an_unresolved_404_link_degrades_visibly(): void {
-		$html = $this->render( home_url( '/nothing-here/' ), '404', self::NOT_FOUND );
-
-		$this->assertStringContainsString( Navigation::UNRESOLVED_CLASS, $html );
-		$this->assertStringContainsString( 'aria-disabled="true"', $html );
-	}
-
-	/**
-	 * With the pages made, the same links resolve.
+	 * The 404's four buttons are `core/button`s with no URL. What ADR-0018 asks
+	 * of the theme is that setting one is enough — no class, no filter, and
+	 * nothing that reads the href back out and replaces it.
 	 *
 	 * @return void
 	 */
-	public function test_the_404_links_resolve_once_the_pages_exist(): void {
-		$contact = $this->seed_page( 'Say hello', 'dp-contact' );
-		$work    = $this->seed_page( 'What I have worked on', 'dp-work' );
+	public function test_a_link_set_on_a_404_button_survives_rendering(): void {
+		$target = home_url( '/where-i-sent-them/' );
+
+		$this->override( 'wp_template', '404', $this->linked( 'templates/404.html', $target ) );
 
 		$html = $this->render( home_url( '/nothing-here/' ), '404', self::NOT_FOUND );
 
-		$this->assertStringContainsString( $this->permalink( $contact ), $html );
-		$this->assertStringContainsString( $this->permalink( $work ), $html );
-		$this->assertStringNotContainsString( Navigation::UNRESOLVED_CLASS, $html );
+		$this->assertSame( 'dpaternina//404', $this->resolved_template() );
+		$this->assertGreaterThan(
+			0,
+			substr_count( $html, 'href="' . esc_url( $target ) . '"' )
+		);
 	}
 
 	/*
@@ -342,25 +347,65 @@ final class PagesTest extends TemplateTestCase {
 	}
 
 	/**
-	 * The download button points at the query variable, on this very page.
+	 * The download block points at the query variable, on this very page.
 	 *
 	 * Never at a path: the theme asks `dp-core` what a résumé download looks
-	 * like and `dp-core` builds it from the page it was handed, so renaming or
-	 * moving the page moves the download with it.
+	 * like and `dp-core` builds it from the page being drawn, so renaming or
+	 * moving the page moves the download with it. It is a named block rather
+	 * than a class on a button (ADR-0018) because that URL is one nobody can
+	 * type: the query variable's name is the plugin's.
 	 *
 	 * @return void
 	 */
-	public function test_the_download_button_resolves_to_the_query_variable(): void {
+	public function test_the_download_block_resolves_to_the_query_variable(): void {
 		$page = $this->seed_page( 'The record, on one page', 'dp-resume.html' );
 
 		$html = $this->render( $this->permalink( $page ), 'page', self::assigned( 'dp-resume.html' ) );
 
-		$this->assertStringContainsString( 'data-dp-destination="resume-pdf"', $html );
+		$this->assertStringContainsString( 'data-dp-destination="' . ResumeDownload::DESTINATION . '"', $html );
 		$this->assertStringContainsString(
 			esc_url( ResumePdf::download_url( $page ) ),
 			$html
 		);
 		$this->assertStringNotContainsString( 'href="/resume', $html );
+		$this->assertStringNotContainsString( DerivedLink::UNRESOLVED_CLASS, $html );
+	}
+
+	/**
+	 * Moving the page moves the download, because the URL was never the name.
+	 *
+	 * @return void
+	 */
+	public function test_moving_the_resume_page_moves_the_download(): void {
+		$this->set_permalink_structure( '/%postname%/' );
+
+		/*
+		 * The slug spelling, not the file name: `wp_update_post()` re-validates
+		 * whatever `page_template` the post already carries, and WordPress offers
+		 * a block theme's custom templates under their slugs. A page holding
+		 * `dp-resume.html` can be read but not saved, which is a fact about core
+		 * rather than about this theme — the block accepts either spelling and
+		 * `test_the_resume_download_accepts_either_spelling_of_the_template`
+		 * covers the other one.
+		 */
+		$page = $this->seed_page( 'The record, on one page', 'dp-resume' );
+
+		$updated = wp_update_post(
+			array(
+				'ID'        => $page,
+				'post_name' => 'the-cv',
+			),
+			true
+		);
+
+		$this->assertIsInt( $updated, 'The rename has to happen, or the test proves nothing.' );
+
+		$html = $this->render( $this->permalink( $page ), 'page', self::assigned( 'dp-resume.html' ) );
+
+		$this->assertStringContainsString( 'the-cv', $this->permalink( $page ) );
+		$this->assertStringContainsString( esc_url( ResumePdf::download_url( $page ) ), $html );
+
+		$this->set_permalink_structure( '' );
 	}
 
 	/**

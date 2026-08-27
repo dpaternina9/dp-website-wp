@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/resume-download",
+	"title": "Résumé — download PDF",
+	"category": "theme",
+	"description": "Links to the PDF of the résumé page it is drawn on. The address is a query variable dp-core owns, so no template can carry it; anywhere but a page assigned the Résumé template it draws inert.",
+	"keywords": [ "resume", "cv", "pdf", "download" ],
+	"textdomain": "dpaternina",
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}

@@ -11,7 +11,6 @@ namespace DP\Tests\Integration\Templates;
 
 use DP\Core\Content\ContentModel;
 use DP\Core\Content\Taxonomies;
-use DP\Theme\Chrome\Destinations;
 use WP_Post;
 use WP_Term;
 use WP_UnitTestCase;
@@ -65,7 +64,12 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 	protected int $posts_page = 0;
 
 	/**
-	 * Register the content model and reset what the chrome caches.
+	 * Register the content model.
+	 *
+	 * There is nothing left to reset beside it. The chrome used to cache a
+	 * template-slug-to-page map in a transient, and every test in this hierarchy
+	 * had to remember to drop it; ADR-0018 deleted the map, so the only thing
+	 * `DP\Theme\Chrome\Destinations` reads now is a Reading setting.
 	 *
 	 * @return void
 	 */
@@ -73,8 +77,6 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 		parent::set_up();
 
 		ContentModel::create()->register();
-
-		delete_transient( Destinations::CACHE_KEY );
 	}
 
 	/**
@@ -185,26 +187,42 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 	}
 
 	/**
-	 * File a post under the series with a part number.
+	 * Create a second series, so "the only one" stops being an answer.
 	 *
-	 * @param int    $post_id The post.
-	 * @param int    $part    Its part number, which is also its `menu_order`.
-	 * @param string $years   The years a planned part covers.
-	 * @param string $note    The line under a planned part.
-	 * @return void
+	 * A fixture with one series cannot tell "the series this post is in" apart
+	 * from "the series", which is the distinction `dpaternina/series-parts-link`
+	 * turns on.
+	 *
+	 * @return int
 	 */
-	protected function file_under_series( int $post_id, int $part, string $years = '', string $note = '' ): void {
-		wp_set_post_terms( $post_id, array( $this->series ), Taxonomies::SERIES, false );
-		wp_update_post(
+	protected function seed_second_series(): int {
+		$term = self::factory()->term->create_and_get(
 			array(
-				'ID'         => $post_id,
-				'menu_order' => $part,
+				'taxonomy'    => Taxonomies::SERIES,
+				'name'        => 'Placeholder series',
+				'slug'        => 'placeholder-series',
+				'description' => 'A second series, so there are two.',
 			)
 		);
 
-		update_post_meta( $post_id, 'dp_series_part', $part );
-		update_post_meta( $post_id, 'dp_series_years', $years );
-		update_post_meta( $post_id, 'dp_series_note', $note );
+		$this->assertInstanceOf( WP_Term::class, $term );
+
+		return $term->term_id;
+	}
+
+	/**
+	 * File a post under the series.
+	 *
+	 * Filing it is the whole of it. A part carries no number of its own any more:
+	 * it is the position of the post among the published posts in the term,
+	 * oldest first (ADR-0016). `seed_posts()` dates its posts newest first, so
+	 * the last one it returns is part 1.
+	 *
+	 * @param int $post_id The post.
+	 * @return void
+	 */
+	protected function file_under_series( int $post_id ): void {
+		wp_set_post_terms( $post_id, array( $this->series ), Taxonomies::SERIES, false );
 	}
 
 	/**
@@ -229,8 +247,6 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 		if ( '' !== $template ) {
 			update_post_meta( $page_id, '_wp_page_template', $template );
 		}
-
-		delete_transient( Destinations::CACHE_KEY );
 
 		return $page_id;
 	}
@@ -334,6 +350,114 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 		if ( '' !== $line ) {
 			update_post_meta( $post_id, 'dp_line', $line );
 		}
+
+		return $post_id;
+	}
+
+	/**
+	 * The contents of one file the theme ships.
+	 *
+	 * @param string $relative Path relative to the theme root, e.g. `parts/header.html`.
+	 * @return string
+	 */
+	protected function theme_file( string $relative ): string {
+		$path = get_theme_file_path( $relative );
+
+		$this->assertFileIsReadable( $path );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the theme under test.
+		$markup = file_get_contents( $path );
+
+		$this->assertIsString( $markup );
+
+		return $markup;
+	}
+
+	/**
+	 * Every piece of block markup the theme ships, keyed by path.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function theme_markup_files(): array {
+		$found = array();
+
+		foreach ( array( 'templates/*.html', 'parts/*.html', 'patterns/*.php' ) as $pattern ) {
+			$paths = glob( get_theme_file_path( $pattern ) );
+
+			if ( ! is_array( $paths ) ) {
+				continue;
+			}
+
+			foreach ( $paths as $path ) {
+				$relative = substr( $path, strlen( get_stylesheet_directory() ) + 1 );
+
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the theme under test.
+				$markup = file_get_contents( $path );
+
+				if ( is_string( $markup ) ) {
+					$found[ $relative ] = $markup;
+				}
+			}
+		}
+
+		$this->assertNotEmpty( $found );
+
+		return $found;
+	}
+
+	/**
+	 * The theme's own markup with a URL put on every button that ships without one.
+	 *
+	 * This is what David does in the site editor: select the button, set the
+	 * link, save. WordPress writes the result as a `wp_template` or
+	 * `wp_template_part` post carrying the `url` attribute and the `href`, and
+	 * that post is what renders from then on.
+	 *
+	 * @param string $relative Path relative to the theme root.
+	 * @param string $url      The link to set.
+	 * @return string
+	 */
+	protected function linked( string $relative, string $url ): string {
+		$markup = str_replace(
+			'<!-- wp:button {"className"',
+			'<!-- wp:button {"url":"' . esc_url( $url ) . '","className"',
+			$this->theme_file( $relative )
+		);
+
+		return str_replace(
+			'<a class="wp-block-button__link wp-element-button">',
+			'<a class="wp-block-button__link wp-element-button" href="' . esc_url( $url ) . '">',
+			$markup
+		);
+	}
+
+	/**
+	 * Save a user override of one of the theme's templates or parts.
+	 *
+	 * The site editor writes exactly this: a post of the matching type, carrying
+	 * the theme as a `wp_theme` term, which `get_block_templates()` then prefers
+	 * over the file. A test that edits the file instead would be testing the
+	 * theme rather than the thing that broke.
+	 *
+	 * @param string $post_type Either `wp_template` or `wp_template_part`.
+	 * @param string $slug      The template's slug, e.g. `header`.
+	 * @param string $content   The saved block markup.
+	 * @return int The post ID.
+	 */
+	protected function override( string $post_type, string $slug, string $content ): int {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'    => $post_type,
+				'post_name'    => $slug,
+				'post_title'   => $slug,
+				'post_status'  => 'publish',
+				'post_content' => $content,
+			)
+		);
+
+		$this->assertIsInt( $post_id );
+
+		wp_set_post_terms( $post_id, array( get_stylesheet() ), 'wp_theme' );
 
 		return $post_id;
 	}

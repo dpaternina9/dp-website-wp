@@ -4,7 +4,11 @@
 
 Accepted — 2026-08-20. Section 2's last paragraph — "a destination with nothing
 behind it renders as nothing" — is superseded by
-[ADR-0008](0008-unresolved-destinations-degrade-visibly.md). The rest stands.
+[ADR-0008](0008-unresolved-destinations-degrade-visibly.md). **The destination
+mechanism is superseded by
+[ADR-0018](0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md) —
+2026-08-26**: a link to a page is set in the site editor, not resolved from a
+`dp-to-*` class at render. Section 1 (the two lines of `theme.json`) stands.
 
 ## Context
 

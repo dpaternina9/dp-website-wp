@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/feed-link",
+	"title": "Feed link",
+	"category": "theme",
+	"description": "Links to the site's feed. Where the feed lives follows the permalink setting, so no template can carry the address.",
+	"keywords": [ "rss", "feed", "subscribe" ],
+	"textdomain": "dpaternina",
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}
