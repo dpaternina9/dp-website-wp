@@ -588,6 +588,90 @@ categories index to point at instead. The row's geometry is identical with one
 link. David's call; do not re-add it, and do not build a `dp-categories` template
 to justify it.
 
+### 7.7 Phase 7f — the seed makes a site you can navigate ✅
+
+[ADR-0018](adr/0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md)
+deleted the `dp-to-*` destination system, and named the bill it was leaving:
+"Fresh installs ship with blank links … `dp-core`'s seeder sets them on a seeded
+site, so `npm run env:reset` still produces a working site." Nothing did that.
+`wp dp seed --fresh` produced a site with **three** pages, no template assigned
+to any of them, `show_on_front` still `posts`, the privacy setting still pointing
+at WordPress's own draft, and every chrome button inert — four of the theme's six
+`customTemplates` assigned to nothing at all.
+
+Four things closed it, and only the last one needed a mechanism.
+
+**Nine pages, not three.** The design's `PAGES` has three; the other six views it
+draws — the front page, the writing index, Work, About, the résumé, Contact — are
+built from data and still need a page behind them or their templates cannot be
+reached. Each carries only the words the design actually prints: the `<h1>` its
+template binds to `core/post-title`, the deck it binds to `dp_lead`, and body
+copy where the template renders `core/post-content`. Where a template renders no
+body, the page carries a callout saying so rather than invented prose. The Work
+page is titled *"Where I worked, what came out of it."* because that is the
+design's `<h1>` and `dp-work.html` binds the `<h1>` to the post title; a page
+called "Work" would draw a page headed "Work".
+
+**Templates and settings are seeded as data.** `Fixture::pages()` gained
+`template` and `role` fields; the seeder writes `_wp_page_template` (the slug,
+`dp-work` — `wp_update_post()` rejects the `.html` spelling) and points
+`show_on_front`, `page_on_front`, `page_for_posts` and
+`wp_page_for_privacy_policy` at the pages it just made. `page_for_posts` does
+nothing while `show_on_front` is `posts`, so those three move together. `--fresh`
+gives all of them back, and only where they point at a page the seed created.
+None of this is a route: nothing registers a rewrite, branches on a slug, or
+looks a page up by name, and re-slugging any of them breaks nothing.
+
+**The chrome links go in through a seam.** `dp-core` may not know the theme's
+files, block names or labels, so it hands over a map of *its* destination keys to
+URLs through `dp_seed_chrome_links` and the theme hands back finished markup,
+which the plugin saves as a `wp_template` / `wp_template_part` post and inspects
+none of. That post is byte-for-byte the kind of thing the site editor saves when
+David links a button by hand, so **nothing is computed at render time** and the
+editor and the front end draw the same links — which is what ADR-0018 asked for
+and what the deleted system could not give. The trigger is a `metadata.name` on
+the button, visible in List View ("Contact link", not "Button"), because ADR-0018
+rule 2 says a bare CSS class is not an announcement. A button that already
+carries a `url` is left alone.
+
+**Staleness is the hazard, and it is handled by regeneration.** A stored override
+beats the theme's file for as long as it exists, so one kept across releases
+freezes that template silently — this project has had exactly that bug, a `home`
+override still drawing a block the theme had replaced. So: every run deletes
+every override carrying the seeder's own meta mark *before* writing any, and the
+theme rebuilds each from `get_block_file_template()`, which reads the file and
+ignores the stored copy. Deletion is scoped by the mark, never by post type, so
+an override David saved is untouched by a normal run and by `--fresh` alike. The
+cost, accepted for a development site and not for a real one: a re-seed discards
+his edits to those five templates.
+
+Five files are covered — `header`, `footer`, `front-page`, `home`, `404` — and no
+more, because every override is a frozen template. The closing CTA band is
+inlined into the two of those that carry it, since a `core/pattern` reference is
+resolved at render time and cannot carry a link into the pattern; a pattern whose
+expansion gains no link stays a reference, so the query loop and the pager are
+never frozen into a seeded copy.
+
+**What is still open, and is David's or a later phase's.**
+
+- **The header's navigation has no menu.** `core/navigation` ships with no `ref`,
+  so core falls back to a page list: every published page, by title, including
+  WordPress's own "Sample Page" and the long design titles. Every item resolves,
+  and none of it is wrong — it is simply not the design's six-item nav. A
+  `wp_navigation` menu is the answer and ADR-0011 has the reason it was not built
+  here.
+- **Buttons outside the five covered files are still David's to link**, which is
+  ADR-0018 working as intended rather than a gap: "See the record" and "Get in
+  touch" on About, "Open the timeline" and "Get in touch" on the résumé, "Read
+  the series →" on Work, and the CTA band's "Say hi" on the seven templates that
+  are not seeded. Covering them means freezing those templates too, and the trade
+  gets worse the further it goes.
+- **The Contact page's three method rows** — email, X, the agency — are the
+  theme's `contact-method` pattern, which the plugin may not name. The page says
+  so on its face instead of pretending they are there.
+
+---
+
 ---
 
 ## Phase 8 — Feeds
