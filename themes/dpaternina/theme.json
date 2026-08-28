@@ -423,6 +423,7 @@
     { "name": "dp-about", "title": "About", "postTypes": [ "page" ] },
     { "name": "dp-resume", "title": "Résumé", "postTypes": [ "page" ] },
     { "name": "dp-contact", "title": "Contact", "postTypes": [ "page" ] },
+    { "name": "dp-series", "title": "Series index", "postTypes": [ "page" ] },
     { "name": "dp-uses", "title": "Uses", "postTypes": [ "page" ] },
     { "name": "dp-colophon", "title": "Colophon", "postTypes": [ "page" ] }
   ],

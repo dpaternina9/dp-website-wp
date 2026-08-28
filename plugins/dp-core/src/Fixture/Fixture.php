@@ -747,7 +747,7 @@ final class Fixture {
 	 * rewriting it here would hide the problem instead of surfacing it. It is a
 	 * launch blocker, not a seed bug.
 	 *
-	 * The other six are the views the design draws from data rather than from a
+	 * Six more are the views the design draws from data rather than from a
 	 * `PAGES` entry: the front page, the writing index, Work, About, the résumé
 	 * and Contact. WordPress needs a page behind each of them anyway — a template
 	 * with nothing assigned to it is a template nobody can reach — so each is
@@ -758,6 +758,11 @@ final class Fixture {
 	 * rather than invented prose. CLAUDE.md section 6: seed the design's copy as
 	 * written, and never write plausible-sounding facts about David to fill a
 	 * gap.
+	 *
+	 * The tenth, the series index, is a view the design does not draw at all —
+	 * it had one series and never needed a list of them — so its two lines of
+	 * copy say they are placeholder rather than imitating a page that does not
+	 * exist.
 	 *
 	 * Three fields carry the wiring and none of them is a route.
 	 *
@@ -834,6 +839,43 @@ final class Fixture {
 				'body'     => array(
 					self::note(
 						'Nothing on this page is rendered. WordPress draws the posts index with the theme\'s "home" template, which ships its own hero — "Writing." and the line under it — because the index is a list of posts rather than a page anybody edits.',
+						'PLACEHOLDER — NOT RENDERED'
+					),
+				),
+			),
+			array(
+
+				/*
+				 * Not keyed `series`: `Seeder::seed_chrome_links()` builds its
+				 * destination map from these keys and then sets the `series` key
+				 * itself, to the design series' term archive, which is what the
+				 * chrome has always meant by it. A page keyed `series` would be
+				 * silently overwritten.
+				 */
+				'key'      => 'series-index',
+
+				/*
+				 * `/series/` is the URL a reader guesses and the one that used to
+				 * 404, so it is what a seeded site starts with. It is a starting
+				 * slug and not a route: the `dp_series` rewrite claims
+				 * `/series/{term}/` and nothing else, no code looks this page up
+				 * by name, and re-slugging it breaks nothing.
+				 */
+				'slug'     => 'series',
+				'title'    => 'Series',
+				'template' => 'dp-series',
+				'role'     => '',
+				'updated'  => '',
+
+				/*
+				 * Placeholder, and short on purpose. The design has no index of
+				 * series — it only ever drew one — so there is no copy to
+				 * transcribe here and none is invented (CLAUDE.md section 6).
+				 */
+				'deck'     => 'Placeholder. The writing that runs in order, longest first. Each one is a series you can start at part one.',
+				'body'     => array(
+					self::note(
+						'Nothing on this page is rendered. The Series index template draws the list from the `dp_series` terms that have something published in them; the only things it takes from this page are its title and its deck.',
 						'PLACEHOLDER — NOT RENDERED'
 					),
 				),

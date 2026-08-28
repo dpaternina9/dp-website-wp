@@ -61,6 +61,7 @@ final class Theme {
 	private function register(): void {
 		$destinations = new Chrome\Destinations();
 		$navigation   = new Chrome\Navigation( $destinations );
+		$archive      = new Query\ArchiveFacts();
 
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
@@ -75,6 +76,7 @@ final class Theme {
 		( new Blocks\LeadImage() )->register();
 		( new Blocks\Markup() )->register();
 		( new Blocks\ResumeDownload() )->register();
+		( new Blocks\SeriesIndex( $archive ) )->register();
 		( new Blocks\SeriesPartsLink() )->register();
 		( new Blocks\SeriesPlanned() )->register();
 		( new Blocks\TemplateHierarchy() )->register();
@@ -85,7 +87,7 @@ final class Theme {
 		( new Chrome\PostPresentation() )->register();
 		( new Chrome\SeededLinks() )->register();
 		( new Chrome\SiteFacts() )->register();
-		( new Query\ArchiveFacts() )->register();
+		$archive->register();
 		( new Query\Pagination() )->register();
 		( new Query\QueryLoops() )->register();
 	}

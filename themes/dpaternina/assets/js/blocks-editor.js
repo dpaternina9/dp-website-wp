@@ -65,6 +65,7 @@
 		'dpaternina/feed-link',
 		'dpaternina/filter-pills',
 		'dpaternina/work-card-title',
+		'dpaternina/series-index',
 		'dpaternina/series-planned',
 	];
 

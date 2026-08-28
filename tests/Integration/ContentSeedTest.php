@@ -124,14 +124,16 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'planned_parts' => 5,
 
 				/*
-				 * Nine, where the design's `PAGES` has three. The other six are
-				 * the views it draws from data rather than from a page — the
-				 * front page, the writing index, Work, About, the resume and
-				 * Contact — and WordPress needs a page behind each of them or
-				 * four of the theme's six custom templates are assigned to
-				 * nothing and cannot be reached at all.
+				 * Ten, where the design's `PAGES` has three. Six are the views
+				 * it draws from data rather than from a page — the front page,
+				 * the writing index, Work, About, the resume and Contact — and
+				 * WordPress needs a page behind each of them or four of the
+				 * theme's custom templates are assigned to nothing and cannot be
+				 * reached at all. The tenth is the series index, which the
+				 * design does not draw and which is the only way `/series/` is
+				 * anything but a 404.
 				 */
-				'pages'         => 9,
+				'pages'         => 10,
 
 				/*
 				 * The permalink structure, `page_on_front`, `page_for_posts` and

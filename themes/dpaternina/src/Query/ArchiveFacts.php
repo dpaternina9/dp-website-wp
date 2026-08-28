@@ -217,7 +217,27 @@ final class ArchiveFacts {
 	public function series_written(): ?string {
 		$term = $this->term();
 
-		if ( null === $term || ! class_exists( SeriesParts::class ) || ! $this->orders_its_posts( $term ) ) {
+		if ( null === $term || ! $this->orders_its_posts( $term ) ) {
+			return null;
+		}
+
+		return $this->parts_line( $term->term_id );
+	}
+
+	/**
+	 * The same sentence about a series named rather than queried.
+	 *
+	 * `DP\Theme\Blocks\SeriesIndex` prints one of these per row and this is the
+	 * only place the string is written. Keeping it here rather than copying it
+	 * there is not tidiness: two copies of a translatable string are two entries
+	 * in the `.pot` file, two things to keep in step, and two chances for the
+	 * index and the archive to describe the same series differently.
+	 *
+	 * @param int $term_id A term in a taxonomy whose archive is a reading order.
+	 * @return string|null Null when `dp-core` is not there to count with.
+	 */
+	public function parts_line( int $term_id ): ?string {
+		if ( $term_id <= 0 || ! class_exists( SeriesParts::class ) ) {
 			return null;
 		}
 
@@ -226,8 +246,8 @@ final class ArchiveFacts {
 		return sprintf(
 			/* translators: 1: how many parts are published, 2: how many are drafted. */
 			__( '%1$s parts up · %2$s drafted', 'dpaternina' ),
-			number_format_i18n( count( $parts->published( $term->term_id ) ) ),
-			number_format_i18n( count( $parts->planned( $term->term_id ) ) )
+			number_format_i18n( count( $parts->published( $term_id ) ) ),
+			number_format_i18n( count( $parts->planned( $term_id ) ) )
 		);
 	}
 

@@ -1,0 +1,18 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/series-index",
+	"title": "Series index",
+	"category": "theme",
+	"description": "Every series with at least one published part, the longest first. Each row links to that series' own archive and prints how much of it exists.",
+	"keywords": [ "series", "index", "archive", "taxonomy", "parts" ],
+	"textdomain": "dpaternina",
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"multiple": false,
+		"className": false,
+		"lock": false
+	}
+}
