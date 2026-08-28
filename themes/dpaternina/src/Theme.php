@@ -83,6 +83,7 @@ final class Theme {
 		$navigation->register();
 		( new Chrome\Brand( $this->directory ) )->register();
 		( new Chrome\PostPresentation() )->register();
+		( new Chrome\SeededLinks() )->register();
 		( new Chrome\SiteFacts() )->register();
 		( new Query\ArchiveFacts() )->register();
 		( new Query\Pagination() )->register();

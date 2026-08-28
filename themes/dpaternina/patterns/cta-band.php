@@ -19,7 +19,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons"><!-- wp:button {"className":"dp-button-lg"} -->
+<div class="wp-block-buttons"><!-- wp:button {"className":"dp-button-lg","metadata":{"name":"Contact link"}} -->
 <div class="wp-block-button dp-button-lg"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Say hi', 'dpaternina' ); ?></a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons --></section>
