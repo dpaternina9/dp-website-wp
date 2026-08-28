@@ -149,7 +149,8 @@ offering, and taking, the update — observed, not assumed.
 
 - CPTs `dp_role`, `dp_ship`, `dp_video` — `public => false`,
   `publicly_queryable => false`, `rewrite => false`, `has_archive => false`,
-  `show_ui => true`, `show_in_rest => true`, `supports` trimmed to what is used.
+  `show_ui => true`, `show_in_rest => true`, `supports` trimmed to what is used —
+  plus `editor`, which is what §3.2 turned out to depend on.
   None of them has a single view: roles and ships expand inline on the timeline, videos
   render in the Watch grid. They are structured data David edits, not URLs.
 - Taxonomy `dp_series` on `post`, with term meta for the deck. Its rewrite slug
@@ -238,6 +239,38 @@ Fallback if David dislikes public drafts: `dp_series_stub`, with a WP-CLI comman
 reconciles stubs against published posts and warns on duplicates.
 
 ---
+
+### 3.2 The editing surface — every field has a control ✅
+
+ADR-0016 audited the *screens* rather than the code and found that none of the ten
+fields on `post` had an editor control: registered with `show_in_rest`, written by the
+seeder, read at render, and unreachable by hand. It deleted all ten, because a post
+already knew what they held. The thirty-three on `dp_role`, `dp_ship` and `dp_video`
+and the two on `page` are the remainder of that audit, and they cannot be deleted —
+nothing else knows what they hold — so they get controls.
+
+**The three custom types open as a locked form.** `register_post_type()`'s `template`
+carries the form `DP\Core\Editor\FieldForm` generates from the type's registered
+fields, and `template_lock => 'all'` holds it together. That needed `editor` in
+`supports`: `use_block_editor_for_post_type()` returns false without it, and all three
+types were opening in the *classic* editor, whose only offer for a registered field is
+the raw Custom Fields table.
+
+**A field is a bound `core/paragraph` unless it cannot be.** Seventeen of the
+thirty-three are core's own `core/post-meta` bindings, which cost no JavaScript. The
+other sixteen — booleans, enums, lists, decimal years, post references, and the
+multi-line fields whose line breaks `sanitize_textarea_field()` would strip out of rich
+text — are one of six small blocks, all `inserter: false`.
+
+**`dp_role_id` and `dp_writeup_id` are pickers.** Attaching a shipped thing to a role
+was typing a post ID into a key/value table; it is now a search by name.
+
+**A page keeps its canvas.** Its two fields are a document sidebar panel, generated
+from the REST schema so the labels are the ones `Meta` registered.
+
+Two things the phase found: the three types had no block editor at all, and the seeder
+was passing unslashed data to `wp_insert_post()`, which silently ate a backslash out of
+every block attribute containing a quotation mark.
 
 ## Phase 4 ✅ — The house style: blocks and editor constraints
 

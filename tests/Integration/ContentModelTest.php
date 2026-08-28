@@ -120,18 +120,36 @@ final class ContentModelTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * `supports` is trimmed to what is used.
+	 * The canvas is a locked form, and cannot become a second place for prose.
 	 *
-	 * No editor: a role's prose is `dp_detail`, a shipped thing's is `dp_detail`
-	 * plus `dp_bullets`, and a video has none. An editor nobody writes in is an
-	 * editor somebody eventually writes in, and then there are two places a
-	 * description can live.
+	 * This assertion used to be `editor` is **off**, and the reasoning it carried
+	 * was sound: a role's prose is `dp_detail`, a shipped thing's is `dp_detail`
+	 * plus `dp_bullets`, a video has none, and an editor nobody writes in is an
+	 * editor somebody eventually writes in — after which a description has two
+	 * places to live.
+	 *
+	 * What that reasoning did not know is what `use_block_editor_for_post_type()`
+	 * checks. Without `editor` in `supports` there is no block editor at all for
+	 * the type: no canvas, no `template`, no `template_lock`, and the only offer
+	 * WordPress makes for a registered field is the raw Custom Fields table. All
+	 * three of these types opened in the classic editor for that reason, and the
+	 * thirty fields on them had no control of any kind.
+	 *
+	 * So `editor` is on, and what keeps the old reasoning true is the pair below
+	 * it: the canvas opens as the generated form, and `template_lock => 'all'`
+	 * means nothing can be added to it, moved in it or removed from it. There is
+	 * still exactly one place a description can live.
 	 *
 	 * @return void
 	 */
-	public function test_a_post_type_has_no_editor(): void {
+	public function test_the_canvas_is_a_locked_form(): void {
 		foreach ( PostTypes::all() as $post_type ) {
-			$this->assertFalse( post_type_supports( $post_type, 'editor' ), $post_type . ' has no editor.' );
+			$object = get_post_type_object( $post_type );
+
+			$this->assertNotNull( $object );
+			$this->assertTrue( post_type_supports( $post_type, 'editor' ), $post_type . ' has no block editor, so it has no canvas to put a form in.' );
+			$this->assertSame( 'all', $object->template_lock, $post_type . ' has a canvas anything can be written in.' );
+			$this->assertNotEmpty( $object->template, $post_type . ' opens on an empty locked canvas.' );
 			$this->assertFalse( post_type_supports( $post_type, 'comments' ), $post_type . ' takes no comments.' );
 		}
 

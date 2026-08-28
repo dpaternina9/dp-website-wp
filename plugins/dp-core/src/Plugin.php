@@ -82,6 +82,7 @@ final class Plugin {
 		Contact\Contact::create( plugin_dir_path( $this->file ) )->register();
 		Resume\Resume::create( plugin_dir_path( $this->file ) )->register();
 		Admin\Admin::create( $this->file, $this->version )->register();
+		Editor\Editor::create( $this->file, $this->version )->register();
 		Update\UpdateClient::register();
 	}
 

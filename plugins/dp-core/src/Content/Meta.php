@@ -102,6 +102,16 @@ final class Meta {
 	}
 
 	/**
+	 * The fields declared for one post type.
+	 *
+	 * @param string $post_type The post type.
+	 * @return list<MetaField> Empty when this plugin declares nothing for the type.
+	 */
+	public function fields_for( string $post_type ): array {
+		return $this->post_fields()[ $post_type ] ?? array();
+	}
+
+	/**
 	 * Every meta key this plugin registers, flattened.
 	 *
 	 * @return list<string>
@@ -128,12 +138,14 @@ final class Meta {
 			new MetaField(
 				'dp_lead',
 				'string',
+				__( 'Deck', 'dp-core' ),
 				__( 'The deck under the page title.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_updated',
 				'string',
+				__( 'Updated stamp', 'dp-core' ),
 				__( 'The mono caps stamp at the top of the page, e.g. "UPDATED AUG 2026". Overrides the modified date.', 'dp-core' )
 			),
 		);
@@ -149,29 +161,34 @@ final class Meta {
 			new MetaField(
 				'dp_role_title',
 				'string',
+				__( 'Job title', 'dp-core' ),
 				__( 'The job title. The post title holds the organisation.', 'dp-core' )
 			),
-			$this->year_field( 'dp_start', __( 'When the role began, as a decimal year. The fraction is the month: 2026.4 is May 2026.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'When the role ended, as a decimal year. An ongoing role ends at today.', 'dp-core' ) ),
+			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When the role began, as a decimal year. The fraction is the month: 2026.4 is May 2026.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Ended', 'dp-core' ), __( 'When the role ended, as a decimal year. An ongoing role ends at today.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',
+				__( 'Range as printed', 'dp-core' ),
 				__( 'The range exactly as it is printed, e.g. "2016 — now". Never derived from the dates: "now" is a choice.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_detail',
 				'string',
+				__( 'Detail', 'dp-core' ),
 				__( 'What the job was and what it owned. Two or three sentences.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_stack',
 				'string',
+				__( 'Stack line', 'dp-core' ),
 				__( 'The mono caps stack line, e.g. "PHP · VUE.JS · REST APIS".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_accent',
 				'string',
+				__( 'Accent', 'dp-core' ),
 				__( 'An accent this lane owns, overriding the default teal. A lane with one also earns a legend swatch.', 'dp-core' ),
 				allowed: Tone::meta_values()
 			),
@@ -188,71 +205,86 @@ final class Meta {
 			new MetaField(
 				'dp_role_id',
 				'integer',
+				__( 'Role it came from', 'dp-core' ),
 				__( 'The role this hangs off. A shipped thing with no role does not appear on the timeline.', 'dp-core' ),
+				reference: PostTypes::ROLE,
 				minimum: 0.0
 			),
-			$this->year_field( 'dp_start', __( 'When work on it began, as a decimal year.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'When it shipped, or today if it is still going, as a decimal year.', 'dp-core' ) ),
+			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When work on it began, as a decimal year.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Shipped', 'dp-core' ), __( 'When it shipped, or today if it is still going, as a decimal year.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',
+				__( 'Range as printed', 'dp-core' ),
 				__( 'The range exactly as it is printed, e.g. "2023 — now".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_headline',
 				'string',
+				__( 'Headline', 'dp-core' ),
 				__( 'One line, in the display face, at the top of the expanded panel.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_detail',
 				'string',
+				__( 'Detail', 'dp-core' ),
 				__( 'What it is and who it is for.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_line',
 				'string',
+				__( 'Card line', 'dp-core' ),
 				__( 'One short sentence, written for the card above the timeline. Not the same copy as the detail: the card gets a line, the expanded panel gets the paragraph.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_bullets',
 				'array',
+				__( 'Constraints', 'dp-core' ),
 				__( 'The constraints that shaped it. Three is the house maximum.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_ship_role',
 				'string',
+				__( 'What David did', 'dp-core' ),
 				__( 'What David did on it, e.g. "Everything". Distinct from the role it hangs off.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_stack',
 				'string',
+				__( 'Stack line', 'dp-core' ),
 				__( 'The mono caps stack line for this piece of work.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_artifact_label',
 				'string',
+				__( 'Artifact label', 'dp-core' ),
 				__( 'The label above the artifact block, e.g. "WP-CLI SESSION".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_artifact',
 				'string',
+				__( 'Artifact', 'dp-core' ),
 				__( 'A preformatted terminal or code sample. Line breaks are content here, so they survive.', 'dp-core' ),
-				multiline: true
+				multiline: true,
+				preformatted: true
 			),
-			new MetaField( 'dp_stat1', 'string', __( 'The first statistic. An em dash means the number is not in yet.', 'dp-core' ) ),
-			new MetaField( 'dp_stat1_label', 'string', __( 'What the first statistic counts.', 'dp-core' ) ),
-			new MetaField( 'dp_stat2', 'string', __( 'The second statistic.', 'dp-core' ) ),
-			new MetaField( 'dp_stat2_label', 'string', __( 'What the second statistic counts.', 'dp-core' ) ),
+			new MetaField( 'dp_stat1', 'string', __( 'Statistic one', 'dp-core' ), __( 'The first statistic. An em dash means the number is not in yet.', 'dp-core' ) ),
+			new MetaField( 'dp_stat1_label', 'string', __( 'Statistic one label', 'dp-core' ), __( 'What the first statistic counts.', 'dp-core' ) ),
+			new MetaField( 'dp_stat2', 'string', __( 'Statistic two', 'dp-core' ), __( 'The second statistic.', 'dp-core' ) ),
+			new MetaField( 'dp_stat2_label', 'string', __( 'Statistic two label', 'dp-core' ), __( 'What the second statistic counts.', 'dp-core' ) ),
 			new MetaField(
 				'dp_featured',
 				'boolean',
+				__( 'Featured on a work card', 'dp-core' ),
 				__( 'Whether this appears as a WorkCard above the timeline.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_writeup_id',
 				'integer',
+				__( 'Write-up', 'dp-core' ),
 				__( 'A post that writes this up, if one exists. 0 when there is none.', 'dp-core' ),
+				reference: 'post',
 				minimum: 0.0
 			),
 		);
@@ -268,36 +300,42 @@ final class Meta {
 			new MetaField(
 				'dp_video_source',
 				'string',
+				__( 'Source', 'dp-core' ),
 				__( 'Where the video is hosted.', 'dp-core' ),
 				allowed: VideoSource::meta_values()
 			),
 			new MetaField(
 				'dp_video_ref',
 				'string',
+				__( 'Platform identifier', 'dp-core' ),
 				__( 'The platform identifier: a Twitch VOD id or a YouTube video id. Read according to the source.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_tone',
 				'string',
+				__( 'Tone', 'dp-core' ),
 				__( 'Which hue the card takes. The design codes the platform with it.', 'dp-core' ),
 				allowed: Tone::meta_values()
 			),
-			new MetaField( 'dp_duration', 'string', __( 'Runtime as it is printed, e.g. "2H 41M".', 'dp-core' ) ),
-			new MetaField( 'dp_when', 'string', __( 'When it went out, e.g. "AUG 2026".', 'dp-core' ) ),
+			new MetaField( 'dp_duration', 'string', __( 'Runtime', 'dp-core' ), __( 'Runtime as it is printed, e.g. "2H 41M".', 'dp-core' ) ),
+			new MetaField( 'dp_when', 'string', __( 'When it went out', 'dp-core' ), __( 'When it went out, e.g. "AUG 2026".', 'dp-core' ) ),
 			new MetaField(
 				'dp_note',
 				'string',
+				__( 'Note', 'dp-core' ),
 				__( 'One line under the title.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_live',
 				'boolean',
+				__( 'Live now', 'dp-core' ),
 				__( 'Whether this is the live-now panel rather than an archived video.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_live_meta',
 				'string',
+				__( 'Live strapline', 'dp-core' ),
 				__( 'The live strapline, e.g. "STREAMING NOW · 1H 12M IN".', 'dp-core' )
 			),
 		);
@@ -310,13 +348,15 @@ final class Meta {
 	 * value is a 400 with a readable message, not a silent zero.
 	 *
 	 * @param string $key         Meta key.
+	 * @param string $label       The short name of the field.
 	 * @param string $description What it holds.
 	 * @return MetaField
 	 */
-	private function year_field( string $key, string $description ): MetaField {
+	private function year_field( string $key, string $label, string $description ): MetaField {
 		return new MetaField(
 			$key,
 			'number',
+			$label,
 			$description,
 			is_year: true,
 			minimum: (float) Year::MIN_YEAR,
@@ -347,6 +387,7 @@ final class Meta {
 	private function schema( MetaField $field ): array {
 		$schema = array(
 			'type'        => $field->type,
+			'title'       => $field->label,
 			'description' => $field->description,
 		);
 

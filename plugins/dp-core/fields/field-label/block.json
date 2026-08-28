@@ -1,0 +1,39 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/field-label",
+	"version": "0.1.0",
+	"title": "Field label",
+	"category": "dp",
+	"icon": "tag",
+	"description": "The name of the field in the paragraph below it. Placed by the post type, not by hand.",
+	"textdomain": "dp-core",
+	"attributes": {
+		"label": {
+			"type": "string",
+			"default": ""
+		},
+		"help": {
+			"type": "string",
+			"default": ""
+		},
+		"metaKey": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"inserter": false,
+		"html": false,
+		"reusable": false,
+		"multiple": true,
+		"anchor": false,
+		"align": false,
+		"customClassName": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false,
+		"lock": false
+	}
+}

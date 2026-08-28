@@ -1137,6 +1137,21 @@ final class Seeder {
 			$postarr['post_date_gmt'] = $date;
 		}
 
+		/*
+		 * `wp_insert_post()` and `wp_update_post()` both expect slashed data and
+		 * both call `wp_unslash()` on the way to the database. This script was
+		 * passing it unslashed, and nothing in today's fixture contains a
+		 * backslash, so it round-tripped exactly and the omission cost nothing.
+		 *
+		 * It is here because the first value that *did* contain one lost it
+		 * silently, with no error anywhere: a block comment's attributes are
+		 * JSON, `wp_json_encode()` writes a quotation mark as `\u0022`, and every
+		 * attribute holding a quoted example arrived a backslash short and read
+		 * `u0022` in the editor. The value that found it is written elsewhere
+		 * now; the contract is the same for everything written here.
+		 */
+		$postarr = wp_slash( $postarr );
+
 		if ( $existing > 0 && get_post( $existing ) instanceof WP_Post ) {
 			$postarr['ID'] = $existing;
 			$result        = wp_update_post( $postarr, true );

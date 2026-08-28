@@ -15,6 +15,7 @@ use DP\Core\Content\ContentModel;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\SeriesParts;
 use DP\Core\Content\Taxonomies;
+use DP\Core\Editor\FieldForm;
 use DP\Core\Fixture\Fixture;
 use DP\Core\Fixture\Seeder;
 use WP_Post;
@@ -1029,5 +1030,44 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		}
 
 		$this->fail( sprintf( 'No %s titled "%s" was seeded.', $post_type, $title ) );
+	}
+
+	/**
+	 * Every timeline post the seeder writes opens with its editing form.
+	 *
+	 * The editor applies a post type's `template` only while the post is an
+	 * `auto-draft` — `setupEditor()` checks exactly that — and everything here is
+	 * published the moment it exists. So a seeded Role whose content were empty
+	 * would open on a blank locked canvas with no way to reach any of its seven
+	 * fields, which is the defect this phase set out to remove and would have
+	 * reintroduced on the only site anybody looks at.
+	 *
+	 * @return void
+	 */
+	public function test_every_seeded_timeline_post_opens_with_its_form(): void {
+		$this->seeder->seed();
+
+		$form = new FieldForm();
+
+		foreach ( PostTypes::all() as $post_type ) {
+			$posts = get_posts(
+				array(
+					'post_type'   => $post_type,
+					'numberposts' => -1,
+					'post_status' => 'any',
+				)
+			);
+
+			$this->assertNotEmpty( $posts, $post_type . ' seeded nothing.' );
+
+			foreach ( $posts as $post ) {
+				$this->assertInstanceOf( WP_Post::class, $post );
+				$this->assertSame(
+					$form->markup( $post_type ),
+					$post->post_content,
+					$post->post_title . ' would open on an empty locked canvas.'
+				);
+			}
+		}
 	}
 }

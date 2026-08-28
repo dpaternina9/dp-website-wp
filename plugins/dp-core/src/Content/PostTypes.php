@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace DP\Core\Content;
 
+use DP\Core\Editor\FieldForm;
+
 /**
  * Registers `dp_role`, `dp_ship` and `dp_video`.
  *
@@ -27,6 +29,28 @@ namespace DP\Core\Content;
  * `supports` carries `custom-fields` on all three deliberately: without it
  * `WP_REST_Posts_Controller` omits the `meta` property from the schema entirely,
  * and every registered field would be invisible to the editor and to the tests.
+ * It is not there to draw the raw key/value table — `DP\Core\Editor\Editor`
+ * switches that panel off on these three screens — it is there so `meta` exists
+ * to bind to.
+ *
+ * **Each of the three opens with its own form, locked.** `template` is the form
+ * `FieldForm` generates from the type's registered fields, and
+ * `template_lock => 'all'` means the blocks in it cannot be moved, removed or
+ * added to. That is the whole editing surface for these types: they carry no
+ * prose, so there is nothing else the canvas could be for, and a field with no
+ * control is a field only the seeder can write (ADR-0016). The lock is what
+ * makes the form a form rather than a suggestion: without it the first
+ * accidental backspace in an empty paragraph removes a field's only control, and
+ * nothing says so until the value stops rendering.
+ *
+ * **`editor` is in `supports` for that reason and no other.** It is not there so
+ * a Role can be written up — a Role has no single view to write it up on. It is
+ * there because `use_block_editor_for_post_type()` returns false without it, and
+ * a post type with no block editor has no canvas, no `template` and no
+ * `template_lock`: all three of these opened in the classic editor, whose only
+ * offer for a registered field is the raw Custom Fields table. That is the
+ * screen this phase replaces, and it was the screen because of a missing word in
+ * this array.
  */
 final class PostTypes {
 
@@ -61,6 +85,13 @@ final class PostTypes {
 	}
 
 	/**
+	 * Constructor.
+	 *
+	 * @param FieldForm $form The editing form each type opens with.
+	 */
+	public function __construct( private readonly FieldForm $form = new FieldForm() ) {}
+
+	/**
 	 * Register the three post types.
 	 *
 	 * @return void
@@ -72,7 +103,7 @@ final class PostTypes {
 			__( 'A job on the timeline. Its lane, its dates, and what it was.', 'dp-core' ),
 			'dashicons-id-alt',
 			21,
-			array( 'title', 'custom-fields', 'page-attributes' )
+			array( 'title', 'editor', 'custom-fields', 'page-attributes' )
 		);
 
 		$this->register_one(
@@ -83,7 +114,7 @@ final class PostTypes {
 			22,
 			// `thumbnail` is the WorkCard shot from digest section 3.4. It is a real
 			// attachment, so it belongs to the media library, not to a meta field.
-			array( 'title', 'custom-fields', 'page-attributes', 'thumbnail' )
+			array( 'title', 'editor', 'custom-fields', 'page-attributes', 'thumbnail' )
 		);
 
 		$this->register_one(
@@ -92,7 +123,7 @@ final class PostTypes {
 			__( 'A stream or a video for the Watch grid. Thumbnails are never uploaded.', 'dp-core' ),
 			'dashicons-video-alt3',
 			23,
-			array( 'title', 'custom-fields', 'page-attributes' )
+			array( 'title', 'editor', 'custom-fields', 'page-attributes' )
 		);
 	}
 
@@ -137,6 +168,8 @@ final class PostTypes {
 				'capability_type'     => 'post',
 				'map_meta_cap'        => true,
 				'supports'            => $supports,
+				'template'            => $this->form->template( $post_type ),
+				'template_lock'       => 'all',
 			)
 		);
 	}
