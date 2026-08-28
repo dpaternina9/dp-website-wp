@@ -12,6 +12,7 @@ namespace DP\Tests\Integration;
 use DP\Core\Content\ContentModel;
 use DP\Core\Content\Taxonomies;
 use DP\Core\Fixture\ChromeLinks;
+use DP\Core\Fixture\Fixture;
 use DP\Core\Fixture\Seeder;
 use WP_Block_Template;
 use WP_Post;
@@ -78,6 +79,21 @@ final class SeedChromeLinksTest extends WP_UnitTestCase {
 		parent::set_up();
 
 		ContentModel::create()->register();
+	}
+
+	/**
+	 * Put the URL shape back for whatever runs next.
+	 *
+	 * The seeder sets `permalink_structure`, and `$wp_rewrite` holds its copy in
+	 * memory for the whole process. The transaction rolls the option back;
+	 * nothing rolls the object back.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		$this->set_permalink_structure( '' );
+
+		parent::tear_down();
 	}
 
 	/*
@@ -223,6 +239,57 @@ final class SeedChromeLinksTest extends WP_UnitTestCase {
 			'<!-- wp:pattern {"slug":"dpaternina/post-row-compact"} /-->',
 			$front,
 			'A pattern with nothing to link is still a reference, so it cannot go stale.'
+		);
+	}
+
+	/**
+	 * Every link the chrome carries is a path, and the series link is its route.
+	 *
+	 * The links are built from `get_permalink()` and `get_term_link()` during the
+	 * run, so they are whatever the permalink structure said at the moment they
+	 * were asked for. A seed that saved the chrome before setting the structure
+	 * would bake `?page_id=47` into five templates and then keep serving it after
+	 * the structure changed, which is the same staleness problem in a different
+	 * coat.
+	 *
+	 * @return void
+	 */
+	public function test_the_saved_links_are_paths(): void {
+		Seeder::create()->seed();
+
+		$series = ( new Fixture() )->series()['slug'];
+		$found  = 0;
+
+		foreach ( self::COVERED as list( $slug, $type ) ) {
+			foreach ( $this->buttons( $this->override( $slug, $type )->post_content ) as $name => $button ) {
+				/*
+				 * The mobile panel's own toggles ship with `#dp-nav-panel` and
+				 * `#dp-header-top`, which are fragments rather than
+				 * destinations. Nothing seeded them and nothing should.
+				 */
+				if ( '' === $button['url'] || str_starts_with( $button['url'], '#' ) ) {
+					continue;
+				}
+
+				$this->assertStringStartsWith( home_url( '/' ), $button['url'] );
+				$this->assertStringNotContainsString(
+					'?',
+					$button['url'],
+					sprintf( '"%s" on %s is a path, not a query string.', $name, $slug )
+				);
+
+				++$found;
+			}
+		}
+
+		$this->assertGreaterThan( 10, $found, 'The chrome carries links, so this is looking at something.' );
+
+		$home = $this->override( 'home', 'wp_template' )->post_content;
+
+		$this->assertStringContainsString(
+			home_url( '/' . ( new Taxonomies() )->rewrite_slug() . '/' . $series . '/' ),
+			$home,
+			'The series quicklink is the taxonomy\'s own route, which does not exist under a plain structure.'
 		);
 	}
 

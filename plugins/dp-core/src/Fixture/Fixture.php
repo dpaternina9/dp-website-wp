@@ -714,6 +714,28 @@ final class Fixture {
 	}
 
 	/**
+	 * The URL shape a seeded site starts with.
+	 *
+	 * Not transcribed from the design — the design tool has no URLs — but implied
+	 * by it directly: every path it draws is a path. `/writing/`, `/work/`,
+	 * `/series/life-story/`, `/category/dev/`. On a fresh WordPress install
+	 * `permalink_structure` is empty and every one of those is a 404, because
+	 * plain permalinks are query strings and **no rewrite exists at all** under
+	 * them. That takes `dp_series`' rewrite slug with it, which CLAUDE.md
+	 * section 5.1 names as the one registered page-facing route in this project.
+	 *
+	 * `/%postname%/` rather than a dated structure, because the design's post
+	 * view carries a date in its own copy and never in its URL, and because a
+	 * flat structure is the one that survives the migration redirect map with the
+	 * fewest rows.
+	 *
+	 * @return string A `permalink_structure` value.
+	 */
+	public function permalink_structure(): string {
+		return '/%postname%/';
+	}
+
+	/**
 	 * Every page the design implies, and the template each one is drawn by.
 	 *
 	 * Three of these are the design's own `PAGES` entries — Uses, Colophon,

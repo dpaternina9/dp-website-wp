@@ -9,11 +9,13 @@ declare( strict_types=1 );
 
 namespace DP\Core\Fixture;
 
+use DP\Core\Content\ContentModel;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\Taxonomies;
 use RuntimeException;
 use WP_Filesystem_Base;
 use WP_Post;
+use WP_Rewrite;
 use WP_Term;
 
 /**
@@ -65,11 +67,20 @@ final class Seeder {
 	/**
 	 * The index, as loaded and then updated.
 	 *
-	 * @var array{posts: array<string, int>, terms: array<string, int>}
+	 * `settings` records site options this script wrote, against the value it
+	 * wrote, so `wipe()` can tell "I set this" from "it already said that". The
+	 * other three settings need no such record: each holds the ID of a post in
+	 * `posts`, which is proof enough. A permalink structure holds a string that
+	 * anything could have put there — the development environment sets exactly
+	 * this one at `wp-env start`, and clearing that on `--fresh` would be this
+	 * script tidying away somebody else's work.
+	 *
+	 * @var array{posts: array<string, int>, terms: array<string, int>, settings: array<string, string>}
 	 */
 	private array $index = array(
-		'posts' => array(),
-		'terms' => array(),
+		'posts'    => array(),
+		'terms'    => array(),
+		'settings' => array(),
 	);
 
 	/**
@@ -202,6 +213,7 @@ final class Seeder {
 
 		$this->release_setting( 'page_for_posts', 'page:posts' );
 		$this->release_setting( 'wp_page_for_privacy_policy', 'page:privacy' );
+		$this->release_permalinks();
 
 		foreach ( $this->index['posts'] as $post_id ) {
 			if ( get_post( $post_id ) instanceof WP_Post ) {
@@ -218,8 +230,9 @@ final class Seeder {
 		}
 
 		$this->index = array(
-			'posts' => array(),
-			'terms' => array(),
+			'posts'    => array(),
+			'terms'    => array(),
+			'settings' => array(),
 		);
 
 		delete_option( self::INDEX_OPTION );
@@ -565,7 +578,7 @@ final class Seeder {
 	}
 
 	/**
-	 * Point Settings to Reading and Settings to Privacy at the seeded pages.
+	 * Settings: the URL shape, Reading, and the privacy page.
 	 *
 	 * The theme ships both a `front-page` template and a `home` one, which is the
 	 * design's own shape: a landing page, and a separate index of the writing.
@@ -573,20 +586,37 @@ final class Seeder {
 	 * nothing at all while `show_on_front` is `posts` — so the three move
 	 * together or not at all.
 	 *
-	 * This one does overwrite. `seed_brand()` deliberately never replaces a logo
-	 * David chose, because a logo is a preference; a front page pointing at a
-	 * page this run has just re-created is not a preference, it is the wiring
-	 * that makes the run's own output reachable. On a seeded site that is the
-	 * point of the command. `wipe()` puts all three back.
+	 * These do overwrite. `seed_brand()` deliberately never replaces a logo David
+	 * chose, because a logo is a preference; a front page pointing at a page this
+	 * run has just re-created is not a preference, it is the wiring that makes
+	 * the run's own output reachable. `wipe()` puts all three back.
+	 *
+	 * **The permalink structure is the exception, and it is set only when there
+	 * is none.** A fresh install has an empty `permalink_structure`, and under
+	 * plain permalinks *no rewrite rule exists at all* — so every path the design
+	 * draws is a 404 and `dp_series`' rewrite slug, the one registered
+	 * page-facing route in this project, is simply not there. A seeded site is
+	 * supposed to match the design's fixtures and the design's URLs are paths, so
+	 * an empty structure is filled in. A structure David already chose is left
+	 * alone whatever it is: any non-empty structure gives the rewrite rules the
+	 * routes need, and replacing, say, a dated structure would invalidate every
+	 * URL on the site to gain nothing.
+	 *
+	 * It has to happen before the chrome links are built, because those are
+	 * `get_permalink()` calls and a permalink is whatever the structure says it
+	 * is at the moment it is asked. That is the same mistake this method's own
+	 * first version made in its verification: a sweep driven by `get_permalink()`
+	 * measures the URL WordPress currently generates, not the URL the design
+	 * specifies, and `?page_id=47` resolves perfectly well.
 	 *
 	 * @param array<string, int> $pages Fixture key to post ID.
-	 * @return int How many settings now point at a seeded page.
+	 * @return int How many settings this run is now responsible for.
 	 */
 	private function seed_settings( array $pages ): int {
 		$front   = $pages['home'] ?? 0;
 		$posts   = $pages['posts'] ?? 0;
 		$privacy = $pages['privacy'] ?? 0;
-		$pointed = 0;
+		$pointed = $this->seed_permalinks();
 
 		if ( $front > 0 && $posts > 0 ) {
 			update_option( 'show_on_front', 'page' );
@@ -603,6 +633,70 @@ final class Seeder {
 		}
 
 		return $pointed;
+	}
+
+	/**
+	 * Give a site with no permalink structure the one the design's URLs imply.
+	 *
+	 * **Setting the option is not enough, and this is the part that is easy to
+	 * get wrong.** `register_taxonomy()` adds a permastruct only when
+	 * `is_admin()` or there is already a permalink structure:
+	 *
+	 *     if ( false !== $args['rewrite'] && ( is_admin() || get_option( 'permalink_structure' ) ) )
+	 *
+	 * Under WP-CLI neither is true on a fresh install, so every taxonomy
+	 * registered on `init` — core's `category` and `post_tag`, and this plugin's
+	 * `dp_series` — has **no permastruct at all** by the time this runs. Change
+	 * the option now and two things go wrong at once: `get_term_link()` keeps
+	 * returning `?dp_series=life-story`, which is what the chrome links a few
+	 * steps later would be built from and saved with; and a flush at this moment
+	 * would write a rule set with no taxonomy rules in it, which
+	 * `WP_Rewrite::wp_rewrite_rules()` then serves from the option forever
+	 * because it only regenerates when that option is *empty*. A site that 404s
+	 * on every archive, cached.
+	 *
+	 * So the registrations are re-run first. `create_initial_taxonomies()` is
+	 * core's own function for it and is what `init` calls at priority 0; running
+	 * it again resets `category` and `post_tag` to their declared arguments,
+	 * which is a side effect worth naming, and is the reason this happens only on
+	 * a site that has no structure to begin with. `ContentModel::register()` does
+	 * the same for ours and is idempotent by design.
+	 *
+	 * Then the flush, and **soft**. The rewrite rules are site data and this
+	 * writes them; the `.htaccess` that tells Apache to send the request to
+	 * WordPress at all is server configuration and this does not. It cannot
+	 * honestly write one anyway — `got_mod_rewrite()` is false under WP-CLI
+	 * because there is no server to ask, so a hard flush silently does nothing —
+	 * and a plugin that asserted `got_rewrite` to get past that would be a plugin
+	 * writing Apache config into a site root on a guess. `.wp-env.json` does that
+	 * part for the development environment, through the `apache_modules` key
+	 * WP-CLI reads and wp-env already ships for exactly this.
+	 *
+	 * @return int 1 if this run set the structure, 0 if there already was one.
+	 */
+	private function seed_permalinks(): int {
+		global $wp_rewrite;
+
+		if ( ! $wp_rewrite instanceof WP_Rewrite ) {
+			return 0;
+		}
+
+		$stored = get_option( 'permalink_structure' );
+
+		if ( is_string( $stored ) && '' !== $stored ) {
+			return 0;
+		}
+
+		$wp_rewrite->set_permalink_structure( $this->fixture->permalink_structure() );
+
+		create_initial_taxonomies();
+		ContentModel::create()->register();
+
+		$wp_rewrite->flush_rules( false );
+
+		$this->index['settings']['permalink_structure'] = $this->fixture->permalink_structure();
+
+		return 1;
 	}
 
 	/**
@@ -747,6 +841,40 @@ final class Seeder {
 		$this->index['posts'][ self::TEMPLATE_KEY . $override['type'] . ':' . $override['slug'] ] = $post_id;
 
 		return $post_id;
+	}
+
+	/**
+	 * Give the permalink structure back, if this script is the one that set it.
+	 *
+	 * The same rule as the three settings above and as the site logo: what was
+	 * changed is undone, what somebody else chose is left. The difference is what
+	 * counts as proof. Those three hold a post ID, and the index says whether the
+	 * post is ours; this holds a string, and "it matches the fixture" is not the
+	 * same claim as "we wrote it" — `.wp-env.json` sets this very value at
+	 * `wp-env start`, so matching on the value alone had `--fresh` quietly
+	 * clearing the environment's own work and putting it back a moment later.
+	 *
+	 * So the index records the write, and only a recorded write is undone.
+	 *
+	 * @return void
+	 */
+	private function release_permalinks(): void {
+		global $wp_rewrite;
+
+		$written = $this->index['settings']['permalink_structure'] ?? null;
+
+		if ( ! $wp_rewrite instanceof WP_Rewrite || null === $written ) {
+			return;
+		}
+
+		unset( $this->index['settings']['permalink_structure'] );
+
+		if ( get_option( 'permalink_structure' ) !== $written ) {
+			return;
+		}
+
+		$wp_rewrite->set_permalink_structure( '' );
+		$wp_rewrite->flush_rules( false );
 	}
 
 	/**
@@ -1131,8 +1259,9 @@ final class Seeder {
 		}
 
 		$this->index = array(
-			'posts' => $this->int_map( $stored['posts'] ?? array() ),
-			'terms' => $this->int_map( $stored['terms'] ?? array() ),
+			'posts'    => $this->int_map( $stored['posts'] ?? array() ),
+			'terms'    => $this->int_map( $stored['terms'] ?? array() ),
+			'settings' => $this->string_map( $stored['settings'] ?? array() ),
 		);
 	}
 
@@ -1145,6 +1274,28 @@ final class Seeder {
 	 */
 	private function save_index(): void {
 		update_option( self::INDEX_OPTION, $this->index, false );
+	}
+
+	/**
+	 * Coerce the settings half of a stored index into the shape assumed here.
+	 *
+	 * @param mixed $stored Whatever was in the option.
+	 * @return array<string, string>
+	 */
+	private function string_map( mixed $stored ): array {
+		if ( ! is_array( $stored ) ) {
+			return array();
+		}
+
+		$map = array();
+
+		foreach ( $stored as $key => $value ) {
+			if ( is_string( $key ) && is_string( $value ) ) {
+				$map[ $key ] = $value;
+			}
+		}
+
+		return $map;
 	}
 
 	/**

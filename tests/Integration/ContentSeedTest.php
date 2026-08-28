@@ -69,6 +69,22 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Put the URL shape back for whatever runs next.
+	 *
+	 * The seeder now sets `permalink_structure`, and `$wp_rewrite` keeps its copy
+	 * in memory for the whole process — so a run that left it set would hand the
+	 * next test in the file a different site from the one it asked for. The
+	 * transaction rolls the option back; nothing rolls the object back.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		$this->set_permalink_structure( '' );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * The run produces the counts the design implies.
 	 *
 	 * @return void
@@ -118,12 +134,14 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'pages'         => 9,
 
 				/*
-				 * `page_on_front`, `page_for_posts` and the privacy page. The
-				 * theme ships both a `front-page` and a `home` template, which
-				 * is the design's shape, and neither is reachable until Reading
-				 * says so.
+				 * The permalink structure, `page_on_front`, `page_for_posts` and
+				 * the privacy page. The theme ships both a `front-page` and a
+				 * `home` template, which is the design's shape, and neither is
+				 * reachable until Reading says so; and under the empty structure
+				 * a fresh install starts with, none of the design's paths exists
+				 * at all.
 				 */
-				'settings'      => 3,
+				'settings'      => 4,
 
 				/*
 				 * The header, the footer, the front page, the blog index and
@@ -628,6 +646,197 @@ final class ContentSeedTest extends WP_UnitTestCase {
 
 		$this->assertSame( $mine, $this->setting( 'page_on_front' ) );
 		$this->assertSame( 'page', get_option( 'show_on_front' ) );
+	}
+
+	/**
+	 * A seeded site serves the paths the design draws, not query strings.
+	 *
+	 * This is the assertion the first version of this work did not have, and the
+	 * gap it left was invisible from the inside: the sweep that checked every
+	 * page drove itself from `get_permalink()`, so it was asking WordPress what
+	 * URL it would generate and then checking that WordPress could resolve it.
+	 * Under an empty `permalink_structure` that is `?page_id=47`, which returns
+	 * 200 and proves nothing, while every path in the design 404s.
+	 *
+	 * So this asserts the shape as well as the resolution, and it resolves
+	 * through `url_to_postid()`, which runs the URL back through the rewrite
+	 * rules rather than through the function that produced it.
+	 *
+	 * @return void
+	 */
+	public function test_a_seeded_site_serves_paths_rather_than_query_strings(): void {
+		$this->seeder->seed();
+
+		$this->assertSame( $this->fixture->permalink_structure(), get_option( 'permalink_structure' ) );
+
+		foreach ( $this->fixture->pages() as $page ) {
+			$post = $this->seeded_page( $page['slug'] );
+			$url  = get_permalink( $post );
+
+			$this->assertIsString( $url );
+			$this->assertStringNotContainsString( '?', $url, $page['slug'] . ' has a path, not a query string.' );
+			$this->assertSame(
+				'front' === $page['role'] ? home_url( '/' ) : home_url( '/' . $page['slug'] . '/' ),
+				$url
+			);
+
+			/*
+			 * `go_to()` parses the URL the way a request does, through the
+			 * rewrite rules, so this is the half `get_permalink()` cannot
+			 * vouch for. It is uniform across all three roles because the
+			 * queried object of a static front page and of the posts page is
+			 * the page itself.
+			 */
+			$this->go_to( $url );
+
+			$this->assertSame(
+				$post->ID,
+				get_queried_object_id(),
+				$page['slug'] . ' is what its own path resolves to.'
+			);
+		}
+	}
+
+	/**
+	 * `dp_series`' rewrite exists, which under a plain structure it does not.
+	 *
+	 * CLAUDE.md section 5.1 names it as one of the only two registered rewrites
+	 * in the project. A rewrite is a rewrite rule, and a site with an empty
+	 * `permalink_structure` generates no rewrite rules at all — so the one route
+	 * this project owns was, on every freshly seeded site, absent.
+	 *
+	 * @return void
+	 */
+	public function test_the_series_archive_lives_under_its_own_path(): void {
+		$this->seeder->seed();
+
+		$term = get_term_by( 'slug', $this->fixture->series()['slug'], Taxonomies::SERIES );
+
+		$this->assertInstanceOf( WP_Term::class, $term );
+
+		$link = get_term_link( $term );
+
+		$this->assertIsString( $link );
+		$this->assertSame(
+			home_url( '/' . ( new Taxonomies() )->rewrite_slug() . '/' . $term->slug . '/' ),
+			$link
+		);
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertIsArray( $rules );
+		$this->assertNotEmpty( $rules, 'A structure with no rules behind it is a structure that 404s.' );
+
+		$matched = array_filter(
+			$rules,
+			static fn ( $target ): bool => is_string( $target ) && str_contains( $target, 'dp_series=' )
+		);
+
+		$this->assertNotEmpty( $matched, 'The series taxonomy has rewrite rules.' );
+
+		/*
+		 * Core's own taxonomies are in the same boat and for the same reason:
+		 * `register_taxonomy()` adds no permastruct on a site with no permalink
+		 * structure, so a flush that ran before they were re-registered would
+		 * write a rule set with no category archives in it and
+		 * `wp_rewrite_rules()` would serve that from the option forever.
+		 */
+		$categories = array_filter(
+			$rules,
+			static fn ( $target ): bool => is_string( $target ) && str_contains( $target, 'category_name=' )
+		);
+
+		$this->assertNotEmpty( $categories, 'Core\'s category archives survived the flush too.' );
+	}
+
+	/**
+	 * A structure David already chose is not replaced.
+	 *
+	 * Any non-empty structure gives the routes their rules, so there is nothing
+	 * to gain by overwriting one — and everything to lose, since it would
+	 * invalidate every URL on the site.
+	 *
+	 * @return void
+	 */
+	public function test_a_permalink_structure_already_set_is_left_alone(): void {
+		$this->set_permalink_structure( '/%year%/%postname%/' );
+
+		$report = $this->seeder->seed();
+
+		$this->assertSame( '/%year%/%postname%/', get_option( 'permalink_structure' ) );
+		$this->assertSame( 3, $report->count( 'settings' ), 'Three settings, not four: the structure was already there.' );
+	}
+
+	/**
+	 * A fresh run gives the structure back, and leaves one it did not set.
+	 *
+	 * The third case is the one that matters and the one a value comparison gets
+	 * wrong: `.wp-env.json` sets *this exact structure* at `wp-env start`, so
+	 * "the option matches the fixture" is not evidence that this script wrote it.
+	 * The index records the write, and only a recorded write is undone.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_releases_only_the_structure_it_set(): void {
+		$this->seeder->seed();
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( '', get_option( 'permalink_structure' ), 'What it set, it gives back.' );
+
+		$this->set_permalink_structure( '/%year%/%postname%/' );
+
+		Seeder::create()->seed();
+		Seeder::create()->wipe();
+
+		$this->assertSame( '/%year%/%postname%/', get_option( 'permalink_structure' ), 'A different structure is left alone.' );
+
+		$this->set_permalink_structure( $this->fixture->permalink_structure() );
+
+		Seeder::create()->seed();
+		Seeder::create()->wipe();
+
+		$this->assertSame(
+			$this->fixture->permalink_structure(),
+			get_option( 'permalink_structure' ),
+			'And so is the same structure, when somebody else put it there.'
+		);
+	}
+
+	/**
+	 * The environment and the fixture agree on the URL shape.
+	 *
+	 * The value is written twice on purpose and the halves do different jobs, so
+	 * the risk is that one moves and the other does not.
+	 *
+	 * `.wp-env.json` sets the structure at `wp-env start`, through WP-CLI's own
+	 * `rewrite structure --hard`. That is the only thing here that can write the
+	 * `.htaccess` Apache needs before a request ever reaches PHP: `got_mod_rewrite()`
+	 * is false under WP-CLI, and the way past it is the `apache_modules` key in
+	 * the `wp-cli.yml` wp-env already ships — a piece of environment
+	 * configuration, not something a plugin should assert on a guess.
+	 *
+	 * The seeder sets the same structure when it finds none, which is what makes
+	 * `wp dp seed` correct on a site wp-env did not build, and what makes
+	 * `get_term_link()` return `/series/life-story/` at the moment the chrome
+	 * links are saved rather than `?dp_series=life-story`.
+	 *
+	 * @return void
+	 */
+	public function test_the_environment_and_the_fixture_want_the_same_urls(): void {
+		$path = dirname( __DIR__, 2 ) . '/.wp-env.json';
+
+		$this->assertFileIsReadable( $path );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test.
+		$json = file_get_contents( $path );
+
+		$this->assertIsString( $json );
+		$this->assertStringContainsString(
+			"wp rewrite structure '" . $this->fixture->permalink_structure() . "' --hard",
+			$json,
+			'.wp-env.json sets the structure the fixture names, or a reset gives a site whose paths 404.'
+		);
 	}
 
 	/**
