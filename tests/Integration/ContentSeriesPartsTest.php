@@ -78,18 +78,20 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	/**
 	 * Create a part of the series.
 	 *
-	 * The date is what orders a series now and therefore what numbers it, so it is
-	 * the only positioning argument this helper takes. `$day` is a day in January
-	 * 2026: day 1 sorts before day 2, which is the whole of what any of these
-	 * tests needs to say.
+	 * Two positioning arguments, because a series has two. `$day` is a day in
+	 * January 2026 and orders a series nobody has arranged; `$order` is
+	 * `menu_order` and is what the ordering screen writes. A call that passes no
+	 * `$order` is describing a series in the state every series is in until
+	 * somebody drags a row, which is what most of these tests are about.
 	 *
 	 * @param string $title  The title.
 	 * @param string $status `publish` or `draft`.
-	 * @param int    $day    Day of the month, which fixes the order.
+	 * @param int    $day    Day of the month, which fixes the order when nothing else does.
 	 * @param string $note   The line under a planned part, stored as the excerpt.
+	 * @param int    $order  `menu_order`, or zero for a part nobody has placed.
 	 * @return int The post ID.
 	 */
-	private function part( string $title, string $status, int $day, string $note = '' ): int {
+	private function part( string $title, string $status, int $day, string $note = '', int $order = 0 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => $title,
@@ -98,6 +100,7 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 				'post_excerpt' => $note,
 				'post_name'    => sanitize_title( $title ),
 				'post_date'    => sprintf( '2026-01-%02d 09:00:00', $day ),
+				'menu_order'   => $order,
 			)
 		);
 
@@ -421,5 +424,85 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 		wp_set_current_user( 0 );
 
 		$this->assertCount( 1, $this->parts->planned( $this->series ) );
+	}
+
+	/**
+	 * **The compatibility guarantee.** A series nobody has ordered is unchanged.
+	 *
+	 * `menu_order` is back as the first sort key. Every post on this site carries
+	 * zero in it, so the sort falls straight through to the date and every
+	 * assertion above this one is a statement about that. This one says it out
+	 * loud, so that the guarantee fails as one named test rather than as eleven.
+	 *
+	 * @return void
+	 */
+	public function test_an_unordered_series_reads_in_date_order(): void {
+		$last  = $this->part( 'Written last', 'publish', 9 );
+		$first = $this->part( 'Written first', 'publish', 1 );
+
+		$this->assertSame( array( $first, $last ), $this->parts->published( $this->series ) );
+		$this->assertSame( 1, $this->parts->part_of( $first ) );
+		$this->assertSame( 2, $this->parts->part_of( $last ) );
+	}
+
+	/**
+	 * An order somebody set leads the date it was published on.
+	 *
+	 * The point of the whole field. A part written out of sequence, or a draft
+	 * created in the wrong week, sits where David put it.
+	 *
+	 * @return void
+	 */
+	public function test_an_order_somebody_set_leads_the_date(): void {
+		$early = $this->part( 'Published first, reads second', 'publish', 1, '', 2 );
+		$late  = $this->part( 'Published second, reads first', 'publish', 9, '', 1 );
+
+		$this->assertSame( array( $late, $early ), $this->parts->published( $this->series ) );
+		$this->assertSame( 1, $this->parts->part_of( $late ) );
+		$this->assertSame( 2, $this->parts->part_of( $early ) );
+	}
+
+	/**
+	 * Planned parts obey the same order, so a draft can sit between two posts.
+	 *
+	 * @return void
+	 */
+	public function test_planned_parts_take_the_order_too(): void {
+		$this->part( 'Reads third', 'draft', 1, '', 3 );
+		$this->part( 'Reads first', 'draft', 9, '', 1 );
+
+		$titles = array_map(
+			static fn ( PlannedPart $part ): string => $part->title,
+			$this->parts->planned( $this->series )
+		);
+
+		$this->assertSame( array( 'Reads first', 'Reads third' ), $titles );
+	}
+
+	/**
+	 * `all()` is one sequence with both statuses in it.
+	 *
+	 * The reading order spans the two lists, which is why the ordering screen
+	 * shows one list rather than two.
+	 *
+	 * @return void
+	 */
+	public function test_all_returns_both_statuses_in_one_sequence(): void {
+		$published = $this->part( 'Up', 'publish', 5, '', 1 );
+		$planned   = $this->part( 'Still to come', 'draft', 5, '', 2 );
+		$later     = $this->part( 'Up, later', 'publish', 5, '', 3 );
+
+		$this->assertSame( array( $published, $planned, $later ), $this->parts->all( $this->series ) );
+		$this->assertSame( array( $published, $later ), $this->parts->published( $this->series ) );
+	}
+
+	/**
+	 * `all()` on a term nobody named is an empty list, like its neighbours.
+	 *
+	 * @return void
+	 */
+	public function test_all_on_a_missing_term_returns_nothing(): void {
+		$this->assertSame( array(), $this->parts->all( 0 ) );
+		$this->assertSame( array(), $this->parts->all( -1 ) );
 	}
 }

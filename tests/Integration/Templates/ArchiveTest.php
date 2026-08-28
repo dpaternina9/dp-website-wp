@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Core\Admin\SeriesOrder;
 use DP\Core\Content\Taxonomies;
 use WP_Post;
 
@@ -143,6 +144,62 @@ final class ArchiveTest extends TemplateTestCase {
 
 		$this->assertGreaterThan( $positions[2], $positions[1], 'Part 2 comes after part 1.' );
 		$this->assertGreaterThan( $positions[1], $positions[0], 'Part 3 comes after part 2.' );
+	}
+
+	/**
+	 * The series archive draws in the order David dragged it into.
+	 *
+	 * The test above is the same archive with nothing ordered, so the two of them
+	 * together are the compatibility claim: `menu_order` leads, the date follows,
+	 * and a series nobody has touched is unchanged.
+	 *
+	 * @return void
+	 */
+	public function test_the_series_archive_obeys_a_saved_order(): void {
+		$this->seed_categories();
+		$this->seed_series();
+
+		$posts = $this->seed_posts( 3 );
+
+		foreach ( $posts as $post_id ) {
+			$this->file_under_series( $post_id );
+		}
+
+		/*
+		 * `SeriesOrder::save()` asks `edit_post` per row, so the order is written
+		 * as somebody who may write it — and then read back as a visitor, which is
+		 * who the assertion is about.
+		 *
+		 * `seed_posts()` dates them newest first, so the order below is the reverse
+		 * of the date order and the reverse of the creation order.
+		 */
+		$editor = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		$this->assertIsInt( $editor );
+
+		wp_set_current_user( $editor );
+
+		$this->assertSame( 3, ( new SeriesOrder() )->save( $this->series, array( $posts[1], $posts[2], $posts[0] ) ) );
+
+		wp_set_current_user( 0 );
+
+		$link = get_term_link( $this->series );
+
+		$this->assertIsString( $link );
+
+		$html      = $this->render( $link, 'taxonomy-dp_series', self::SERIES );
+		$positions = array();
+
+		foreach ( array( $posts[1], $posts[2], $posts[0] ) as $post_id ) {
+			$position = strpos( $html, (string) get_the_title( $post_id ) );
+
+			$this->assertIsInt( $position );
+
+			$positions[] = $position;
+		}
+
+		$this->assertGreaterThan( $positions[0], $positions[1], 'The second row is not second.' );
+		$this->assertGreaterThan( $positions[1], $positions[2], 'The third row is not third.' );
 	}
 
 	/**
