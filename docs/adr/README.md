@@ -98,5 +98,6 @@ reasoning intact — the record of why we believed something is the point.
 | [0013](0013-one-fixture-nobody-owns.md) | E2E content that a global query reads belongs to nobody | Accepted — 2026-08-23 |
 | [0014](0014-the-year-axis-and-the-bars-share-one-scale.md) | The year axis is drawn on the bars' scale, and the track ends now | Accepted — 2026-08-24 |
 | [0015](0015-the-blog-templates-derive-four-things-a-template-cannot-say.md) | The blog templates derive four things a template cannot say | Accepted — 2026-08-25, partly superseded by 0016 |
-| [0016](0016-a-post-carries-no-fields-of-ours.md) | A post carries no fields of ours | Accepted — 2026-08-26, featured-series half superseded by 0018; deck field reversed in commit |
-| [0018](0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md) | Computation is visible in the editor, or it does not happen | Accepted — 2026-08-26 |
+| [0016](0016-a-post-carries-no-fields-of-ours.md) | A post carries no fields of ours | Accepted — 2026-08-26, featured-series half superseded by 0018, `menu_order` rejection by 0019; deck field reversed in commit |
+| [0018](0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md) | Computation is visible in the editor, or it does not happen | Accepted — 2026-08-26, one claim corrected 2026-08-27 |
+| [0019](0019-a-series-is-ordered-by-hand.md) | A series is ordered by hand | Accepted — 2026-08-27 |

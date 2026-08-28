@@ -196,7 +196,13 @@ four are gone:
 - **Ordering is the publish date, ascending.** `post` does not declare
   `page-attributes`, so the Order box is not on the post editor and `menu_order` was
   zero on every post; the date tiebreak that sat beside it was doing the whole sort
-  already.
+  already. *Reversed 2026-08-27 —
+  [ADR-0019](adr/0019-a-series-is-ordered-by-hand.md).* The order is
+  `menu_order ASC, date ASC`, written by a drag-to-reorder screen at
+  **Posts → Series → Order parts**. `post` still declares no `page-attributes` and
+  there is still no Order box: the rejection above assumed the box was the price of
+  the column, and `wp_update_post()` writes `menu_order` without it. A series nobody
+  has ordered still reads by date, which is why this needed no migration.
 - **A part is numbered by its position** among the published posts in the term, so the
   number and the order the page draws in cannot disagree.
 - **The note is the draft's excerpt**, which is a core field with a sidebar box David
