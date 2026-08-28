@@ -21,120 +21,39 @@
  * settles it in prose; `design-parity.spec.ts` asserts it for the chart's chips;
  * this asserts it for the pager's, which are a different set of rules.
  *
- * **The fixture is dated 2019 on purpose.** Twelve posts is enough to paginate,
- * and posts on any site's blog index push whatever was there down the list. The
- * suite runs fully parallel against one site (ADR-0013), and `chrome.spec.ts`
- * asserts that its own two posts are visible on the first page of that index —
- * so this fixture is old enough that it can never be on the first page of
- * anything but its own term archive.
+ * **This file owns no content.** It used to publish a category and twelve posts
+ * in `beforeAll` and delete them again in `afterAll`, which is the shared-fixture
+ * mutation ADR-0013 rules out: a category is read by global queries — the
+ * footer's list and the home page's pill row — so creating one is not setting up
+ * this spec's page, it is editing everyone's. It also flaked, as
+ * `locator.click: element is not stable`, because two workers racing to create
+ * and delete the same twelve posts relaid an archive under a browser mid-click.
+ * The fixture is `SHARED_PAGER` in `global-setup.ts` now, established once and
+ * deleted by nothing, and this file asks it a question instead.
  *
  * External dependencies
  */
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
+import { SHARED_PAGER, sharedPagerArchiveUrl } from './global-setup';
 
-/** How many posts, and therefore how many pages at ten to a page. */
-const POSTS = 12;
-
-/** The slugs this fixture owns. Nothing outside this list is ever deleted. */
-const SLUGS = {
-	category: 'pager-fixture-term',
-	post: ( index: number ) => `pager-fixture-post-${ index }`,
-};
-
-/** What the term is called, so its name can be read out of the range line. */
-const TERM = 'Pager fixture';
-
-/** The shape of the REST fields this spec reads back. */
-type Created = { id: number; link: string };
-
-/** The term archive's URL, filled in by `beforeAll`. */
+/** The term archive's URL, looked up once per worker. */
 let archive = '';
 
-/**
- * Delete everything carrying one of this fixture's slugs, and nothing else.
- *
- * @param requestUtils The suite's REST client.
- */
-async function removeFixture(
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	requestUtils: any
-): Promise< void > {
-	const posts = Array.from( { length: POSTS }, ( _unused, index ) =>
-		SLUGS.post( index + 1 )
-	);
-
-	const sweep: Array< [ string, string[] ] > = [
-		[ 'posts', posts ],
-		[ 'categories', [ SLUGS.category ] ],
-	];
-
-	for ( const [ endpoint, slugs ] of sweep ) {
-		const found: Created[] = await requestUtils.rest( {
-			path: `/wp/v2/${ endpoint }`,
-			params:
-				endpoint === 'categories'
-					? { slug: slugs.join( ',' ), per_page: 100 }
-					: { slug: slugs.join( ',' ), per_page: 100, status: 'any' },
-		} );
-
-		for ( const item of found ) {
-			await requestUtils.rest( {
-				path: `/wp/v2/${ endpoint }/${ item.id }`,
-				method: 'DELETE',
-				params: { force: true },
-			} );
-		}
-	}
-}
-
 test.describe( 'The pager', () => {
-	/*
-	 * Serial, like `chrome.spec.ts` and for the same reason: every test here
-	 * shares one fixture, `beforeAll` runs once per worker, and under
-	 * `fullyParallel` two workers would race to create the same slugs.
-	 */
-	test.describe.configure( { mode: 'serial' } );
-
 	test.use( {
 		javaScriptEnabled: false,
 		// Logged out: the admin bar is chrome no reader sees.
 		storageState: { cookies: [], origins: [] },
 		viewport: { width: 1440, height: 900 },
+		// The same preference `design-parity.spec.ts` measures under (ADR-0013
+		// §6). Nothing here samples a colour mid-transition, but a control whose
+		// box is still settling is a control Playwright refuses to click, and
+		// there is no reason for this file to wait for one.
+		reducedMotion: 'reduce',
 	} );
 
 	test.beforeAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
-
-		const term = await requestUtils.rest< Created >( {
-			path: '/wp/v2/categories',
-			method: 'POST',
-			data: { name: TERM, slug: SLUGS.category },
-		} );
-
-		for ( let index = 1; index <= POSTS; index++ ) {
-			await requestUtils.rest( {
-				path: '/wp/v2/posts',
-				method: 'POST',
-				data: {
-					title: `Pager fixture — post ${ index }`,
-					slug: SLUGS.post( index ),
-					status: 'publish',
-					categories: [ term.id ],
-					// Old enough never to reach the first page of the site's
-					// own index, which other specs assert about.
-					date_gmt: `2019-01-${ String( index ).padStart(
-						2,
-						'0'
-					) }T09:00:00`,
-				},
-			} );
-		}
-
-		archive = term.link;
-	} );
-
-	test.afterAll( async ( { requestUtils } ) => {
-		await removeFixture( requestUtils );
+		archive = await sharedPagerArchiveUrl( requestUtils );
 	} );
 
 	test( 'names where you are, and takes you to the next page without scripts', async ( {
@@ -144,7 +63,9 @@ test.describe( 'The pager', () => {
 
 		const range = page.locator( '.dp-pagination-range' );
 
-		await expect( range ).toHaveText( `1–10 of ${ POSTS } in ${ TERM }` );
+		await expect( range ).toHaveText(
+			`1–10 of ${ SHARED_PAGER.posts } in ${ SHARED_PAGER.term }`
+		);
 		await expect( page.locator( '.dp-row' ) ).toHaveCount( 10 );
 
 		// The current page is the one marked, and it is not a link.
@@ -157,8 +78,12 @@ test.describe( 'The pager', () => {
 
 		await page.locator( '.wp-block-query-pagination-next' ).click();
 
-		await expect( range ).toHaveText( `11–12 of ${ POSTS } in ${ TERM }` );
-		await expect( page.locator( '.dp-row' ) ).toHaveCount( 2 );
+		await expect( range ).toHaveText(
+			`11–${ SHARED_PAGER.posts } of ${ SHARED_PAGER.posts } in ${ SHARED_PAGER.term }`
+		);
+		await expect( page.locator( '.dp-row' ) ).toHaveCount(
+			SHARED_PAGER.posts - 10
+		);
 		await expect( page.locator( '.page-numbers.current' ) ).toHaveText(
 			'2'
 		);
@@ -166,7 +91,9 @@ test.describe( 'The pager', () => {
 		// And back, the same way.
 		await page.locator( '.wp-block-query-pagination-previous' ).click();
 
-		await expect( range ).toHaveText( `1–10 of ${ POSTS } in ${ TERM }` );
+		await expect( range ).toHaveText(
+			`1–10 of ${ SHARED_PAGER.posts } in ${ SHARED_PAGER.term }`
+		);
 	} );
 
 	test( 'draws the step it cannot take, inert rather than absent', async ( {

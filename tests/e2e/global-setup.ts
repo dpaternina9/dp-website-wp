@@ -109,6 +109,31 @@ export const SHARED_SHIPS = [
 	},
 ] as const;
 
+/**
+ * The term archive that runs to more than one page.
+ *
+ * Twelve posts at ten to a page, so `pagination.spec.ts` has a page one, a page
+ * two, a step that cannot be taken and a step that can. It is here rather than
+ * in that spec for the reason ADR-0013 gives about everything else in this file:
+ * a category is read by a **global** query — the footer's category list, and the
+ * home page's `dpaternina/filter-pills` row — so a spec that creates and deletes
+ * one is not setting up its own page, it is editing everyone's. Two workers
+ * racing to create and delete the same twelve posts is also how an archive
+ * relaid itself under a browser mid-click, which Playwright reports as
+ * `locator.click: element is not stable`.
+ *
+ * **The posts are dated 2019 on purpose.** Posts on any site's blog index push
+ * whatever was there down the list, and `chrome.spec.ts` asserts that its own
+ * two posts are visible on the first page of that index. These are old enough
+ * that they can never be on the first page of anything but their own archive.
+ */
+export const SHARED_PAGER = {
+	category: 'e2e-shared-pager',
+	term: 'Pager fixture',
+	posts: 12,
+	post: ( index: number ) => `e2e-shared-pager-post-${ index }`,
+} as const;
+
 /** The page carrying the `dp-work` template, which every work-page spec reads. */
 export const SHARED_WORK_PAGE = {
 	slug: 'e2e-shared-work',
@@ -144,6 +169,35 @@ export async function sharedWorkPageUrl(
 	}
 
 	return page.link;
+}
+
+/**
+ * The paginated term archive's URL, for a spec that is about to visit it.
+ *
+ * A lookup, like `sharedWorkPageUrl()` and for the same reason.
+ *
+ * @param requestUtils The suite's REST client.
+ * @return The term archive's permalink.
+ */
+export async function sharedPagerArchiveUrl(
+	requestUtils: RequestUtils
+): Promise< string > {
+	const found = await requestUtils.rest< Established[] >( {
+		path: '/wp/v2/categories',
+		params: { slug: SHARED_PAGER.category, per_page: 1 },
+	} );
+
+	const term = found[ 0 ];
+
+	if ( ! term ) {
+		throw new Error(
+			`The shared pager category ("${ SHARED_PAGER.category }") is missing. It is ` +
+				'established in tests/e2e/global-setup.ts, which runs before every ' +
+				'spec; if it is not there, global setup did not finish.'
+		);
+	}
+
+	return term.link;
 }
 
 /**
@@ -247,6 +301,66 @@ async function establish(
 }
 
 /**
+ * Publish one term under a slug this file owns, or bring the existing one up to date.
+ *
+ * Terms have no status and no `establish()` shape, so they get their own two
+ * requests. Nothing is deleted here either.
+ *
+ * @param requestUtils The suite's REST client.
+ * @param slug         The slug this file owns.
+ * @param name         What the term is called.
+ * @return The term as the REST API describes it.
+ */
+async function establishTerm(
+	requestUtils: RequestUtils,
+	slug: string,
+	name: string
+): Promise< Established > {
+	const existing = await requestUtils.rest< Established[] >( {
+		path: '/wp/v2/categories',
+		params: { slug, per_page: 1 },
+	} );
+
+	const id = existing[ 0 ]?.id;
+
+	return requestUtils.rest< Established >( {
+		path: id ? `/wp/v2/categories/${ id }` : '/wp/v2/categories',
+		method: 'POST',
+		data: { name, slug },
+	} );
+}
+
+/**
+ * Establish the twelve posts and the term that paginate.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function establishPagerArchive(
+	requestUtils: RequestUtils
+): Promise< void > {
+	const term = await establishTerm(
+		requestUtils,
+		SHARED_PAGER.category,
+		SHARED_PAGER.term
+	);
+
+	for ( let index = 1; index <= SHARED_PAGER.posts; index++ ) {
+		await establish( requestUtils, 'posts', SHARED_PAGER.post( index ), {
+			title: `Pager fixture — post ${ index }`,
+			categories: [ term.id ],
+			content:
+				'Published so that one term archive on this site runs to more ' +
+				'than one page. Established in tests/e2e/global-setup.ts and ' +
+				'deleted by nothing.',
+			date_gmt: `2019-01-${ String( index ).padStart(
+				2,
+				'0'
+			) }T09:00:00`,
+		} );
+	}
+}
+
+/**
  * Establish the content the whole suite reads.
  *
  * The shape is the union of what the three work-page specs used to publish for
@@ -328,6 +442,8 @@ async function establishSharedContent(
 			},
 		} );
 	}
+
+	await establishPagerArchive( requestUtils );
 
 	await establish( requestUtils, 'pages', SHARED_WORK_PAGE.slug, {
 		title: SHARED_WORK_PAGE.title,
