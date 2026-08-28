@@ -1,0 +1,80 @@
+/**
+ * The series ordering screen.
+ *
+ * wp-admin, not the site: these are WordPress's own admin greys and radii, not
+ * the design tokens. `design-source/` describes the front end and has nothing to
+ * say about a list table, and dragging a dark-ground card around a white admin
+ * screen would be a worse answer than looking like the admin it is in.
+ *
+ * No transition and no animation anywhere, so there is nothing for
+ * `prefers-reduced-motion` to turn off.
+ */
+
+.dp-series-order {
+	margin: 1em 0;
+	padding: 0;
+	list-style: none;
+	max-width: 48rem;
+}
+
+.dp-series-order-item {
+	display: grid;
+	grid-template-columns: 1.5rem 2.5rem 1fr auto;
+	gap: 0.75rem;
+	align-items: center;
+	margin: 0 0 -1px;
+	padding: 0.6rem 0.9rem;
+	border: 1px solid #c3c4c7;
+	background: #fff;
+}
+
+.dp-series-order-item:first-child {
+	border-radius: 4px 4px 0 0;
+}
+
+.dp-series-order-item:last-child {
+	margin-bottom: 0;
+	border-radius: 0 0 4px 4px;
+}
+
+.is-draggable .dp-series-order-item {
+	cursor: grab;
+}
+
+.dp-series-order-item.is-dragging {
+	cursor: grabbing;
+	opacity: 0.5;
+	border-color: #2271b1;
+}
+
+.dp-series-order-handle {
+	color: #8c8f94;
+	font-size: 1rem;
+	line-height: 1;
+	text-align: center;
+}
+
+.is-draggable .dp-series-order-handle::before {
+	content: "\2807\2807";
+	letter-spacing: 0.1em;
+}
+
+.dp-series-order-part {
+	color: #50575e;
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	text-align: center;
+}
+
+.dp-series-order-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+
+.dp-series-order-status {
+	color: #646970;
+	font-size: 0.8125rem;
+	white-space: nowrap;
+}

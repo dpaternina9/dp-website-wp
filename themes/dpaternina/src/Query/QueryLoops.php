@@ -223,13 +223,17 @@ final class QueryLoops {
 	 * read from its oldest part, which is the opposite of what an archive does by
 	 * default.
 	 *
-	 * It used to sort on `menu_order` first, on the reasoning that a reading order
-	 * is not a publication order. The reasoning was sound and the field was not:
-	 * `post` does not declare `page-attributes`, so the Order box is nowhere on
-	 * the post editor and `menu_order` is zero on every post — which made the date
-	 * tiebreak the whole sort anyway. Saying so out loud is the change (ADR-0016),
-	 * and it is the same order `DP\Core\Content\SeriesParts` numbers the parts in,
-	 * which is what keeps the numbers and the sequence agreeing.
+	 * `menu_order` first, then the date. The theme is not the authority on either
+	 * half of that — it is a transcription of what
+	 * `DP\Core\Content\SeriesParts::published()` sorts on, and the two have to
+	 * match or the part numbers on the rows would disagree with the order the
+	 * rows are drawn in.
+	 *
+	 * The field went away with ADR-0016 and has come back, for a reason recorded
+	 * against `SeriesParts`: nothing could write `menu_order` on a `post` because
+	 * there was no screen for it, which is not the same as the field being
+	 * unwritable. `dp-core` now ships that screen. The date stays as the tiebreak,
+	 * so a series nobody has ordered still draws in publish order.
 	 *
 	 * @param WP_Query $query The query about to run.
 	 * @return void
@@ -239,7 +243,13 @@ final class QueryLoops {
 			return;
 		}
 
-		$query->set( 'orderby', array( 'date' => 'ASC' ) );
+		$query->set(
+			'orderby',
+			array(
+				'menu_order' => 'ASC',
+				'date'       => 'ASC',
+			)
+		);
 	}
 
 	/**

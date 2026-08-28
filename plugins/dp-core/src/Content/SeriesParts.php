@@ -14,20 +14,38 @@ use WP_Query;
 use WP_Term;
 
 /**
- * The two queries the series archive runs against one term, and the numbering.
+ * The queries the series archive runs against one term, and the numbering.
  *
  * `published()` returns post IDs, because published posts have permalinks and
  * the template needs them. `planned()` returns `PlannedPart` objects, which have
- * no ID at all — see that class for why.
+ * no ID at all — see that class for why. `all()` returns both, and exists for
+ * the one screen that has to show a reading order spanning the two.
  *
- * **Order is the publish date, ascending, and nothing else.** Plan section 3.1
- * originally chose `menu_order`, on the reasoning that a planned part becoming a
- * published one should keep its place. That reasoning survives; the mechanism did
- * not. `post` does not declare `page-attributes`, so the Order field is not on
- * the post editor at all and `menu_order` is zero on every post David will ever
- * write — which made the tiebreak the whole sort. Oldest first is what the
- * design's series page says out loud ("newest last"), it is what a reader means
- * by part one, and it is a field the editor actually has.
+ * **Order is `menu_order` ascending, then the publish date ascending.**
+ *
+ * Plan section 3.1 chose `menu_order` and ADR-0016 took it away again, on an
+ * observation that was true as far as it went: `post` does not declare
+ * `page-attributes`, so the Order box is nowhere on the post editor, so the
+ * field was zero on every post and the date tiebreak beside it was doing the
+ * whole sort. What that missed is the difference between *no screen* and *not
+ * writable*. `wp_update_post()` writes `menu_order` whether or not the post type
+ * declares support for it; the field was always there, and what was missing was
+ * somewhere for David to say what he meant. `DP\Core\Admin\SeriesOrderScreen` is
+ * that somewhere.
+ *
+ * Keeping the date as the tiebreak is what makes this compatible by
+ * construction rather than by migration: a series nobody has ever ordered has
+ * zero in every row, so the sort falls through to the date and the page draws
+ * exactly what it drew before.
+ *
+ * It has one consequence worth stating rather than discovering. Zero sorts
+ * *first*, so a part filed under a series that has already been ordered arrives
+ * at the top of it — a new draft appears above the parts already written rather
+ * than after them. That is visible on the ordering screen, where the new row is
+ * at position one, and one drag settles it. The alternative was a `save_post`
+ * hook giving a joining post the next position, which is precisely the invisible
+ * computation ADR-0018 rules out: nothing on the screen would say it had
+ * happened. A wart you can see beats a mechanism you cannot.
  *
  * **The part number is the position in that list.** It is not stored anywhere.
  * `part_of()` answers "what part is this post" by finding the index of its ID in
@@ -35,6 +53,13 @@ use WP_Term;
  * draws, and a post that moves takes its number with it. The list is memoised
  * per term for the length of the request, so a template that asks on every row
  * of an archive still runs one query.
+ *
+ * One consequence of storing the order on the post rather than on the pair is
+ * worth saying out loud: `menu_order` is a property of a post, not of a post in
+ * a series. A post filed under two series would carry one position into both.
+ * The design assumes exactly one — `SERIES.parts` is one ordered list, and
+ * `series_of()` below already answers with the first term — so this is a
+ * limitation the content model had before this field arrived, not one it adds.
  */
 final class SeriesParts {
 
@@ -46,8 +71,9 @@ final class SeriesParts {
 	/**
 	 * Constructor.
 	 *
-	 * @param int $limit The most parts either query will return. A series longer than this
-	 *                   is a series that wants splitting, not a query that wants unbounding.
+	 * @param int $limit The most parts any of these queries will return. A series longer
+	 *                   than this is a series that wants splitting, not a query that wants
+	 *                   unbounding.
 	 */
 	public function __construct( private readonly int $limit = 50 ) {}
 
@@ -70,7 +96,7 @@ final class SeriesParts {
 	public function planned( int $term_id ): array {
 		$parts = array();
 
-		foreach ( $this->ids( $term_id, 'draft' ) as $post_id ) {
+		foreach ( $this->ids( $term_id, array( 'draft' ) ) as $post_id ) {
 			$parts[] = new PlannedPart(
 				title: get_the_title( $post_id ),
 				note: $this->excerpt( $post_id )
@@ -78,6 +104,25 @@ final class SeriesParts {
 		}
 
 		return $parts;
+	}
+
+	/**
+	 * Every part of a series that has a place in the reading order.
+	 *
+	 * Published and planned in one sequence, which is the sequence the ordering
+	 * screen has to show and write: a part's position has to survive its going
+	 * from draft to published, and it cannot do that if the two lists are ordered
+	 * against different things.
+	 *
+	 * IDs rather than posts, and no memo. The one caller is an admin screen that
+	 * renders once per request; caching a list whose whole purpose is to be
+	 * rewritten a moment later would be a cache to invalidate for no gain.
+	 *
+	 * @param int $term_id The `dp_series` term.
+	 * @return list<int> Post IDs, in reading order.
+	 */
+	public function all( int $term_id ): array {
+		return $this->ids( $term_id, array( 'publish', 'draft' ) );
 	}
 
 	/**
@@ -136,9 +181,11 @@ final class SeriesParts {
 	 * The published IDs of one series, memoised for the request.
 	 *
 	 * The key carries both `last_changed` stamps core already maintains, so
-	 * publishing a post or filing one under a series invalidates the list without
-	 * this class having to hook anything. Without the memo, an archive of twenty
-	 * rows asking each row for its number would be twenty identical queries.
+	 * publishing a post, filing one under a series or moving one on the ordering
+	 * screen invalidates the list without this class having to hook anything —
+	 * `wp_update_post()` cleans the post cache, which is what bumps the stamp.
+	 * Without the memo, an archive of twenty rows asking each row for its number
+	 * would be twenty identical queries.
 	 *
 	 * @param int $term_id The `dp_series` term.
 	 * @return list<int>
@@ -169,7 +216,7 @@ final class SeriesParts {
 			return $ids;
 		}
 
-		$ids = $this->ids( $term_id, 'publish' );
+		$ids = $this->ids( $term_id, array( 'publish' ) );
 
 		wp_cache_set( $key, $ids, self::CACHE_GROUP );
 
@@ -177,7 +224,7 @@ final class SeriesParts {
 	}
 
 	/**
-	 * Post IDs in one series with one status, oldest first.
+	 * Post IDs in one series, in reading order.
 	 *
 	 * `fields => ids` is doing real work: it is what keeps `post_content` out of
 	 * the result set for the draft query. Every value `planned()` goes on to read
@@ -189,11 +236,11 @@ final class SeriesParts {
 	 * titles are meant to be public. The series term is the switch — a draft is
 	 * announced when David files it under a series, not when he creates it.
 	 *
-	 * @param int    $term_id The `dp_series` term.
-	 * @param string $status  A post status.
+	 * @param int                $term_id  The `dp_series` term.
+	 * @param array<int, string> $statuses The post statuses to include.
 	 * @return list<int>
 	 */
-	private function ids( int $term_id, string $status ): array {
+	private function ids( int $term_id, array $statuses ): array {
 		if ( $term_id <= 0 ) {
 			return array();
 		}
@@ -201,7 +248,7 @@ final class SeriesParts {
 		$query = new WP_Query(
 			array(
 				'post_type'              => 'post',
-				'post_status'            => $status,
+				'post_status'            => $statuses,
 				'fields'                 => 'ids',
 				// A taxonomy query is the entire purpose of this method, so the
 				// performance warning has nothing to tell us.
@@ -214,7 +261,10 @@ final class SeriesParts {
 						'include_children' => false,
 					),
 				),
-				'orderby'                => array( 'date' => 'ASC' ),
+				'orderby'                => array(
+					'menu_order' => 'ASC',
+					'date'       => 'ASC',
+				),
 				'posts_per_page'         => $this->limit,
 				'no_found_rows'          => true,
 				'ignore_sticky_posts'    => true,
