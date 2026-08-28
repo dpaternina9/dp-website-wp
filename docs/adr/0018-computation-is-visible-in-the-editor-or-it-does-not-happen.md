@@ -82,8 +82,14 @@ four to be doing work that is not necessary at all:
   drew.
 - `FilterPills::wrap_the_counts()` is a regular expression over rendered HTML,
   moving core's `(3)` text node inside the anchor so it can be coloured. It is
-  anchored on markup core is free to change, and it corrupts the name of any
-  category containing parentheses.
+  anchored on markup core is free to change. **This ADR also claimed it corrupts
+  the name of any category containing parentheses. That was wrong** — asserted
+  from reading the pattern, never reproduced. Phase B2 tried to write the failing
+  test first, could not, and probed nine names through the live walker
+  (`Tools (beta)`, `Half (`, `A) (B`, `Say "hi" (loudly)` …); every one rendered
+  correctly, because `[^<]*` cannot cross `</a>` and the only thing
+  `Walker_Category` writes after the anchor is ` (N)`. The correction is left
+  here rather than edited out; the deletion stands on the fragility alone.
 - `PostPresentation::link_the_series()` is `resolve_destination()` again, for
   `dp-to-post-series`. Unlike the other four its *value* is legitimate: the
   series a post belongs to is a property of the post being read and there is no
@@ -136,8 +142,9 @@ Three cases survive because they are genuinely not typeable, and each becomes a
 | `dp-to-feed` | `dpaternina/feed-link` | `get_feed_link()`. Changes with the permalink setting. |
 
 `FilterPills` becomes one dynamic block, `dpaternina/filter-pills`, which renders
-the All pill and the counts as its own markup. Both rewrites and the parenthesis
-bug go with it. `Destinations::posts_index()` survives as its href, because the
+the All pill and the counts as its own markup. Both rewrites go with it — for the
+fragility and the editor/page divergence, not for the parenthesis bug this ADR
+wrongly claimed above. `Destinations::posts_index()` survives as its href, because the
 posts index is a Reading setting rather than a slug this theme invented.
 
 `PostPresentation::add_tone_class()` stays — it adds a class rather than
