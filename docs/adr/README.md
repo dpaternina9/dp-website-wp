@@ -101,3 +101,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0016](0016-a-post-carries-no-fields-of-ours.md) | A post carries no fields of ours | Accepted — 2026-08-26, featured-series half superseded by 0018, `menu_order` rejection by 0019; deck field reversed in commit |
 | [0018](0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md) | Computation is visible in the editor, or it does not happen | Accepted — 2026-08-26, one claim corrected 2026-08-27 |
 | [0019](0019-a-series-is-ordered-by-hand.md) | A series is ordered by hand | Accepted — 2026-08-27 |
+| [0020](0020-theme-json-opens-for-a-custom-template.md) | `theme.json` opens a second time, for one custom template | Accepted — 2026-08-27 |
