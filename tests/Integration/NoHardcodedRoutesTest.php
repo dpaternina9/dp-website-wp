@@ -56,7 +56,17 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 	/**
 	 * What may never appear in shipped code, and why.
 	 *
-	 * @var array<string, array{pattern: string, reason: string}>
+	 * `package` narrows a rule to one of `PACKAGES`, and only `page_on_front`
+	 * uses it. Its own reason has always said *the theme*, and the distinction it
+	 * was drawing is real: the theme renders whatever David chose and may never
+	 * ask which page he chose, while writing a starting value is what the Reading
+	 * screen does and what `dp-core`'s seeder does once, from the CLI, alongside
+	 * the site logo and the privacy page. Everything else in this list is
+	 * forbidden to both packages, `is_page()` and `get_page_by_path()` included,
+	 * so the shapes that would actually couple code to a slug are still caught
+	 * wherever they appear.
+	 *
+	 * @var array<string, array{pattern: string, reason: string, package?: string}>
 	 */
 	private const FORBIDDEN = array(
 		'add_rewrite_rule' => array(
@@ -75,8 +85,10 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 		),
 		'page_on_front'    => array(
 			'pattern' => '~[\'"]page_on_front[\'"]~',
+			'package' => 'themes/dpaternina',
 			'reason'  => 'Which page is the front page is a Reading setting. The theme must render '
-				. 'correctly whatever David chose, including nothing.',
+				. 'correctly whatever David chose, including nothing. Seeding a first value from '
+				. 'dp-core is the Reading screen\'s own act and is not this rule.',
 		),
 	);
 
@@ -181,6 +193,10 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 			foreach ( $lines as $number => $line ) {
 				foreach ( self::FORBIDDEN as $name => $rule ) {
 					if ( 1 !== preg_match( $rule['pattern'], $line ) ) {
+						continue;
+					}
+
+					if ( isset( $rule['package'] ) && ! str_starts_with( $relative, $rule['package'] . '/' ) ) {
 						continue;
 					}
 

@@ -106,7 +106,32 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				 */
 				'posts'         => 29,
 				'planned_parts' => 5,
-				'pages'         => 3,
+
+				/*
+				 * Nine, where the design's `PAGES` has three. The other six are
+				 * the views it draws from data rather than from a page — the
+				 * front page, the writing index, Work, About, the resume and
+				 * Contact — and WordPress needs a page behind each of them or
+				 * four of the theme's six custom templates are assigned to
+				 * nothing and cannot be reached at all.
+				 */
+				'pages'         => 9,
+
+				/*
+				 * `page_on_front`, `page_for_posts` and the privacy page. The
+				 * theme ships both a `front-page` and a `home` template, which
+				 * is the design's shape, and neither is reachable until Reading
+				 * says so.
+				 */
+				'settings'      => 3,
+
+				/*
+				 * The header, the footer, the front page, the blog index and
+				 * the 404 — saved with their links in, because ADR-0018 leaves
+				 * a shipped button with no href and a seeded site has nobody to
+				 * set them.
+				 */
+				'chrome_links'  => 5,
 
 				/*
 				 * The site logo, which the seeder sets from the file the theme
@@ -474,24 +499,163 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Pages are pages, with no template assigned and no opinion about their slug.
-	 *
-	 * CLAUDE.md section 5.1: David creates every page and picks its template. The
-	 * seed supplies content, not routing.
+	 * The design's three block-kit pages still carry their deck and their date.
 	 *
 	 * @return void
 	 */
-	public function test_pages_carry_content_and_no_routing(): void {
+	public function test_the_block_kit_pages_carry_their_content(): void {
 		$this->seeder->seed();
 
 		foreach ( array( 'uses', 'colophon', 'privacy' ) as $slug ) {
-			$page = get_page_by_path( $slug, OBJECT, 'page' );
+			$page = $this->seeded_page( $slug );
 
-			$this->assertInstanceOf( WP_Post::class, $page, $slug . ' was seeded.' );
-			$this->assertSame( '', get_page_template_slug( $page->ID ), $slug . ' has no template assigned.' );
-			$this->assertNotSame( '', get_post_meta( $page->ID, 'dp_lead', true ) );
+			$this->assertNotSame( '', get_post_meta( $page->ID, 'dp_lead', true ), $slug . ' has a deck.' );
 			$this->assertSame( 'UPDATED AUG 2026', get_post_meta( $page->ID, 'dp_updated', true ) );
 		}
+	}
+
+	/**
+	 * Every page the fixture assigns a template to gets that template.
+	 *
+	 * The value is the custom template's slug, without the extension, because
+	 * that is what the admin stores and what `wp_update_post()` would accept.
+	 *
+	 * @return void
+	 */
+	public function test_each_page_carries_the_template_the_fixture_names(): void {
+		$this->seeder->seed();
+
+		foreach ( $this->fixture->pages() as $page ) {
+			$post = $this->seeded_page( $page['slug'] );
+
+			$this->assertSame(
+				$page['template'],
+				get_page_template_slug( $post->ID ),
+				$page['slug'] . ' carries the template the fixture names.'
+			);
+		}
+	}
+
+	/**
+	 * Every template the theme offers has a page assigned to it.
+	 *
+	 * A `customTemplates` entry with nothing assigned is a view that renders
+	 * nowhere, which is the state four of the six were in: the theme declared
+	 * `dp-work`, `dp-about`, `dp-resume` and `dp-contact` and the seed created no
+	 * page that could ever use them.
+	 *
+	 * @return void
+	 */
+	public function test_every_custom_template_the_theme_offers_is_assigned(): void {
+		$this->seeder->seed();
+
+		$offered = array_keys( wp_get_theme()->get_page_templates( null, 'page' ) );
+
+		$this->assertNotEmpty( $offered, 'The active theme offers custom templates, so this is looking at something.' );
+
+		$assigned = array();
+
+		foreach ( $this->fixture->pages() as $page ) {
+			if ( '' !== $page['template'] ) {
+				$assigned[] = $page['template'];
+			}
+		}
+
+		sort( $offered );
+		sort( $assigned );
+
+		$this->assertSame( $offered, $assigned, 'Every custom template has exactly one page, and no page names one the theme does not have.' );
+	}
+
+	/**
+	 * Reading and Privacy point at the pages the run just made.
+	 *
+	 * `page_for_posts` does nothing at all while `show_on_front` is `posts`, so
+	 * the three are asserted together or the assertion is worthless.
+	 *
+	 * @return void
+	 */
+	public function test_reading_and_privacy_point_at_the_seeded_pages(): void {
+		$this->seeder->seed();
+
+		$this->assertSame( 'page', get_option( 'show_on_front' ) );
+		$this->assertSame( $this->seeded_page( 'home' )->ID, $this->setting( 'page_on_front' ) );
+		$this->assertSame( $this->seeded_page( 'writing' )->ID, $this->setting( 'page_for_posts' ) );
+		$this->assertSame( $this->seeded_page( 'privacy' )->ID, $this->setting( 'wp_page_for_privacy_policy' ) );
+	}
+
+	/**
+	 * A fresh run gives the three settings back rather than leaving them dangling.
+	 *
+	 * `show_on_front` set to `page` with a deleted `page_on_front` is a site
+	 * whose front page renders nothing, which is a worse state than the one the
+	 * seed found.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_releases_the_settings_it_set(): void {
+		$this->seeder->seed();
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( 'posts', get_option( 'show_on_front' ) );
+		$this->assertSame( 0, $this->setting( 'page_on_front' ) );
+		$this->assertSame( 0, $this->setting( 'page_for_posts' ) );
+		$this->assertSame( 0, $this->setting( 'wp_page_for_privacy_policy' ) );
+	}
+
+	/**
+	 * It leaves alone a Reading setting pointing at a page David chose.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_leaves_a_front_page_it_did_not_set(): void {
+		$this->seeder->seed();
+
+		$mine = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'The one David picked',
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->assertIsInt( $mine );
+
+		update_option( 'page_on_front', $mine );
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( $mine, $this->setting( 'page_on_front' ) );
+		$this->assertSame( 'page', get_option( 'show_on_front' ) );
+	}
+
+	/**
+	 * A setting that holds a post ID.
+	 *
+	 * @param string $option The option name.
+	 * @return int
+	 */
+	private function setting( string $option ): int {
+		$stored = get_option( $option );
+
+		$this->assertIsNumeric( $stored, $option . ' holds a post ID.' );
+
+		return (int) $stored;
+	}
+
+	/**
+	 * A page the run created, looked up the way a person would.
+	 *
+	 * @param string $slug The slug the fixture starts it with.
+	 * @return WP_Post
+	 */
+	private function seeded_page( string $slug ): WP_Post {
+		$page = get_page_by_path( $slug, OBJECT, 'page' );
+
+		$this->assertInstanceOf( WP_Post::class, $page, $slug . ' was seeded.' );
+
+		return $page;
 	}
 
 	/**

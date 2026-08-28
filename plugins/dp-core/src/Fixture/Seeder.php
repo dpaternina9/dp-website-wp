@@ -40,6 +40,29 @@ final class Seeder {
 	public const INDEX_OPTION = 'dp_core_seed_index';
 
 	/**
+	 * The meta key that marks a template override as this script's.
+	 *
+	 * The index is the primary record, and this is the belt to its braces: an
+	 * option can be deleted, and a `wp_template` post whose index entry has gone
+	 * would then be an override nobody could find and nobody could refresh —
+	 * which is exactly the stale-override failure the overrides exist to avoid.
+	 * Every run deletes every override carrying this mark before writing new
+	 * ones, so what a previous run left cannot survive whatever happened to the
+	 * option. An override David saved from the site editor carries no mark and is
+	 * never touched.
+	 *
+	 * @var string
+	 */
+	public const CHROME_MARK = '_dp_seed_chrome_link';
+
+	/**
+	 * The prefix template overrides are indexed under.
+	 *
+	 * @var string
+	 */
+	private const TEMPLATE_KEY = 'template:';
+
+	/**
 	 * The index, as loaded and then updated.
 	 *
 	 * @var array{posts: array<string, int>, terms: array<string, int>}
@@ -54,10 +77,12 @@ final class Seeder {
 	 *
 	 * @param Fixture     $fixture The design's data.
 	 * @param BlockMarkup $markup  Converts fixture bodies into block markup.
+	 * @param ChromeLinks $links   Asks the theme for its chrome's saved markup.
 	 */
 	public function __construct(
 		private readonly Fixture $fixture,
-		private readonly BlockMarkup $markup
+		private readonly BlockMarkup $markup,
+		private readonly ChromeLinks $links
 	) {}
 
 	/**
@@ -66,7 +91,7 @@ final class Seeder {
 	 * @return self
 	 */
 	public static function create(): self {
-		return new self( new Fixture(), new BlockMarkup() );
+		return new self( new Fixture(), new BlockMarkup(), new ChromeLinks() );
 	}
 
 	/**
@@ -113,6 +138,8 @@ final class Seeder {
 			);
 			$planned    = $this->seed_planned_parts( $series, $extra );
 			$pages      = $this->seed_pages();
+			$settings   = $this->seed_settings( $pages );
+			$links      = $this->seed_chrome_links( $pages, $series );
 			$ships      = $this->seed_ships( $roles, $posts );
 			$videos     = $this->seed_videos();
 			$brand      = $this->seed_brand();
@@ -131,6 +158,8 @@ final class Seeder {
 				'posts'         => count( $posts ),
 				'planned_parts' => count( $planned ),
 				'pages'         => count( $pages ),
+				'settings'      => $settings,
+				'chrome_links'  => $links,
 				'brand'         => $brand,
 			),
 			$fresh
@@ -160,6 +189,19 @@ final class Seeder {
 		if ( $mark > 0 && is_numeric( $stored ) && (int) $stored === $mark ) {
 			delete_option( 'site_logo' );
 		}
+
+		/*
+		 * Four settings point at a page by ID, and three of them are worse than
+		 * useless once that page is gone: `show_on_front` set to `page` with a
+		 * deleted `page_on_front` is a site whose front page is blank. Released
+		 * first, and only where the ID is one this script wrote.
+		 */
+		if ( $this->release_setting( 'page_on_front', 'page:home' ) ) {
+			update_option( 'show_on_front', 'posts' );
+		}
+
+		$this->release_setting( 'page_for_posts', 'page:posts' );
+		$this->release_setting( 'wp_page_for_privacy_policy', 'page:privacy' );
 
 		foreach ( $this->index['posts'] as $post_id ) {
 			if ( get_post( $post_id ) instanceof WP_Post ) {
@@ -471,24 +513,37 @@ final class Seeder {
 	}
 
 	/**
-	 * Uses, Colophon and Privacy.
+	 * Every page the design implies, each carrying its starting template.
 	 *
-	 * They are seeded as ordinary pages with ordinary slugs and no template
-	 * assigned. Which page is which, where it lives, and what template it uses is
-	 * David's (CLAUDE.md section 5.1) — the seed supplies content, not routing.
+	 * The seed picks a first slug and a first template assignment; both are
+	 * David's from then on. That is not a contradiction of CLAUDE.md section 5.1
+	 * — nothing here registers a route, branches on a slug, or reads a page back
+	 * by name. `_wp_page_template` is a per-page value the Page Attributes panel
+	 * writes, and writing it once is the same act as choosing it in the admin. He
+	 * re-slugs, renames or re-assigns any of them and nothing in either package
+	 * notices.
 	 *
-	 * @return array<string, int> Slug to post ID.
+	 * It is written as meta rather than through `wp_update_post()` deliberately:
+	 * that path validates against `wp_get_theme()->get_page_templates()`, which
+	 * makes the assignment fail silently while a theme is being switched or a
+	 * template renamed. A template that has gone simply falls back through the
+	 * hierarchy, which is the visible failure and the better one.
+	 *
+	 * @return array<string, int> Fixture key to post ID.
 	 */
 	private function seed_pages(): array {
-		$ids = array();
+		$ids   = array();
+		$order = 0;
 
 		foreach ( $this->fixture->pages() as $page ) {
-			$ids[ $page['slug'] ] = $this->upsert_post(
-				'page:' . $page['slug'],
+			++$order;
+
+			$post_id = $this->upsert_post(
+				'page:' . $page['key'],
 				'page',
 				$page['title'],
 				'publish',
-				0,
+				$order,
 				array(
 					'dp_lead'    => $page['deck'],
 					'dp_updated' => $page['updated'],
@@ -496,9 +551,222 @@ final class Seeder {
 				slug: $page['slug'],
 				content: $this->markup->render( $page['body'] )
 			);
+
+			if ( '' === $page['template'] ) {
+				delete_post_meta( $post_id, '_wp_page_template' );
+			} else {
+				update_post_meta( $post_id, '_wp_page_template', $page['template'] );
+			}
+
+			$ids[ $page['key'] ] = $post_id;
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * Point Settings to Reading and Settings to Privacy at the seeded pages.
+	 *
+	 * The theme ships both a `front-page` template and a `home` one, which is the
+	 * design's own shape: a landing page, and a separate index of the writing.
+	 * Neither is reachable until Reading says so, and `page_for_posts` does
+	 * nothing at all while `show_on_front` is `posts` — so the three move
+	 * together or not at all.
+	 *
+	 * This one does overwrite. `seed_brand()` deliberately never replaces a logo
+	 * David chose, because a logo is a preference; a front page pointing at a
+	 * page this run has just re-created is not a preference, it is the wiring
+	 * that makes the run's own output reachable. On a seeded site that is the
+	 * point of the command. `wipe()` puts all three back.
+	 *
+	 * @param array<string, int> $pages Fixture key to post ID.
+	 * @return int How many settings now point at a seeded page.
+	 */
+	private function seed_settings( array $pages ): int {
+		$front   = $pages['home'] ?? 0;
+		$posts   = $pages['posts'] ?? 0;
+		$privacy = $pages['privacy'] ?? 0;
+		$pointed = 0;
+
+		if ( $front > 0 && $posts > 0 ) {
+			update_option( 'show_on_front', 'page' );
+			update_option( 'page_on_front', $front );
+			update_option( 'page_for_posts', $posts );
+
+			$pointed += 2;
+		}
+
+		if ( $privacy > 0 ) {
+			update_option( 'wp_page_for_privacy_policy', $privacy );
+
+			++$pointed;
+		}
+
+		return $pointed;
+	}
+
+	/**
+	 * Ask the theme to link its own chrome, and save what comes back.
+	 *
+	 * Since ADR-0018 the shipped templates carry the design's words and no URLs,
+	 * and a fresh install has buttons that go nowhere until David links them. On
+	 * a real site that is a one-time setup pass. On a seeded one it means `wp dp
+	 * seed` produces a site nobody can navigate, so this closes the gap the same
+	 * way David would: by saving a `wp_template` or `wp_template_part` post with
+	 * the hrefs in it. Nothing is computed at request time and no filter touches a
+	 * rendered button.
+	 *
+	 * Two rules, and the second is the one that is easy to get wrong.
+	 *
+	 * **Regenerate, never patch.** Every override this script wrote is deleted
+	 * before any is written, and the theme builds each one from the file it
+	 * currently ships. A stored override beats the theme's file forever, so an
+	 * override kept across releases silently freezes that template at whatever
+	 * the theme looked like the day it was first seeded — a bug this project has
+	 * had, where a stale `home` override went on rendering a block the theme had
+	 * already replaced.
+	 *
+	 * **Only ever its own.** Deletion is scoped by the `CHROME_MARK` meta, so an
+	 * override David saved from the site editor is not touched — not on a normal
+	 * run, not on `--fresh`. It does mean a re-seed discards edits made to the
+	 * five chrome templates, which is the right trade on a seeded development
+	 * site and would not be on a real one.
+	 *
+	 * @param array<string, int> $pages  Fixture key to post ID.
+	 * @param int                $series The design's series term, for the one
+	 *                                   chrome link that points at an archive.
+	 * @return int How many overrides were saved.
+	 */
+	private function seed_chrome_links( array $pages, int $series ): int {
+		$this->clear_chrome_links();
+
+		$destinations = array();
+
+		foreach ( $pages as $key => $page_id ) {
+			$url = get_permalink( $page_id );
+
+			if ( is_string( $url ) && '' !== $url ) {
+				$destinations[ $key ] = $url;
+			}
+		}
+
+		if ( $series > 0 ) {
+			$archive = get_term_link( $series, Taxonomies::SERIES );
+
+			if ( is_string( $archive ) && '' !== $archive ) {
+				$destinations['series'] = $archive;
+			}
+		}
+
+		$saved = 0;
+
+		foreach ( $this->links->collect( $destinations ) as $override ) {
+			if ( $this->save_override( $override ) > 0 ) {
+				++$saved;
+			}
+		}
+
+		return $saved;
+	}
+
+	/**
+	 * Delete every template override a previous run wrote, and forget them.
+	 *
+	 * Found by the mark rather than by the index, so an override survives neither
+	 * a lost index nor a half-finished run. Nothing without the mark is looked at.
+	 *
+	 * @return void
+	 */
+	private function clear_chrome_links(): void {
+		$found = get_posts(
+			array(
+				'post_type'   => array( 'wp_template', 'wp_template_part' ),
+				'post_status' => 'any',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- one query, once, in a CLI seed; there is no request path to it.
+				'meta_key'    => self::CHROME_MARK,
+			)
+		);
+
+		foreach ( $found as $post_id ) {
+			if ( is_numeric( $post_id ) ) {
+				wp_delete_post( (int) $post_id, true );
+			}
+		}
+
+		foreach ( array_keys( $this->index['posts'] ) as $key ) {
+			if ( str_starts_with( $key, self::TEMPLATE_KEY ) ) {
+				unset( $this->index['posts'][ $key ] );
+			}
+		}
+	}
+
+	/**
+	 * Save one override exactly as the site editor would.
+	 *
+	 * The two terms are not decoration. `wp_theme` is what makes
+	 * `get_block_templates()` prefer this post over the theme's file at all, and
+	 * a template part's `wp_template_part_area` is what core turns into the
+	 * wrapping `<header>` or `<footer>` — a part saved without it renders inside
+	 * a `<div>`, which is a landmark lost without a word.
+	 *
+	 * If David has already saved an override under the same slug, WordPress
+	 * suffixes this one's `post_name` and it is never resolved: his edit wins and
+	 * nothing is destroyed, which is the failure this should have.
+	 *
+	 * @param array{type: string, slug: string, title: string, area: string, content: string} $override What the theme handed back.
+	 * @return int The post ID, or 0 when WordPress refused the write.
+	 */
+	private function save_override( array $override ): int {
+		$post_id = wp_insert_post(
+			array(
+				'post_type'    => $override['type'],
+				'post_name'    => $override['slug'],
+				'post_title'   => $override['title'],
+				'post_status'  => 'publish',
+				'post_author'  => $this->author(),
+				'post_content' => $override['content'],
+			),
+			true
+		);
+
+		if ( is_wp_error( $post_id ) || $post_id <= 0 ) {
+			return 0;
+		}
+
+		wp_set_post_terms( $post_id, array( get_stylesheet() ), 'wp_theme' );
+
+		if ( 'wp_template_part' === $override['type'] && '' !== $override['area'] ) {
+			wp_set_post_terms( $post_id, array( $override['area'] ), 'wp_template_part_area' );
+		}
+
+		update_post_meta( $post_id, self::CHROME_MARK, '1' );
+
+		$this->index['posts'][ self::TEMPLATE_KEY . $override['type'] . ':' . $override['slug'] ] = $post_id;
+
+		return $post_id;
+	}
+
+	/**
+	 * Clear a setting, but only where it points at a page this script wrote.
+	 *
+	 * @param string $option The option name.
+	 * @param string $key    The fixture key the page is indexed under.
+	 * @return bool Whether the setting was pointing at one of ours.
+	 */
+	private function release_setting( string $option, string $key ): bool {
+		$mine   = $this->index['posts'][ $key ] ?? 0;
+		$stored = get_option( $option );
+
+		if ( $mine <= 0 || ! is_numeric( $stored ) || (int) $stored !== $mine ) {
+			return false;
+		}
+
+		update_option( $option, 0 );
+
+		return true;
 	}
 
 	/**
