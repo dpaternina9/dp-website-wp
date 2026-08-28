@@ -1,19 +1,20 @@
 /**
- * The editor's half of this theme's three computed links.
+ * The editor's half of every block this theme renders on the server.
  *
- * `dpaternina/series-parts-link`, `dpaternina/resume-download` and
- * `dpaternina/feed-link` are registered in PHP with a render callback and
- * nothing else. That is enough for the front end and not enough for the editor:
- * the block editor draws a block only from a client-side registration, so a
- * block the server knows about and the client does not arrives in the canvas as
- * core's `core/missing` — "Your site doesn't include support for the
- * dpaternina/feed-link block" — inside a template that renders perfectly on the
- * site. ADR-0009 has the reasoning; this is the theme's application of it.
+ * Every name in `SERVER_RENDERED` below is registered in PHP with a render
+ * callback and nothing else. That is enough for the front end and not enough
+ * for the editor: the block editor draws a block only from a client-side
+ * registration, so a block the server knows about and the client does not
+ * arrives in the canvas as core's `core/missing` — "Your site doesn't include
+ * support for the dpaternina/feed-link block" — inside a template that renders
+ * perfectly on the site. ADR-0009 has the reasoning; this is the theme's
+ * application of it.
  *
  * `ServerSideRender` is the right tool precisely because there is nothing to
- * duplicate. None of these blocks has content of its own: each is a label and a
- * URL nobody can type, and a hand-written editor preview would be a second
- * implementation of the same derivation kept in step with the first by nobody.
+ * duplicate. None of these blocks has content of its own: each is a label, a
+ * URL or a list nobody can type, and a hand-written editor preview would be a
+ * second implementation of the same derivation kept in step with the first by
+ * nobody.
  *
  * Everything else — title, description, category, keywords — comes from the
  * server definition WordPress already bootstraps into `wp.blocks` for every
@@ -53,6 +54,7 @@
 		'dpaternina/series-parts-link',
 		'dpaternina/resume-download',
 		'dpaternina/feed-link',
+		'dpaternina/series-planned',
 	];
 
 	/**

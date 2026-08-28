@@ -302,10 +302,12 @@ Facts later phases inherit:
 
 ### Still open, for a later phase
 
-- [ ] **`dpaternina/series-planned` is still `core/missing` in the site editor.** It is
-      the theme's dynamic block, on `taxonomy-dp_series`. ADR-0009 covers `dp-core`'s
-      three; the theme ships no JavaScript build at all, so giving it a preview means
-      giving the theme a build — a decision of its own.
+- [x] **`dpaternina/series-planned` is still `core/missing` in the site editor.** Closed
+      in Phase B2. `DP\Theme\Blocks\EditorScript` gave the theme one registered handle
+      against a file shipped as written, so no build was needed after all: the block
+      names the handle and joins the list in `assets/js/blocks-editor.js`.
+      `DP\Tests\Integration\Blocks\ThemeEditorParityTest` now holds that list against
+      every `block.json` the theme ships, so a seventh block cannot re-open this.
 - [ ] **The Watch tile is missing from the 404's "OR TRY ONE OF THESE" grid.** The
       design has three; the digest omits Watch from the navigation until Phase 12
       ships, so this ships with two. Phase 12 adds the third, a `dp-watch` entry in

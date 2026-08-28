@@ -127,30 +127,12 @@ final class ComputedLinksTest extends TemplateTestCase {
 		}
 	}
 
-	/**
-	 * The editor file registers exactly the blocks that need it.
-	 *
-	 * Read out of the source, the way `ServerRenderedParityTest` reads
-	 * `dp-core`'s: a fourth server-rendered theme block added without a line in
-	 * that array fails here rather than in David's canvas.
-	 *
-	 * @return void
+	/*
+	 * The list in `blocks-editor.js` is held against every `block.json` the
+	 * theme ships by `DP\Tests\Integration\Blocks\ThemeEditorParityTest`,
+	 * which is where it belongs now that the theme renders six blocks on the
+	 * server rather than these three.
 	 */
-	public function test_the_editor_script_previews_exactly_these_blocks(): void {
-		$javascript = $this->theme_file( EditorScript::PATH );
-
-		$this->assertSame( 1, preg_match( '~const SERVER_RENDERED = \[(.*?)\];~s', $javascript, $array ) );
-
-		preg_match_all( "~'([^']+)'~", $array[1], $names );
-
-		$previewed = $names[1];
-		$expected  = array_keys( self::BLOCKS );
-
-		sort( $previewed );
-		sort( $expected );
-
-		$this->assertSame( $expected, $previewed );
-	}
 
 	/*
 	 * ------------------------------------------------------- The series' parts

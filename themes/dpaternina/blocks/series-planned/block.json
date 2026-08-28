@@ -6,6 +6,7 @@
 	"category": "theme",
 	"description": "The parts of the series being viewed that have not been published yet. Titles, years and notes only — never a draft's body or its link.",
 	"textdomain": "dpaternina",
+	"editorScript": "dpaternina-blocks",
 	"supports": {
 		"inserter": false,
 		"html": false,
