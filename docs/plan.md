@@ -622,6 +622,58 @@ gives all of them back, and only where they point at a page the seed created.
 None of this is a route: nothing registers a rewrite, branches on a slug, or
 looks a page up by name, and re-slugging any of them breaks nothing.
 
+**And the URL shape, which the first pass missed entirely.** A fresh install has
+an empty `permalink_structure`, and under plain permalinks *no rewrite rule
+exists at all* — so `/writing/`, `/work/`, `/series/life-story/` and
+`/category/dev/` were every one of them a 404 on a freshly reset site, including
+`dp_series`' rewrite slug, which §5.1 names as the one registered page-facing
+route in the project. The seeder now fills an **empty** structure with
+`/%postname%/` and leaves any structure David already chose, because any
+non-empty structure gives the routes their rules and replacing a dated one would
+invalidate every URL on the site to gain nothing.
+
+Two things about that are worth writing down, because both are easy to get wrong
+and one of them was:
+
+- **Setting the option is not enough.** `register_taxonomy()` adds a permastruct
+  only when `is_admin()` or a structure already exists, and under WP-CLI on a
+  fresh install neither is true — so `category`, `post_tag` and `dp_series` all
+  have *no* permastruct by the time the seeder runs. Change the option at that
+  point and `get_term_link()` still returns `?dp_series=life-story` (which the
+  chrome links would then be built from and saved with), and a flush writes a
+  rule set with no taxonomy rules in it that `wp_rewrite_rules()` serves from the
+  option forever, because it only regenerates when that option is empty. So
+  `create_initial_taxonomies()` and `ContentModel::register()` are re-run before
+  the flush. The side effect — core's two taxonomies reset to their declared
+  arguments — is why this happens only on a site that had no structure at all.
+- **The `.htaccess` is the environment's, not the plugin's**, and it is a
+  separate failure: with the option set and the rules correct, Apache still
+  answered `/writing/` with its own 404 because the request never reached PHP.
+  A plugin cannot honestly write that file — `got_mod_rewrite()` is false under
+  WP-CLI because there is no server to ask, so a hard flush silently does
+  nothing, and filtering `got_rewrite` to get past it would be writing Apache
+  config into a site root on a guess. WP-CLI's own `rewrite` command gets there
+  through the `apache_modules` key in the `wp-cli.yml` **wp-env already ships**.
+  So `.wp-env.json`'s `afterStart` runs `wp rewrite structure '/%postname%/'
+  --hard` on both environments, which writes the file and sets the structure
+  before the seed even starts; the seeder's own copy is the safety net for a site
+  wp-env did not build. The two values are asserted to agree, because they are
+  written twice.
+- **`wipe()` restores the structure only if it recorded writing it.** Matching on
+  the value is not the same claim: `.wp-env.json` sets that exact structure, so a
+  value comparison had `--fresh` clearing the environment's work and putting it
+  back a moment later. The index gained a `settings` map for the purpose — the
+  other three settings need no such record, since each holds the ID of a post the
+  index already vouches for.
+- **A sweep driven by `get_permalink()` cannot see any of this.** The first
+  pass's verification asked WordPress what URL it would generate and then checked
+  that WordPress could resolve it; under a plain structure that is `?page_id=47`,
+  which returns 200 and proves nothing. The tests now assert the *shape* — a path,
+  and the expected one — and resolve it with `go_to()`, which parses the URL back
+  through the rewrite rules rather than through the function that produced it.
+  The `.htaccess` half is outside what an integration test can see at all, and is
+  verified by requesting the paths over HTTP after a real reset.
+
 **The chrome links go in through a seam.** `dp-core` may not know the theme's
 files, block names or labels, so it hands over a map of *its* destination keys to
 URLs through `dp_seed_chrome_links` and the theme hands back finished markup,
