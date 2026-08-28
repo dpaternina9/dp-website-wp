@@ -71,6 +71,7 @@ final class Theme {
 		( new Blocks\CoreStyles() )->register();
 		( new Blocks\EditorScript( $this ) )->register();
 		( new Blocks\FeedLink() )->register();
+		( new Blocks\FilterPills( $destinations ) )->register();
 		( new Blocks\LeadImage() )->register();
 		( new Blocks\Markup() )->register();
 		( new Blocks\ResumeDownload() )->register();
@@ -80,7 +81,6 @@ final class Theme {
 		( new Blocks\Timeline( $this ) )->register();
 		$navigation->register();
 		( new Chrome\Brand( $this->directory ) )->register();
-		( new Chrome\FilterPills( $destinations ) )->register();
 		( new Chrome\PostPresentation() )->register();
 		( new Chrome\SiteFacts() )->register();
 		( new Query\ArchiveFacts() )->register();

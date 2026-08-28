@@ -54,6 +54,7 @@
 		'dpaternina/series-parts-link',
 		'dpaternina/resume-download',
 		'dpaternina/feed-link',
+		'dpaternina/filter-pills',
 		'dpaternina/series-planned',
 	];
 

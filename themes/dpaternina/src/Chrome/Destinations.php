@@ -28,7 +28,7 @@ use WP_Post;
  * is the blog", and it is not something an author can usefully type into a link
  * — the answer changes with a setting rather than with an edit. Two callers
  * need it: `Navigation`, to mark the blog active and to answer `dp-core`'s
- * `dp_destination_url`, and `FilterPills`, for the All pill.
+ * `dp_destination_url`, and `DP\Theme\Blocks\FilterPills`, for the All pill.
  *
  * Neither answer is memoised. Both are `get_option()` plus `get_post()`, which
  * are served from the options cache and the post cache, and the transient this

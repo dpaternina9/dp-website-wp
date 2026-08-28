@@ -411,11 +411,11 @@ p.dp-badge.is-tone-purple {
 /* -------------------------------------------------------------------------
  * FilterPills
  *
- * `core/categories` with the design's pill drawn over it. Real links to real
+ * `dpaternina/filter-pills`, in its `filter` variation. Real links to real
  * archives, which is the component's own instruction and what keeps filtering
- * working with JavaScript off (CLAUDE.md §1.7). The leading All pill is spliced
- * in by DP\Theme\Chrome\FilterPills; `current-cat` is `wp_list_categories`'s own
- * class, set from the queried object.
+ * working with JavaScript off (CLAUDE.md §1.7). `cat-item` and `current-cat` are
+ * the class names `wp_list_categories` used to write and the block keeps, so
+ * every rule below and every selector in the e2e suite still says what it said.
  * ---------------------------------------------------------------------- */
 
 ul.dp-filter-pills {
@@ -485,10 +485,10 @@ ul.dp-filter-pills a:hover {
 	color: var(--text-primary);
 }
 
-/* The current pill. `current-cat` is wp_list_categories's own class, set from
-   the queried object; `aria-current` is what the All pill and the timeline's
-   three filters carry, because neither of those is a category. Same pill, same
-   state, two ways of saying which one you are looking at. */
+/* The current pill. `current-cat` is the class the block puts on the `<li>`;
+   `aria-current` is on the anchor, and the timeline's three filters — which are
+   not categories at all — carry only that. Same pill, same state, two ways of
+   saying which one you are looking at. */
 ul.dp-filter-pills > li.current-cat a,
 ul.dp-filter-pills a[aria-current="page"] {
 	border-color: var(--dp-teal);
@@ -1938,11 +1938,10 @@ p.dp-archive-outro-line {
 }
 
 /* "Other categories" — the design filters the current term out of the list it
-   builds. `wp_list_categories` builds the list and marks the current term
-   instead, so it is taken out here. A rule rather than a rewrite of core's
-   markup: dropping an `<li>` out of a list that may be nested means parsing it,
-   and the design's own intent — do not offer the page you are on as somewhere
-   to go — is met either way. */
+   builds. `dpaternina/filter-pills` marks the current term instead of dropping
+   it, so it is taken out here. Marking and hiding rather than omitting keeps one
+   render path for both variations, and keeps the mark available to the filter
+   row, where the same term is the one that has to look selected. */
 .dp-band.dp-category-band > .dp-section {
 	padding-block: var(--section-y-sm) 120px;
 }
@@ -2006,8 +2005,9 @@ ul.dp-category-pills a:hover {
 }
 
 /* The count is `--text-muted` where the name is `--text-primary`, which needs
-   an element of its own; core writes it as a bare text node after the anchor.
-   DP\Theme\Chrome\FilterPills moves it inside and wraps it. */
+   an element of its own. `core/categories` wrote it as a bare text node after
+   the anchor and this theme moved it with a regular expression; the block writes
+   the `<span>` in the first place. */
 ul.dp-category-pills .dp-cat-count {
 	color: var(--text-muted);
 }

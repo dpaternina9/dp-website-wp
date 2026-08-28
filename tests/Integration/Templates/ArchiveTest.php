@@ -356,29 +356,11 @@ final class ArchiveTest extends TemplateTestCase {
 		$this->assertStringNotContainsString( 'dp-empty-count', $html );
 	}
 
-	/**
-	 * "Other categories" are pills with their count in an element of its own.
-	 *
-	 * The count is `--text-muted` where the name is `--text-primary`, which
-	 * needs a wrapper; core writes it as a bare text node after the anchor.
-	 *
-	 * @return void
+	/*
+	 * What each pill in that band contains — the count in an element of its own,
+	 * a name with parentheses in it printed whole — belongs to the block now, and
+	 * is `DP\Tests\Integration\Templates\FilterPillsTest`.
 	 */
-	public function test_the_other_categories_are_pills_with_their_counts_wrapped(): void {
-		$this->seed_categories();
-		$this->seed_posts( 2, 'dev' );
-		$this->seed_posts( 3, 'food' );
-
-		$link = get_category_link( $this->categories['dev'] );
-
-		$this->assertIsString( $link );
-
-		$html = $this->render( $link, 'category', self::CATEGORY );
-
-		$this->assertStringContainsString( 'dp-category-pills', $html );
-		$this->assertStringContainsString( 'Food<span class="dp-cat-count">3</span></a>', $html );
-		$this->assertStringNotContainsString( '</a> (3)', $html, 'The count is inside the pill, not beside it.' );
-	}
 
 	/**
 	 * A term archive paginates, with the range naming the term.

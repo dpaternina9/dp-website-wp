@@ -147,62 +147,13 @@ final class HomeTest extends TemplateTestCase {
 		$this->assertContains( (string) get_the_title( $this->posts[0] ), $titles );
 	}
 
-	/**
-	 * The filter pills are links to real archives, with an All pill in front.
-	 *
-	 * FilterPills.dc.html: "these are real links to filtered archive URLs, not
-	 * JS tabs." The assertion is on the anchors, because that is the whole
-	 * promise — the row works with scripting switched off.
-	 *
-	 * @return void
+	/*
+	 * The pill row itself — the All pill, the current pill, the counts and the
+	 * parity between the canvas and the page — is
+	 * `DP\Tests\Integration\Templates\FilterPillsTest`. It stopped being a
+	 * property of this template when it stopped being a rewrite of
+	 * `core/categories` and became `dpaternina/filter-pills`.
 	 */
-	public function test_the_filter_pills_are_links_and_lead_with_all(): void {
-		$this->seed_categories();
-		$this->seed_posts( 2, 'dev' );
-		$this->seed_posts( 1, 'food' );
-		$page = $this->seed_posts_page();
-
-		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
-
-		$this->assertStringContainsString( 'dp-filter-pills', $html );
-		$this->assertStringContainsString( 'dp-pill-all', $html );
-
-		foreach ( array( 'dev', 'food' ) as $slug ) {
-			$link = get_category_link( $this->categories[ $slug ] );
-
-			$this->assertIsString( $link );
-			$this->assertStringContainsString( 'href="' . esc_url( $link ) . '"', $html );
-		}
-
-		$this->assertStringContainsString(
-			'href="' . esc_url( $this->permalink( $page ) ) . '"',
-			$html,
-			'The All pill points at the posts index resolved from Settings → Reading.'
-		);
-	}
-
-	/**
-	 * On the index, All is the pill that is current.
-	 *
-	 * @return void
-	 */
-	public function test_the_all_pill_is_current_on_the_index_and_not_on_an_archive(): void {
-		$this->seed_categories();
-		$this->seed_posts( 2, 'dev' );
-		$page = $this->seed_posts_page();
-
-		$index = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
-
-		$this->assertMatchesRegularExpression( '~<li class="[^"]*dp-pill-all[^"]*current-cat"~', $index );
-
-		$link = get_category_link( $this->categories['dev'] );
-
-		$this->assertIsString( $link );
-
-		$archive = $this->render( $link, 'category', array( 'category.php', 'archive.php', 'index.php' ) );
-
-		$this->assertStringNotContainsString( 'dp-pill-all', $archive, 'The pill row belongs to the index, not to an archive.' );
-	}
 
 	/**
 	 * Nothing on the index renders a notice, and the chrome is there.
