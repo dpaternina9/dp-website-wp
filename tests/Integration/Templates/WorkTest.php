@@ -10,7 +10,10 @@ declare( strict_types=1 );
 namespace DP\Tests\Integration\Templates;
 
 use DP\Core\Blocks\Timeline;
+use DP\Theme\Blocks\DerivedLink;
 use DP\Theme\Blocks\Timeline as TimelinePresentation;
+use DP\Theme\Blocks\WorkCardTitle;
+use WP_REST_Request;
 
 /**
  * Featured work above, the whole record below, and a way between them.
@@ -26,6 +29,15 @@ use DP\Theme\Blocks\Timeline as TimelinePresentation;
  * with the scripts off: the server reads `dp-open` and renders that entry
  * already open, so following a card is one navigation rather than a fragment
  * pointing at a closed `<details>` that no user agent is required to expand.
+ *
+ * The link is also a **block** now, `dpaternina/work-card-title`. It used to be
+ * a `core/post-title` carrying `dp-card-open`, with the `<a>` spliced into the
+ * rendered heading by `strpos` and `substr` — an invisible trigger, and a site
+ * editor that drew a plain title where the page drew a link. ADR-0018 rules that
+ * out, so three of the assertions below are about the block rather than about
+ * the page: that the canvas and the page draw the same markup, that a post with
+ * no row on the chart keeps its title and loses its link, and that the heading
+ * level is still the template's to choose.
  */
 final class WorkTest extends TemplateTestCase {
 
@@ -265,6 +277,106 @@ final class WorkTest extends TemplateTestCase {
 			$this->assertStringContainsString( Timeline::OPEN_ARG . '=' . $key, $url, 'Without the query arg the link needs JavaScript to do anything.' );
 			$this->assertStringEndsWith( '#' . $key, $url, 'And without the fragment it lands at the top of the page.' );
 		}
+	}
+
+	/**
+	 * The canvas and the page draw the same card title.
+	 *
+	 * This is the assertion the spliced `<a>` could never have passed: the
+	 * editor renders saved markup and never ran `render_block_core/post-title`,
+	 * so the canvas drew a plain heading and the page drew a link into the
+	 * chart. `ServerSideRender` has no block context to hand the server, so the
+	 * editor names the post through `urlQueryArgs`; this asks the same route the
+	 * same way and holds the answer against the page.
+	 *
+	 * @return void
+	 */
+	public function test_the_canvas_and_the_page_draw_the_same_card_title(): void {
+		$html = $this->render( $this->permalink( $this->page ), 'page', self::HIERARCHY );
+		$ship = reset( $this->ships );
+
+		$this->assertIsInt( $ship );
+
+		$this->assertStringContainsString(
+			$this->as_the_editor_renders_it( $ship ),
+			$html,
+			'The site editor previews this block through the block-renderer route; what it draws there is what the page has to draw.'
+		);
+	}
+
+	/**
+	 * A post with no row on the chart keeps its title and loses its link.
+	 *
+	 * ADR-0008's treatment, the same one `DerivedLink` gives the theme's three
+	 * computed buttons: the element stays so the failure is visible, and the
+	 * `href` goes so it is not focusable and cannot reach a page that is not
+	 * there. Without it, "the card has no link" and "the card is not there" look
+	 * identical from the page.
+	 *
+	 * @return void
+	 */
+	public function test_a_title_with_no_entry_to_open_draws_inert(): void {
+		$post = self::factory()->post->create( array( 'post_title' => 'Not a shipped thing' ) );
+
+		$this->assertIsInt( $post );
+
+		$rendered = $this->as_the_editor_renders_it( $post );
+
+		$this->assertStringContainsString( 'Not a shipped thing', $rendered );
+		$this->assertStringContainsString( DerivedLink::UNRESOLVED_CLASS, $rendered );
+		$this->assertStringContainsString( 'aria-disabled="true"', $rendered );
+		$this->assertStringNotContainsString( 'href=', $rendered );
+	}
+
+	/**
+	 * The heading level is the template's to choose, and defaults to the design's.
+	 *
+	 * ADR-0018's first rule: a template says what a template can say. A level
+	 * baked into the block is a level that will one day skip.
+	 *
+	 * @return void
+	 */
+	public function test_the_heading_level_is_an_attribute_with_the_designs_default(): void {
+		$ship = reset( $this->ships );
+
+		$this->assertIsInt( $ship );
+		$this->assertStringContainsString( '<h3 ', $this->as_the_editor_renders_it( $ship ) );
+		$this->assertStringContainsString( '<h2 ', $this->as_the_editor_renders_it( $ship, 2 ) );
+	}
+
+	/**
+	 * Render one card title the way `ServerSideRender` does.
+	 *
+	 * @param int      $post_id The post the loop is previewing.
+	 * @param int|null $level   The heading level to ask for, or null for the default.
+	 * @return string The rendered markup.
+	 */
+	private function as_the_editor_renders_it( int $post_id, ?int $level = null ): string {
+		$editor = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		$this->assertIsInt( $editor );
+
+		wp_set_current_user( $editor );
+
+		$request = new WP_REST_Request( 'GET', '/wp/v2/block-renderer/' . WorkCardTitle::NAME );
+
+		$request->set_param( 'context', 'edit' );
+		$request->set_param( 'post_id', $post_id );
+
+		if ( null !== $level ) {
+			$request->set_param( 'attributes', array( 'level' => $level ) );
+		}
+
+		$response = rest_do_request( $request );
+
+		$this->assertFalse( $response->is_error(), 'The block-renderer route refused the block the editor previews with.' );
+
+		$data = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertIsString( $data['rendered'] ?? null );
+
+		return $data['rendered'];
 	}
 
 	/**

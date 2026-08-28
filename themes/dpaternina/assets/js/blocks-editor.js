@@ -16,6 +16,15 @@
  * second implementation of the same derivation kept in step with the first by
  * nobody.
  *
+ * `urlQueryArgs` is what makes that true inside a query loop. The block-renderer
+ * route takes a `post_id` and sets the post up before rendering, but nothing
+ * sends it block context — so a block that reads `postId` would otherwise draw
+ * in the canvas as if there were no post at all, which for
+ * `dpaternina/work-card-title` means an inert title where the page draws a real
+ * card. Handing the route the post the loop is previewing makes the canvas and
+ * the page render the same markup, which is the whole of ADR-0018's third
+ * concern.
+ *
  * Everything else — title, description, category, keywords — comes from the
  * server definition WordPress already bootstraps into `wp.blocks` for every
  * registered block type, so nothing here restates what `block.json` says.
@@ -55,6 +64,7 @@
 		'dpaternina/resume-download',
 		'dpaternina/feed-link',
 		'dpaternina/filter-pills',
+		'dpaternina/work-card-title',
 		'dpaternina/series-planned',
 	];
 
@@ -66,12 +76,15 @@
 	 */
 	function serverRenderedEdit( name ) {
 		return function Edit( props ) {
+			const postId = props.context && props.context.postId;
+
 			return createElement(
 				'div',
 				useBlockProps(),
 				createElement( ServerSideRender, {
 					block: name,
 					attributes: props.attributes,
+					urlQueryArgs: postId ? { post_id: postId } : undefined,
 				} )
 			);
 		};

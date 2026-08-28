@@ -79,6 +79,7 @@ final class Theme {
 		( new Blocks\SeriesPlanned() )->register();
 		( new Blocks\TemplateHierarchy() )->register();
 		( new Blocks\Timeline( $this ) )->register();
+		( new Blocks\WorkCardTitle() )->register();
 		$navigation->register();
 		( new Chrome\Brand( $this->directory ) )->register();
 		( new Chrome\PostPresentation() )->register();

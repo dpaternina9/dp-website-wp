@@ -792,8 +792,8 @@ h3.dp-card-title a {
    design's own note on WorkCard, where the whole card is the control. Here the
    title is the link and this pseudo-element is the rest of the card, which is
    what gives a mouse the target the design draws and a keyboard exactly one tab
-   stop instead of a card's worth of them. The href is derived at render time by
-   DP\Theme\Blocks\Timeline. */
+   stop instead of a card's worth of them. The anchor and its derived href are
+   DP\Theme\Blocks\WorkCardTitle's. */
 h3.dp-card-title a.dp-card-open::after {
 	position: absolute;
 	inset: 0;
