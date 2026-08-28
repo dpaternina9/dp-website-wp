@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Theme\Query;
 
+use WP_Block;
 use WP_Query;
 
 /**
@@ -23,6 +24,17 @@ use WP_Query;
  * href, so it is not focusable and cannot reach a page that does not exist, and
  * `aria-disabled` so it announces as an unavailable control rather than as a
  * stray word.
+ *
+ * It is done by filtering the **step's own block**, not the bar around it. The
+ * first version filtered `core/query-pagination` and spliced a `<span>` into the
+ * rendered `<nav>` — reading the label back out with a regular expression over
+ * that markup, and guessing the position from the first `>` and the last `</`.
+ * Filtering `core/query-pagination-previous` and `-next` instead means the
+ * label is read from the attribute the template set, the step lands where the
+ * template put it rather than at whichever end of the bar, and no HTML is
+ * parsed by anything. `render_block_{$name}` runs whether or not the callback
+ * produced anything, so the empty string core returns for a step it cannot
+ * offer is exactly the hook this needs.
  *
  * **The bar itself only exists when there is more than one page.** `pager.show`
  * is `matching.length > PER_PAGE`, and `pager.atEnd` adds a closing panel on the
@@ -53,13 +65,59 @@ final class Pagination {
 	public const STEP_DISABLED = 'dp-page-step-disabled';
 
 	/**
+	 * The block types that may carry one of the two page-state classes.
+	 *
+	 * This used to be a bare `render_block`, which meant parsing a class
+	 * attribute for every block on every page to find the two that ask.
+	 * ADR-0018's second rule is that a computation announces itself, not that it
+	 * stands in the way of everything else — and the two things the design hides
+	 * are both containers: the pager bar and the end-of-archive panel are each a
+	 * `core/group`.
+	 *
+	 * `DP\Tests\Integration\Templates\PaginationTest` holds this list against
+	 * the theme's shipped markup, so putting one of the classes on a block type
+	 * that is not here fails a test rather than quietly rendering on every page.
+	 *
+	 * @var list<string>
+	 */
+	public const STATEFUL_BLOCKS = array( 'core/group' );
+
+	/**
 	 * Attach the hooks.
 	 *
 	 * @return void
 	 */
 	public function register(): void {
-		add_filter( 'render_block', $this->hide_when_the_query_says_so( ... ), 10, 2 );
-		add_filter( 'render_block_core/query-pagination', $this->keep_the_dead_steps( ... ), 10, 2 );
+		foreach ( self::STATEFUL_BLOCKS as $block ) {
+			add_filter( 'render_block_' . $block, $this->hide_when_the_query_says_so( ... ), 10, 2 );
+		}
+
+		add_filter( 'render_block_core/query-pagination-previous', $this->keep_the_previous_step( ... ), 10, 3 );
+		add_filter( 'render_block_core/query-pagination-next', $this->keep_the_next_step( ... ), 10, 3 );
+	}
+
+	/**
+	 * Draw PREV on page one, where core draws nothing.
+	 *
+	 * @param string               $content  The step's rendered HTML.
+	 * @param array<string, mixed> $block    The parsed block.
+	 * @param WP_Block|null        $instance The block instance.
+	 * @return string
+	 */
+	public function keep_the_previous_step( string $content, array $block, ?WP_Block $instance = null ): string {
+		return $this->keep_the_dead_step( $content, $block, $instance, 'previous' );
+	}
+
+	/**
+	 * Draw NEXT on the last page, where core draws nothing.
+	 *
+	 * @param string               $content  The step's rendered HTML.
+	 * @param array<string, mixed> $block    The parsed block.
+	 * @param WP_Block|null        $instance The block instance.
+	 * @return string
+	 */
+	public function keep_the_next_step( string $content, array $block, ?WP_Block $instance = null ): string {
+		return $this->keep_the_dead_step( $content, $block, $instance, 'next' );
 	}
 
 	/**
@@ -91,32 +149,28 @@ final class Pagination {
 	/**
 	 * Put back the step core dropped because it had nowhere to point.
 	 *
-	 * Core returns the empty string for the whole pagination block when nothing
-	 * inside it rendered, so a one-page archive stays free of a stray rule; this
-	 * only ever adds a step to a bar that already exists.
+	 * Only for a pagination inheriting the main query, which is what both of
+	 * this theme's pagers do. A `core/query` with a query of its own has a page
+	 * count nothing here has computed, and inventing a step for it would be
+	 * drawing a control whose state we do not know.
 	 *
-	 * @param string               $content The rendered pagination.
-	 * @param array<string, mixed> $block   The parsed block.
+	 * @param string               $content  The step's rendered HTML — the empty string when it has nowhere to go.
+	 * @param array<string, mixed> $block    The parsed block.
+	 * @param WP_Block|null        $instance The block instance, which carries the query context.
+	 * @param string               $step     `previous` or `next`.
 	 * @return string
 	 */
-	public function keep_the_dead_steps( string $content, array $block ): string {
-		unset( $block );
-
-		if ( '' === trim( $content ) ) {
+	private function keep_the_dead_step( string $content, array $block, ?WP_Block $instance, string $step ): string {
+		if ( '' !== trim( $content ) || ! $this->inherits_the_main_query( $instance ) || ! $this->is_paginated() ) {
 			return $content;
 		}
 
-		$labels = $this->step_labels( $content );
-
-		if ( ! str_contains( $content, 'wp-block-query-pagination-previous' ) ) {
-			$content = $this->insert_step( $content, 'previous', $labels['previous'], true );
-		}
-
-		if ( ! str_contains( $content, 'wp-block-query-pagination-next' ) ) {
-			$content = $this->insert_step( $content, 'next', $labels['next'], false );
-		}
-
-		return $content;
+		return sprintf(
+			'<span class="wp-block-query-pagination-%1$s %2$s" aria-disabled="true">%3$s</span>',
+			esc_attr( $step ),
+			esc_attr( self::STEP_DISABLED ),
+			esc_html( $this->step_label( $block, $step ) )
+		);
 	}
 
 	/**
@@ -148,63 +202,45 @@ final class Pagination {
 	}
 
 	/**
-	 * The labels the two steps are written with, read off the one that rendered.
+	 * The word the missing step is drawn with.
 	 *
-	 * The words belong to the template — `core/query-pagination-previous` takes a
-	 * `label` attribute and David can change it — so the missing step borrows the
-	 * wording from its opposite number rather than having a second copy of it
-	 * here. On page one of a two-page archive NEXT is present, so PREV is drawn
-	 * with the same word core would have used for it; when neither rendered
-	 * there is no bar to add to and this is never reached.
+	 * The words belong to the template — `core/query-pagination-previous` takes
+	 * a `label` attribute and David can change it — so this reads the same
+	 * attribute core reads, off the same block. The fallbacks are core's own
+	 * defaults, said again in this theme's textdomain rather than borrowed from
+	 * WordPress's.
 	 *
-	 * @param string $content The rendered pagination.
-	 * @return array{previous: string, next: string}
+	 * @param array<string, mixed> $block The parsed block.
+	 * @param string               $step  `previous` or `next`.
+	 * @return string
 	 */
-	private function step_labels( string $content ): array {
-		$labels = array(
-			'previous' => __( 'Prev', 'dpaternina' ),
-			'next'     => __( 'Next', 'dpaternina' ),
-		);
+	private function step_label( array $block, string $step ): string {
+		$attributes = $block['attrs'] ?? array();
+		$label      = is_array( $attributes ) ? ( $attributes['label'] ?? '' ) : '';
 
-		foreach ( array_keys( $labels ) as $step ) {
-			if ( preg_match( '~<a[^>]*wp-block-query-pagination-' . $step . '[^>]*>(.*?)</a>~s', $content, $found ) ) {
-				$text = trim( wp_strip_all_tags( $found[1] ) );
-
-				if ( '' !== $text ) {
-					$labels[ $step ] = $text;
-				}
-			}
+		if ( is_string( $label ) && '' !== trim( $label ) ) {
+			return $label;
 		}
 
-		return $labels;
+		return 'previous' === $step
+			? __( 'Previous Page', 'dpaternina' )
+			: __( 'Next Page', 'dpaternina' );
 	}
 
 	/**
-	 * Add one inert step at the start or the end of the bar.
+	 * Whether this pagination belongs to a query that inherits the main one.
 	 *
-	 * @param string $content The rendered pagination.
-	 * @param string $step    `previous` or `next`.
-	 * @param string $label   What it says.
-	 * @param bool   $first   Whether it goes before everything else.
-	 * @return string
+	 * @param WP_Block|null $instance The block instance.
+	 * @return bool
 	 */
-	private function insert_step( string $content, string $step, string $label, bool $first ): string {
-		$markup = sprintf(
-			'<span class="wp-block-query-pagination-%1$s %2$s" aria-disabled="true">%3$s</span>',
-			esc_attr( $step ),
-			esc_attr( self::STEP_DISABLED ),
-			esc_html( $label )
-		);
-
-		if ( $first ) {
-			$opening = strpos( $content, '>' );
-
-			return false === $opening ? $content : substr_replace( $content, $markup, $opening + 1, 0 );
+	private function inherits_the_main_query( ?WP_Block $instance ): bool {
+		if ( ! $instance instanceof WP_Block ) {
+			return false;
 		}
 
-		$closing = strrpos( $content, '</' );
+		$query = $instance->context['query'] ?? null;
 
-		return false === $closing ? $content : substr_replace( $content, $markup, $closing, 0 );
+		return is_array( $query ) && true === ( $query['inherit'] ?? false );
 	}
 
 	/**
