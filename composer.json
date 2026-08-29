@@ -37,6 +37,7 @@
   "config": {
     "sort-packages": true,
     "optimize-autoloader": true,
+    "process-timeout": 900,
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
     }
