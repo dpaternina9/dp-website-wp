@@ -57,7 +57,9 @@ built, and it did not work.
 
 ## Format
 
-One file per decision, never deleted and never rewritten. Numbered sequentially,
+One file per decision. A fully superseded ADR is pruned to a tombstone — status,
+what survives, pointer to git history — so nobody reads dead reasoning as live
+guidance (done 2026-08-29 for 0004, 0006, 0008). Numbered sequentially,
 four digits, kebab-case title:
 
 ```
@@ -86,11 +88,11 @@ reasoning intact — the record of why we believed something is the point.
 | [0001](0001-phase-0-toolchain.md) | Phase 0 toolchain | Accepted — 2026-08-20 |
 | [0002](0002-design-token-naming.md) | One source of truth for design tokens, and the bridge that keeps their names | Accepted — 2026-08-20 |
 | [0003](0003-content-model-edges.md) | The content model's edges | Accepted — 2026-08-20 |
-| [0004](0004-tag-driven-signed-releases.md) | Tag-driven signed releases | Accepted — 2026-08-20; implementation superseded by ADR-0015 |
+| [0004](0004-tag-driven-signed-releases.md) | Tag-driven signed releases | Superseded by 0015 — tombstone |
 | [0005](0005-house-style-blocks.md) | The house style: where a block's appearance is written down | Accepted — 2026-08-20 |
-| [0006](0006-chrome-and-derived-destinations.md) | The chrome: two lines of `theme.json`, and where a link's URL comes from | Accepted — 2026-08-20, destination half superseded by 0018 |
+| [0006](0006-chrome-and-derived-destinations.md) | The chrome: two lines of `theme.json`, and where a link's URL comes from | Superseded by 0018 — tombstone; only the `templateParts` lines survive |
 | [0007](0007-timeline-modes-and-url-state.md) | The timeline: three modes in one render, and its state in the URL | Accepted — 2026-08-20 |
-| [0008](0008-unresolved-destinations-degrade-visibly.md) | An unresolved destination degrades visibly, not silently | Accepted — 2026-08-20, mostly superseded by 0018 |
+| [0008](0008-unresolved-destinations-degrade-visibly.md) | An unresolved destination degrades visibly, not silently | Superseded by 0018 — tombstone; the visible-degrade rule survives for the three named link blocks |
 | [0009](0009-server-rendered-blocks-in-the-editor.md) | A block rendered in PHP still has to exist in the editor | Accepted — 2026-08-21 |
 | [0010](0010-test-only-mail-and-sender-identity.md) | The test site answers its own mail, and each e2e run is its own sender | Accepted — 2026-08-21 |
 | [0011](0011-the-brand-mark-is-content-and-spacing-out-specifies-the-block-gap.md) | The brand mark is content, and every spacing rule out-specifies the block gap | Accepted — 2026-08-21 |

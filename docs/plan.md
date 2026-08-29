@@ -804,20 +804,13 @@ What is left:
 
 ---
 
-## Phase 9 — Migration
+## Phase 9 — Migration (David's, not this repo's — 2026-08-29)
 
-- Export WXR from `dpaternina.com` and `blog.dpaternina.com`.
-- A `wp dp migrate` command: map old categories onto the five, derive series membership
-  and part numbers, backfill read time, convert classic content to blocks
-  (`wp post list` + block parser, not regex), rehost images, and generate a redirect map
-  from every old URL — including `blog.dpaternina.com/*` → `dpaternina.com/blog/*`.
-- Report what it could not map instead of guessing.
-- Any vanity redirect David wants — `/timeline` → the work page being the obvious one —
-  is a **row in that map**, editable from the admin. It is never a `wp_redirect()` keyed
-  to a hardcoded path in the theme.
-
-**Tests:** run the migration against a fixture WXR in CI and assert the redirect map is
-total — every old URL resolves 200 or 301, none 404.
+David runs the migration by hand: WXR export/import with slugs preserved. Posts move
+from `blog.dpaternina.com` to `dpaternina.com` keeping their slugs, and a single
+Cloudflare redirect rule covers the old host. No `wp dp migrate` command, no redirect
+map, and no migration tests are built here. Any vanity redirect is likewise a
+Cloudflare rule, never code in this repo.
 
 ---
 
@@ -838,18 +831,19 @@ total — every old URL resolves 200 or 301, none 404.
 
 ---
 
-## Phase 11 — Cutover
+## Phase 11 — Cutover (David's, not this repo's — 2026-08-29)
 
-Runbook, staging rehearsal on wp-env with real exported content, DNS plan, redirect
-verification, and a rollback that is a single `wp theme install --activate` of the
-previous tag.
+David handles the cutover himself: install, page creation and template assignment, the
+one-time link pass in the site editor (ADR-0018), DNS, and the Cloudflare redirect
+rule. This repo's only obligation is tagged releases that install cleanly; rollback is
+installing the previous tag.
 
 ---
 
-## Phase 12 — Watch (deferred)
+## Phase 12 — Watch (back in scope — 2026-08-29, and next up)
 
-Deprioritised by David — the site ships without it. Built after launch, or earlier if
-the Twitch credentials turn up.
+Un-deferred: David moved it ahead of the accessibility pass and feeds. Built now,
+before launch.
 
 - `dp_video` grid, live-now panel, gear list.
 - Thumbnails resolve to the public Twitch/YouTube URLs in digest §3.5, fetched and
@@ -865,16 +859,15 @@ declared, and the Watch entry stays out of the nav menus rather than pointing at
 
 ## Sequencing
 
+Reordered 2026-08-29 to wrap the project up. Phases 0–7 are done; what remains in this
+repo, in order:
+
 ```
-0 ─ 1 ─ 2 ─ 3 ─ 4 ─┬─ 5 ─ 6 ─┬─ 8 ─ 10 ─ 11 ─ (12)
-                   ├─ 7 ─────┤
-                   └─ 9 ─────┘
+contact-form fix ─ 12 (Watch) ─ 10 (a11y/perf) ─ 8 (feeds) ─ tag v1
 ```
 
-Phases 5/7/9 can run in parallel once 4 lands, on separate branches, with different
-agents — they share only `theme.json`, which is frozen after Phase 4 except by ADR.
-Phase 6 depends on 5 for the chrome it sits inside. Phase 12 is out of the critical path
-entirely.
+Phases 9 (migration) and 11 (cutover) are David's own work, outside this repo — see
+their sections. The original dependency graph is in git history.
 
 ---
 
@@ -890,8 +883,8 @@ entirely.
 | **SEO** | AIOSEO. Every OG image, canonical, robots directive, sitemap and JSON-LD graph is the plugin's. This repo writes no SEO output. |
 | **HTTP headers** | A security plugin of David's, not this repo. No `send_headers` handler, no CSP config, no header tests. We stay loadable under a strict policy instead. |
 | **Résumé** | Downloadable PDF via Cloudflare Browser Rendering, cached; print stylesheet as the fallback. |
-| **Watch** | Deferred to Phase 12. Ships without it; nav entry removed until it exists. |
+| **Watch** | Was deferred; un-deferred 2026-08-29 and built before launch (Phase 12, next after the contact-form fix). |
 | **Series parts** | Draft posts carrying the `dp_series` term, not a stub post type. See Phase 3.1. |
 | **Pages** | David creates and manages every page. The theme registers **no page routes** and never branches on a slug — design-specific pages are `dp-`-prefixed custom templates assigned from the admin. |
-| **Work page** | David's to name and slug. `/work` is the expectation; a `/timeline` redirect, if wanted, is a row in the migration redirect map, not code. |
+| **Work page** | David's to name and slug. `/work` is the expectation; a `/timeline` redirect, if wanted, is a Cloudflare rule, not code. |
 | **Content** | Every word in the design is placeholder, including Colophon and Privacy. Seeded verbatim, kept visibly provisional, never invented around. |
