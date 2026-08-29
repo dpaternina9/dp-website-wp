@@ -36,6 +36,10 @@
  * dependency below is a core-provided script handle, declared in PHP by
  * `DP\Theme\Blocks\EditorScript`.
  *
+ * One block below is not server-rendered in the canvas, and says so in its own
+ * comment: `dpaternina/page-state` has inner blocks David edits, so its `edit`
+ * is a real container rather than a preview of one.
+ *
  * @since 0.1.0
  */
 
@@ -56,6 +60,7 @@
 
 	const createElement = wp.element.createElement;
 	const useBlockProps = wp.blockEditor.useBlockProps;
+	const useInnerBlocksProps = wp.blockEditor.useInnerBlocksProps;
 	const ServerSideRender = wp.serverSideRender;
 
 	/** The blocks this theme renders on the server and nowhere else. */
@@ -89,6 +94,39 @@
 				} )
 			);
 		};
+	}
+
+	/**
+	 * The container whose state only the front end knows.
+	 *
+	 * `dpaternina/page-state` renders its inner blocks or nothing, depending on
+	 * whether the archive it sits in has more than one page — a fact the canvas
+	 * does not have and cannot be given, which ADR-0021 already recorded about
+	 * the class this block replaced. So the editor always draws the container
+	 * and lets David edit what is inside it; the block's own name in the list
+	 * view is what says the front end may not.
+	 *
+	 * It saves its inner blocks and no wrapper of its own. PHP writes the
+	 * wrapper, which is why there is nothing here for block validation to
+	 * disagree with.
+	 */
+	const PAGE_STATE = 'dpaternina/page-state';
+
+	if ( useInnerBlocksProps && ! wp.blocks.getBlockType( PAGE_STATE ) ) {
+		wp.blocks.registerBlockType( PAGE_STATE, {
+			edit: function Edit() {
+				return createElement(
+					'div',
+					useInnerBlocksProps( useBlockProps() )
+				);
+			},
+			save: function Save() {
+				return createElement(
+					wp.blockEditor.InnerBlocks.Content,
+					null
+				);
+			},
+		} );
 	}
 
 	SERVER_RENDERED.forEach( function ( name ) {

@@ -49,8 +49,8 @@ echo DP\Theme\Patterns::post_row();
 echo DP\Theme\Patterns::pager();
 ?>
 
-<!-- wp:group {"className":"dp-at-end dp-when-last-page","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-at-end dp-when-last-page"><!-- wp:paragraph {"className":"dp-at-end-line"} -->
+<!-- wp:dpaternina/page-state {"state":"last-page","className":"dp-at-end"} -->
+<!-- wp:paragraph {"className":"dp-at-end-line"} -->
 <p class="dp-at-end-line"><?php esc_html_e( 'That is the end of the archive — you have reached the oldest post I kept. The life-story series starts further back than this list goes.', 'dpaternina' ); ?></p>
 <!-- /wp:paragraph -->
 
@@ -58,6 +58,6 @@ echo DP\Theme\Patterns::pager();
 <div class="wp-block-buttons dp-at-end-action"><!-- wp:button {"className":"dp-button-secondary"} -->
 <div class="wp-block-button dp-button-secondary"><a class="wp-block-button__link wp-element-button"><?php esc_html_e( 'Start the series', 'dpaternina' ); ?></a></div>
 <!-- /wp:button --></div>
-<!-- /wp:buttons --></div>
-<!-- /wp:group --></div>
+<!-- /wp:buttons -->
+<!-- /wp:dpaternina/page-state --></div>
 <!-- /wp:query -->

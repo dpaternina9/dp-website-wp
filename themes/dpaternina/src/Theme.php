@@ -62,6 +62,7 @@ final class Theme {
 		$destinations = new Chrome\Destinations();
 		$navigation   = new Chrome\Navigation( $destinations );
 		$archive      = new Query\ArchiveFacts();
+		$pagination   = new Query\Pagination();
 
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
@@ -75,6 +76,7 @@ final class Theme {
 		( new Blocks\FilterPills( $destinations ) )->register();
 		( new Blocks\LeadImage() )->register();
 		( new Blocks\Markup() )->register();
+		( new Blocks\PageState( $pagination ) )->register();
 		( new Blocks\ResumeDownload() )->register();
 		( new Blocks\SeriesIndex( $archive ) )->register();
 		( new Blocks\SeriesPartsLink() )->register();
@@ -89,7 +91,7 @@ final class Theme {
 		( new Chrome\SiteFacts() )->register();
 		$archive->register();
 		( new Query\FeaturedPanel() )->register();
-		( new Query\Pagination() )->register();
+		$pagination->register();
 		( new Query\QueryLoops() )->register();
 	}
 

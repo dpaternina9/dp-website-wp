@@ -91,15 +91,15 @@ final class Patterns {
 	 *
 	 * Three parts: the mono range on the left, bound to
 	 * `DP\Theme\Query\ArchiveFacts`; core's three pagination blocks on the
-	 * right, drawn as the design's pills; and `dp-when-paginated`, which is what
-	 * makes the whole bar — border and all — exist only when there is more than
-	 * one page. `DP\Theme\Query\Pagination` answers both.
+	 * right, drawn as the design's pills; and `dpaternina/page-state`, which is
+	 * what makes the whole bar — border and all — exist only when there is more
+	 * than one page. `DP\Theme\Query\Pagination` answers both.
 	 *
 	 * @return string Block markup, ready to be echoed inside a `core/query`.
 	 */
 	public static function pager(): string {
-		return '<!-- wp:group {"className":"dp-pagination dp-when-paginated","layout":{"type":"default"}} -->
-<div class="wp-block-group dp-pagination dp-when-paginated"><!-- wp:paragraph {"className":"dp-pagination-range","metadata":{"bindings":{"content":{"source":"dpaternina/archive","args":{"key":"range"}}}}} -->
+		return '<!-- wp:dpaternina/page-state {"state":"paginated","className":"dp-pagination"} -->
+<!-- wp:paragraph {"className":"dp-pagination-range","metadata":{"bindings":{"content":{"source":"dpaternina/archive","args":{"key":"range"}}}}} -->
 <p class="dp-pagination-range"></p>
 <!-- /wp:paragraph -->
 
@@ -109,7 +109,7 @@ final class Patterns {
 <!-- wp:query-pagination-numbers /-->
 
 <!-- wp:query-pagination-next {"label":"Next"} /-->
-<!-- /wp:query-pagination --></div>
-<!-- /wp:group -->';
+<!-- /wp:query-pagination -->
+<!-- /wp:dpaternina/page-state -->';
 	}
 }

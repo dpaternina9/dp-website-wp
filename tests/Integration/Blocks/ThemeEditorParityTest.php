@@ -26,11 +26,18 @@ use WP_UnitTestCase;
  *
  * It is derived from the filesystem, not from a list written here. Every
  * `block.json` under `themes/dpaternina/blocks/` is a block the theme renders on
- * the server and nowhere else, so every one of them needs three things — a
- * registration, a render callback, and an `editorScript` naming a handle that
- * exists — and the file the editor loads has to name all of them and nothing
- * else. A seventh block added without a line in that array fails here rather
- * than in David's canvas.
+ * the server, so every one of them needs three things — a registration, a render
+ * callback, and an `editorScript` naming a handle that exists — and the file the
+ * editor loads has to name all of them and nothing else. A block added without a
+ * client registration fails here rather than in David's canvas.
+ *
+ * **Two shapes of editor half, one requirement.** Most of these blocks have no
+ * content of their own and are previewed with `ServerSideRender`, so the bundle
+ * lists them in `SERVER_RENDERED`. `dpaternina/page-state` has inner blocks
+ * David edits, so it is registered on its own with a real `edit` and a `save`.
+ * Both are client registrations; what this asserts is that every shipped block
+ * has one, which is why it reads every block name the bundle mentions rather
+ * than one array in it.
  */
 final class ThemeEditorParityTest extends WP_UnitTestCase {
 
@@ -67,7 +74,12 @@ final class ThemeEditorParityTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The names the editor bundle registers a preview for.
+	 * Every block name the editor bundle mentions.
+	 *
+	 * Read from the whole file rather than from `SERVER_RENDERED` alone, because
+	 * a block with inner blocks is registered outside that array — see the class
+	 * docblock. A name appearing anywhere in the bundle is a name the client
+	 * knows about, which is the fact under test.
 	 *
 	 * @return list<string>
 	 */
@@ -80,14 +92,10 @@ final class ThemeEditorParityTest extends WP_UnitTestCase {
 		$javascript = file_get_contents( $source );
 
 		$this->assertIsString( $javascript );
-		$this->assertSame(
-			1,
-			preg_match( '~const SERVER_RENDERED = \[(.*?)\];~s', $javascript, $array )
-		);
 
-		preg_match_all( "~'([^']+)'~", $array[1], $names );
+		preg_match_all( "~'(dpaternina/[a-z0-9-]+)'~", $javascript, $names );
 
-		$found = $names[1];
+		$found = array_values( array_unique( $names[1] ) );
 
 		sort( $found );
 
@@ -112,9 +120,9 @@ final class ThemeEditorParityTest extends WP_UnitTestCase {
 		$this->assertSame(
 			$this->theme_blocks(),
 			$this->previewed_blocks(),
-			'A block in themes/dpaternina/blocks/ with no entry in blocks-editor.js draws as '
-			. '"core/missing" in the site editor, inside a template that renders perfectly '
-			. 'on the front end.'
+			'A block in themes/dpaternina/blocks/ with no client registration in blocks-editor.js '
+			. 'draws as "core/missing" in the site editor, inside a template that renders '
+			. 'perfectly on the front end.'
 		);
 	}
 

@@ -437,6 +437,7 @@ test.describe( 'the house style in the editor', () => {
 				'dpaternina/series-parts-link',
 				'dpaternina/resume-download',
 				'dpaternina/feed-link',
+				'dpaternina/page-state',
 			].map( ( name ) => ( {
 				name,
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -450,5 +451,22 @@ test.describe( 'the house style in the editor', () => {
 				`${ block.name } has no client-side edit, so the site editor draws it as core/missing.`
 			).toBe( true );
 		}
+
+		// `dpaternina/page-state` is the one of the four with inner blocks, so
+		// it is the one that also needs a `save`: without it the container's
+		// children are not written to the template and the render callback has
+		// nothing to return.
+		const pageState = await page.evaluate(
+			() =>
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				!! ( window as any ).wp.blocks.getBlockType(
+					'dpaternina/page-state'
+				)?.save
+		);
+
+		expect(
+			pageState,
+			'dpaternina/page-state has no save, so its inner blocks would not survive a save.'
+		).toBe( true );
 	} );
 } );

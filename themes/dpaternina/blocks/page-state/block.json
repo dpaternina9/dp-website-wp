@@ -1,0 +1,40 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/page-state",
+	"title": "Only on some pages",
+	"category": "theme",
+	"description": "A container that renders only when the archive it sits in is in a particular state — more than one page, or the last page of several. The canvas has no page number, so the editor always draws it; the front end is where the state exists.",
+	"keywords": [ "pagination", "archive", "pager", "condition" ],
+	"textdomain": "dpaternina",
+	"attributes": {
+		"state": {
+			"type": "string",
+			"default": "paginated",
+			"enum": [ "paginated", "last-page" ]
+		}
+	},
+	"variations": [
+		{
+			"name": "paginated",
+			"title": "Only when paginated",
+			"description": "Renders only when the archive runs to more than one page. The design's pager bar — its rule, its margin and its range line — is drawn by this, so a one-page archive gets no stray line above nothing.",
+			"attributes": { "state": "paginated" },
+			"isDefault": true,
+			"isActive": [ "state" ]
+		},
+		{
+			"name": "last-page",
+			"title": "Only on the last page",
+			"description": "Renders only on the last page of an archive that has more than one. The design's closing panel.",
+			"attributes": { "state": "last-page" },
+			"isActive": [ "state" ]
+		}
+	],
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}

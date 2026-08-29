@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Theme\Blocks\PageState;
 use DP\Theme\Patterns;
 use WP_Block_Patterns_Registry;
 
@@ -257,7 +258,7 @@ final class PatternsTest extends TemplateTestCase {
 
 		$this->assertIsArray( $index );
 		$this->assertIsArray( $archive );
-		$this->assertStringContainsString( 'dp-when-last-page', (string) ( $index['content'] ?? '' ) );
-		$this->assertStringNotContainsString( 'dp-when-last-page', (string) ( $archive['content'] ?? '' ) );
+		$this->assertStringContainsString( PageState::LAST_PAGE_VARIATION, (string) ( $index['content'] ?? '' ) );
+		$this->assertStringNotContainsString( PageState::LAST_PAGE_VARIATION, (string) ( $archive['content'] ?? '' ) );
 	}
 }

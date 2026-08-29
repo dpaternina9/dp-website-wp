@@ -1,6 +1,6 @@
 <?php
 /**
- * The pager bar, and the two blocks that only belong on some pages of it.
+ * The pager bar's dead step, and the state its containers ask about.
  *
  * @package DP\Theme
  */
@@ -39,25 +39,13 @@ use WP_Query;
  * **The bar itself only exists when there is more than one page.** `pager.show`
  * is `matching.length > PER_PAGE`, and `pager.atEnd` adds a closing panel on the
  * last page only. Neither is a thing a template can say, and neither is a thing
- * the block editor can know — the canvas has no page number. So a block asks by
- * class and this answers, which is the same shape as every other derived
- * decision in this theme.
- *
- * The two classes are deliberately about the query rather than about the blog:
- * `dp-when-paginated` and `dp-when-last-page` say what they test, so a template
- * that uses one is readable without opening this file.
+ * the block editor can know — the canvas has no page number. Both questions are
+ * asked of this class, by `DP\Theme\Blocks\PageState`, which is the block a
+ * template wraps those containers in. They used to be asked by a bare CSS class
+ * on a `core/group`, which announced nothing; ADR-0018 rule 2 is why they are
+ * not any more.
  */
 final class Pagination {
-
-	/**
-	 * A block carrying this renders only when the archive has more than one page.
-	 */
-	public const WHEN_PAGINATED = 'dp-when-paginated';
-
-	/**
-	 * A block carrying this renders only on the last page of a paginated archive.
-	 */
-	public const WHEN_LAST_PAGE = 'dp-when-last-page';
 
 	/**
 	 * The class the inert step carries, so the stylesheet can dim it.
@@ -65,33 +53,11 @@ final class Pagination {
 	public const STEP_DISABLED = 'dp-page-step-disabled';
 
 	/**
-	 * The block types that may carry one of the two page-state classes.
-	 *
-	 * This used to be a bare `render_block`, which meant parsing a class
-	 * attribute for every block on every page to find the two that ask.
-	 * ADR-0018's second rule is that a computation announces itself, not that it
-	 * stands in the way of everything else — and the two things the design hides
-	 * are both containers: the pager bar and the end-of-archive panel are each a
-	 * `core/group`.
-	 *
-	 * `DP\Tests\Integration\Templates\PaginationTest` holds this list against
-	 * the theme's shipped markup, so putting one of the classes on a block type
-	 * that is not here fails a test rather than quietly rendering on every page.
-	 *
-	 * @var list<string>
-	 */
-	public const STATEFUL_BLOCKS = array( 'core/group' );
-
-	/**
 	 * Attach the hooks.
 	 *
 	 * @return void
 	 */
 	public function register(): void {
-		foreach ( self::STATEFUL_BLOCKS as $block ) {
-			add_filter( 'render_block_' . $block, $this->hide_when_the_query_says_so( ... ), 10, 2 );
-		}
-
 		add_filter( 'render_block_core/query-pagination-previous', $this->keep_the_previous_step( ... ), 10, 3 );
 		add_filter( 'render_block_core/query-pagination-next', $this->keep_the_next_step( ... ), 10, 3 );
 	}
@@ -118,32 +84,6 @@ final class Pagination {
 	 */
 	public function keep_the_next_step( string $content, array $block, ?WP_Block $instance = null ): string {
 		return $this->keep_the_dead_step( $content, $block, $instance, 'next' );
-	}
-
-	/**
-	 * Drop a block whose class names a page state this page is not in.
-	 *
-	 * @param string               $content The rendered block.
-	 * @param array<string, mixed> $block   The parsed block.
-	 * @return string
-	 */
-	public function hide_when_the_query_says_so( string $content, array $block ): string {
-		$attributes = $block['attrs'] ?? array();
-		$class_name = is_array( $attributes ) && isset( $attributes['className'] ) ? $attributes['className'] : '';
-
-		if ( ! is_string( $class_name ) || '' === $class_name ) {
-			return $content;
-		}
-
-		if ( $this->has_class( $class_name, self::WHEN_PAGINATED ) && ! $this->is_paginated() ) {
-			return '';
-		}
-
-		if ( $this->has_class( $class_name, self::WHEN_LAST_PAGE ) && ! $this->is_last_page() ) {
-			return '';
-		}
-
-		return $content;
 	}
 
 	/**
@@ -262,18 +202,5 @@ final class Pagination {
 		}
 
 		return $query;
-	}
-
-	/**
-	 * Whether a class attribute carries one exact class.
-	 *
-	 * @param string $attribute The class attribute's value.
-	 * @param string $wanted    The class to look for.
-	 * @return bool
-	 */
-	private function has_class( string $attribute, string $wanted ): bool {
-		$classes = preg_split( '~\s+~', trim( $attribute ) );
-
-		return is_array( $classes ) && in_array( $wanted, $classes, true );
 	}
 }

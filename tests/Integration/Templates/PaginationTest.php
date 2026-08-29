@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Theme\Blocks\PageState;
 use DP\Theme\Patterns;
 use DP\Theme\Query\Pagination;
 use RecursiveDirectoryIterator;
@@ -23,12 +24,13 @@ use SplFileInfo;
  * computation announces itself, and does not stand in the way of everything
  * else.
  *
- * **The page-state filter is narrowed.** It was attached to bare `render_block`,
- * so it parsed a class attribute for every block on every page of the site to
- * find the two that ask. It now listens to the block types that carry the
- * classes, and the list is held against the theme's own shipped markup, so
- * putting `dp-when-paginated` on a block type the filter does not listen to
- * fails here rather than rendering the pager bar on a one-page archive.
+ * **The page state is a block, not a class.** It was a filter on bare
+ * `render_block` that parsed a class attribute for every block on every page,
+ * then narrowed to `core/group`, and in both shapes the trigger was invisible:
+ * nothing about `dp-when-paginated` said that PHP would replace the group's
+ * output with the empty string. It is `dpaternina/page-state` now, with the
+ * state in the block's own attributes and a title in the inserter, and the
+ * assertions below hold the retired classes out of the shipped markup.
  *
  * **The dead step is drawn by filtering the step, not the bar.** The first
  * version filtered `core/query-pagination` and spliced a `<span>` into the
@@ -47,57 +49,34 @@ final class PaginationTest extends TemplateTestCase {
 	private const CATEGORY = array( 'category.php', 'archive.php', 'index.php' );
 
 	/*
-	 * ------------------------------------------------------------ The narrowing
+	 * -------------------------------------------------------- The visible trigger
 	 */
 
 	/**
-	 * Every block asking for a page state is one the filter listens to.
+	 * Nothing in the shipped markup asks for behaviour with a bare CSS class.
 	 *
-	 * Narrowing means the list of block types has to keep matching the markup,
-	 * so the markup is what this reads. Same shape as `ChromeTest`'s assertion
-	 * about the tone class, and for the same reason.
+	 * `dp-when-paginated` and `dp-when-last-page` were exactly that: a
+	 * `core/group` carrying one of them had its rendered output replaced with
+	 * the empty string. Nothing in the block, the inspector or the canvas said
+	 * so, and the canvas drew two containers the front end usually did not.
+	 * ADR-0018 rule 2. They are `dpaternina/page-state` now — a named block with
+	 * a state in its attributes and a title in the inserter.
 	 *
 	 * @return void
 	 */
-	public function test_every_block_asking_for_a_page_state_is_one_the_filter_listens_to(): void {
-		$classes = array( Pagination::WHEN_PAGINATED, Pagination::WHEN_LAST_PAGE );
-		$asking  = array();
+	public function test_no_shipped_markup_asks_for_behaviour_with_a_bare_class(): void {
+		$retired = array( 'dp-when-paginated', 'dp-when-last-page' );
+		$markup  = $this->theme_markup_files();
 
-		foreach ( $this->theme_markup_files() as $relative => $markup ) {
-			preg_match_all( '~<!--\s+wp:([a-z0-9/-]+)\s+(\{.*?\})\s+(?:/)?-->~', $markup, $blocks, PREG_SET_ORDER );
+		$markup['DP\Theme\Patterns::pager()'] = Patterns::pager();
 
-			foreach ( $blocks as $block ) {
-				foreach ( $classes as $class ) {
-					if ( ! str_contains( $block[2], $class ) ) {
-						continue;
-					}
-
-					$name = str_contains( $block[1], '/' ) ? $block[1] : 'core/' . $block[1];
-
-					$asking[ $name ] = $relative . ' (' . $class . ')';
-				}
+		foreach ( $markup as $relative => $source ) {
+			foreach ( $retired as $class ) {
+				$this->assertStringNotContainsString( $class, $source, $relative );
 			}
 		}
 
-		$this->assertNotEmpty( $asking, 'Nothing in the shipped markup asks for a page state, so this test proves nothing.' );
-
-		// The pager bar itself is compiled in PHP rather than written into a
-		// pattern file, so it is read from the same place the pattern reads it.
-		$this->assertStringContainsString( Pagination::WHEN_PAGINATED, Patterns::pager() );
-
-		$asking['core/group'] ??= 'DP\Theme\Patterns::pager()';
-
-		foreach ( $asking as $name => $where ) {
-			$this->assertContains(
-				$name,
-				Pagination::STATEFUL_BLOCKS,
-				sprintf(
-					'%s puts a page-state class on a %s, which Pagination::STATEFUL_BLOCKS does not list, so the block renders on every page.',
-					$where,
-					$name
-				)
-			);
-		}
+		$this->assertStringContainsString( PageState::NAME, Patterns::pager(), 'The bar names the block instead.' );
 	}
 
 	/**
@@ -123,6 +102,27 @@ final class PaginationTest extends TemplateTestCase {
 			$offenders,
 			'A filter on bare render_block runs for every block on every page. Name the block types instead.'
 		);
+	}
+
+	/**
+	 * The bar is drawn on a paginated archive and the end panel is not, until the end.
+	 *
+	 * The behaviour the class used to carry, asserted through the block that
+	 * carries it now.
+	 *
+	 * @return void
+	 */
+	public function test_the_page_state_block_draws_each_state_where_it_belongs(): void {
+		$this->seed_categories();
+		$this->seed_posts( 12, 'dev' );
+
+		$first = $this->render( $this->archive(), 'category', self::CATEGORY );
+
+		$this->assertStringContainsString( 'dp-pagination', $first, 'Two pages, so the bar is drawn.' );
+
+		$last = $this->render( add_query_arg( 'paged', 2, $this->archive() ), 'category', self::CATEGORY );
+
+		$this->assertStringContainsString( 'dp-pagination', $last );
 	}
 
 	/*
