@@ -244,14 +244,20 @@ final class Pagination {
 	}
 
 	/**
-	 * The main query, when it is an archive of posts.
+	 * The main query, when it is a list of posts.
+	 *
+	 * A search counts, for the same reason it counts in
+	 * `DP\Theme\Query\ArchiveFacts`: `search.html` draws the same pager bar, and
+	 * "is there more than one page of this" is as true a question about a set of
+	 * search results as about a term archive. Without it a search running to
+	 * three pages drew no pager at all, because the bar asks this first.
 	 *
 	 * @return WP_Query|null
 	 */
 	private function archive(): ?WP_Query {
 		$query = $GLOBALS['wp_query'] ?? null;
 
-		if ( ! $query instanceof WP_Query || ! ( $query->is_home() || $query->is_archive() ) ) {
+		if ( ! $query instanceof WP_Query || ! ( $query->is_home() || $query->is_archive() || $query->is_search() ) ) {
 			return null;
 		}
 

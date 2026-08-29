@@ -262,14 +262,20 @@ final class ArchiveFacts {
 	}
 
 	/**
-	 * The main query, when it is an archive of posts.
+	 * The main query, when it is a list of posts.
+	 *
+	 * A search is on that list even though `is_archive()` excludes it. The three
+	 * facts this class answers are all about a result set — how many there are,
+	 * which slice of them is on the page — and a search has a result set like any
+	 * archive. The template that renders one is `search.html`, which prints the
+	 * same count line the term archive does.
 	 *
 	 * @return WP_Query|null
 	 */
 	private function archive(): ?WP_Query {
 		$query = $GLOBALS['wp_query'] ?? null;
 
-		if ( ! $query instanceof WP_Query || ! ( $query->is_home() || $query->is_archive() ) ) {
+		if ( ! $query instanceof WP_Query || ! ( $query->is_home() || $query->is_archive() || $query->is_search() ) ) {
 			return null;
 		}
 
