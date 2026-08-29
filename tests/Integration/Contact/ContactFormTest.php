@@ -12,7 +12,9 @@ namespace DP\Tests\Integration\Contact;
 use DP\Core\Contact\ContactForm;
 use DP\Core\Contact\Handler;
 use DP\Core\Contact\Outcome;
+use DP\Core\Contact\PanelCopy;
 use DP\Core\Contact\Rejection;
+use DP\Core\Contact\Settings;
 use DP\Core\Contact\Submission;
 use WP_Block_Type_Registry;
 
@@ -416,5 +418,238 @@ final class ContactFormTest extends ContactTestCase {
 	 */
 	public function test_the_json_path_ignores_something_that_is_not_an_outcome(): void {
 		$this->assertSame( '', $this->block->panel_for( '', 'sent' ) );
+	}
+
+	/**
+	 * The form speaks with whatever copy the block's attributes carry.
+	 *
+	 * CLAUDE.md rule 2: the panel's voice is David's to change from the
+	 * editor, not a release's. Every string asserted on here is one that used
+	 * to be written into the render callback.
+	 *
+	 * @return void
+	 */
+	public function test_the_forms_copy_is_the_blocks_to_change(): void {
+		$html = $this->block->panel(
+			Outcome::form(),
+			array(
+				'heading'         => 'Say hello.',
+				'nameLabel'       => 'Who are you?',
+				'namePlaceholder' => 'Ada',
+				'submitLabel'     => 'Fire away',
+				'note'            => 'Read by a person.',
+			)
+		);
+
+		$this->assertStringContainsString( 'Say hello.', $html );
+		$this->assertStringContainsString( 'Who are you?', $html );
+		$this->assertStringContainsString( 'placeholder="Ada"', $html );
+		$this->assertStringContainsString( 'Fire away', $html );
+		$this->assertStringContainsString( 'Read by a person.', $html );
+		$this->assertStringNotContainsString( 'Send a note', $html );
+		$this->assertStringNotContainsString( 'Send it', $html );
+	}
+
+	/**
+	 * The result panels speak with the block's copy too.
+	 *
+	 * @return void
+	 */
+	public function test_the_result_panels_copy_is_the_blocks_to_change(): void {
+		$attributes = array(
+			'sentHeading'      => 'Got it.',
+			'sentLine'         => 'Expect a reply on Tuesday.',
+			'sendAnotherLabel' => 'One more',
+			'failedHeading'    => 'It bounced.',
+			'rateLimitedLine'  => 'Too many, too fast.',
+			'tryAgainLabel'    => 'Once more',
+		);
+
+		$sent = $this->block->panel( Outcome::sent(), $attributes );
+
+		$this->assertStringContainsString( 'Got it.', $sent );
+		$this->assertStringContainsString( 'Expect a reply on Tuesday.', $sent );
+		$this->assertStringContainsString( 'One more', $sent );
+		$this->assertStringNotContainsString( 'It landed. Thanks.', $sent );
+
+		$failed = $this->block->panel(
+			Outcome::failed( Rejection::RateLimited, new Submission( 'Someone', 'someone@example.com', 'Again.' ) ),
+			$attributes
+		);
+
+		$this->assertStringContainsString( 'It bounced.', $failed );
+		$this->assertStringContainsString( 'Too many, too fast.', $failed );
+		$this->assertStringContainsString( 'Once more', $failed );
+		$this->assertStringNotContainsString( 'That did not send.', $failed );
+	}
+
+	/**
+	 * A blanked control keeps its words; a blanked line disappears.
+	 *
+	 * A submit button or a field label with no text is a broken control, so a
+	 * blank there reads as "nothing chosen" and the default answers. The note
+	 * and the result lines are optional prose, and clearing one is a decision
+	 * to say nothing.
+	 *
+	 * @return void
+	 */
+	public function test_blank_controls_fall_back_and_blank_lines_disappear(): void {
+		$html = $this->block->panel(
+			Outcome::form(),
+			array(
+				'submitLabel' => '  ',
+				'note'        => '',
+			)
+		);
+
+		$this->assertStringContainsString( 'Send it', $html );
+		$this->assertStringNotContainsString( 'dp-contact-note', $html );
+	}
+
+	/**
+	 * `block.json` and `PanelCopy` tell the same story.
+	 *
+	 * The defaults live twice on purpose — `block.json` so the inspector shows
+	 * the strings being edited, `PanelCopy::defaults()` so they pass through
+	 * `__()` — and twice is only acceptable while they cannot drift.
+	 *
+	 * @return void
+	 */
+	public function test_the_block_json_defaults_are_panel_copys_defaults(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test, not a remote resource.
+		$json    = file_get_contents( dirname( __DIR__, 3 ) . '/plugins/dp-core/blocks/contact-form/block.json' );
+		$decoded = json_decode( is_string( $json ) ? $json : '', true );
+
+		$this->assertIsArray( $decoded );
+		$this->assertIsArray( $decoded['attributes'] ?? null );
+
+		$declared = array();
+
+		foreach ( $decoded['attributes'] as $name => $attribute ) {
+			$this->assertIsArray( $attribute, (string) $name );
+
+			$declared[ $name ] = $attribute['default'] ?? null;
+		}
+
+		$expected = PanelCopy::defaults();
+
+		ksort( $declared );
+		ksort( $expected );
+
+		$this->assertSame( $expected, $declared );
+	}
+
+	/**
+	 * The Public address setting is what publishes the fallback.
+	 *
+	 * This is the half that used to be dead UI: the filter had no default and
+	 * nothing in the project answered it, so "email instead" could never
+	 * render without a code change.
+	 *
+	 * @return void
+	 */
+	public function test_the_public_address_option_becomes_the_fallback(): void {
+		update_option( Settings::PUBLIC_ADDRESS, 'hello@example.com' );
+
+		$html = $this->block->panel(
+			Outcome::failed( Rejection::MailFailed, new Submission( 'Someone', 'someone@example.com', 'Again.' ) )
+		);
+
+		$this->assertStringContainsString( 'mailto:hello@example.com', $html );
+		$this->assertStringContainsString( 'Email instead', $html );
+	}
+
+	/**
+	 * The filter is layered on top of the option, not replaced by it.
+	 *
+	 * @return void
+	 */
+	public function test_the_public_address_filter_overrides_the_option(): void {
+		update_option( Settings::PUBLIC_ADDRESS, 'hello@example.com' );
+		add_filter( 'dp_contact_public_address', static fn (): string => 'direct@example.com' );
+
+		$html = $this->block->panel(
+			Outcome::failed( Rejection::MailFailed, new Submission( 'Someone', 'someone@example.com', 'Again.' ) )
+		);
+
+		$this->assertStringContainsString( 'mailto:direct@example.com', $html );
+		$this->assertStringNotContainsString( 'hello@example.com', $html );
+	}
+
+	/**
+	 * The enhanced path reads the copy from the page the form was posted to.
+	 *
+	 * The `fetch` upgrade is answered from `template_redirect`, before any
+	 * block renders, so the attributes have to be found where the block is
+	 * saved. A panel that came back in the design's voice after David rewrote
+	 * it would be the two paths drifting — the exact thing one renderer was
+	 * supposed to prevent.
+	 *
+	 * @return void
+	 */
+	public function test_the_json_path_reads_the_copy_from_the_pages_content(): void {
+		$page_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Say hello',
+				'post_content' => '<!-- wp:dp/contact-form {"sentHeading":"Page speaking."} /-->',
+			)
+		);
+
+		$this->assertIsInt( $page_id );
+
+		$this->go_to( (string) get_permalink( $page_id ) );
+
+		$html = $this->block->panel_for( '', Outcome::sent() );
+
+		$this->assertStringContainsString( 'Page speaking.', $html );
+		$this->assertStringNotContainsString( 'It landed. Thanks.', $html );
+	}
+
+	/**
+	 * The enhanced path reads the copy from the page's template as well.
+	 *
+	 * The shipped placement is `<!-- wp:dp/contact-form /-->` inside the
+	 * contact template, so a site-editor edit of the copy lands on the saved
+	 * template override, not on the page. The lookup follows the page's
+	 * assigned template slug there.
+	 *
+	 * @return void
+	 */
+	public function test_the_json_path_reads_the_copy_from_the_pages_template(): void {
+		$template_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template',
+				'post_name'    => 'dp-copy-fixture',
+				'post_status'  => 'publish',
+				'post_title'   => 'Copy fixture',
+				'post_content' => '<!-- wp:group {"layout":{"type":"default"}} --><div class="wp-block-group">'
+					. '<!-- wp:dp/contact-form {"sentHeading":"Template speaking."} /-->'
+					. '</div><!-- /wp:group -->',
+			)
+		);
+
+		$this->assertIsInt( $template_id );
+
+		wp_set_object_terms( $template_id, get_stylesheet(), 'wp_theme' );
+
+		$page_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'post_title'  => 'Say hello',
+			)
+		);
+
+		$this->assertIsInt( $page_id );
+
+		update_post_meta( $page_id, '_wp_page_template', 'dp-copy-fixture' );
+
+		$this->go_to( (string) get_permalink( $page_id ) );
+
+		$html = $this->block->panel_for( '', Outcome::sent() );
+
+		$this->assertStringContainsString( 'Template speaking.', $html );
 	}
 }

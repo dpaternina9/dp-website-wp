@@ -112,17 +112,26 @@ final class Mailer {
 	/**
 	 * Where the message goes.
 	 *
+	 * The Delivery address on Settings → General (`DP\Core\Contact\Settings`)
+	 * when David has set one; the administration address otherwise, so the form
+	 * works on a fresh install with nothing configured.
+	 *
 	 * @return string
 	 */
 	private function recipient(): string {
-		$default = get_option( 'admin_email' );
-		$default = is_string( $default ) ? $default : '';
+		$admin = get_option( 'admin_email' );
+		$admin = is_string( $admin ) ? $admin : '';
+
+		$stored  = Settings::recipient();
+		$default = '' === $stored ? $admin : $stored;
 
 		/**
 		 * Filters where contact messages are delivered.
 		 *
-		 * Defaults to Settings to General's administration address, so the form
-		 * works on a fresh install with nothing configured.
+		 * Receives the Delivery address setting when one is set, and Settings to
+		 * General's administration address otherwise — so the filter is an
+		 * override layered on top of what David set in wp-admin, not the only
+		 * way to route delivery.
 		 *
 		 * @since 0.1.0
 		 *

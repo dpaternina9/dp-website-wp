@@ -26,11 +26,13 @@ final class Contact {
 	 * @param Capability  $capability Grants `dp_send_message`.
 	 * @param Handler     $handler    Decides what a POST means.
 	 * @param ContactForm $block      Draws whichever state that is.
+	 * @param Settings    $settings   The two addresses, on Settings → General.
 	 */
 	private function __construct(
 		private readonly Capability $capability,
 		private readonly Handler $handler,
-		private readonly ContactForm $block
+		private readonly ContactForm $block,
+		private readonly Settings $settings
 	) {}
 
 	/**
@@ -44,7 +46,7 @@ final class Contact {
 	public static function create( string $plugin_dir ): self {
 		$handler = new Handler();
 
-		return new self( new Capability(), $handler, new ContactForm( $plugin_dir, $handler ) );
+		return new self( new Capability(), $handler, new ContactForm( $plugin_dir, $handler ), new Settings() );
 	}
 
 	/**
@@ -56,5 +58,6 @@ final class Contact {
 		$this->capability->register();
 		$this->handler->register();
 		$this->block->register();
+		$this->settings->register();
 	}
 }

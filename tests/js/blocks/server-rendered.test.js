@@ -35,6 +35,7 @@ import { registerBlockType, getBlockType, __reset } from '@wordpress/blocks';
  * Internal dependencies
  */
 import {
+	COPY_PANELS,
 	SERVER_RENDERED,
 	serverRenderedEdit,
 	registerServerRenderedBlocks,
@@ -96,5 +97,52 @@ describe( 'the server-rendered blocks', () => {
 			'data-server-side-render="dp/resume-ledger"'
 		);
 		expect( markup ).toContain( 'Experience' );
+	} );
+
+	it( 'offers inspector copy panels only where the attributes are copy', () => {
+		expect( Object.keys( COPY_PANELS ) ).toEqual( [ 'dp/contact-form' ] );
+	} );
+
+	it( 'lets the contact copy be edited from the inspector', () => {
+		const Edit = serverRenderedEdit( 'dp/contact-form' );
+
+		const markup = renderToStaticMarkup(
+			<Edit
+				attributes={ { heading: 'Say hello.' } }
+				setAttributes={ () => {} }
+			/>
+		);
+
+		/*
+		 * One control per attribute the copy panels declare, each prefilled
+		 * from the block's attributes — "Say hello." is the heading control's
+		 * value, and the preview beside it is still the server's.
+		 */
+		expect( markup ).toContain( 'class="inspector"' );
+		expect( markup ).toContain( 'value="Say hello."' );
+		expect( markup ).toContain(
+			'data-server-side-render="dp/contact-form"'
+		);
+
+		/*
+		 * One labelled control per attribute the copy panels declare, plus the
+		 * label the PanelBody double puts on each section.
+		 */
+		const panels = COPY_PANELS[ 'dp/contact-form' ];
+		const fields = panels.flatMap( ( panel ) => panel.fields );
+
+		expect( markup.match( /aria-label=/g ) ).toHaveLength(
+			fields.length + panels.length
+		);
+	} );
+
+	it( 'gives the other server-rendered blocks no inspector', () => {
+		const Edit = serverRenderedEdit( 'dp/timeline' );
+
+		const markup = renderToStaticMarkup(
+			<Edit attributes={ {} } setAttributes={ () => {} } />
+		);
+
+		expect( markup ).not.toContain( 'class="inspector"' );
 	} );
 } );

@@ -9,7 +9,80 @@
 	"description": "The form, the thank-you and the failure, as one panel. Posts to the page it is on; there is no endpoint.",
 	"keywords": [ "contact", "form", "email", "message" ],
 	"textdomain": "dp-core",
-	"attributes": {},
+	"attributes": {
+		"heading": {
+			"type": "string",
+			"default": "Send a note"
+		},
+		"nameLabel": {
+			"type": "string",
+			"default": "Name"
+		},
+		"namePlaceholder": {
+			"type": "string",
+			"default": "Your name"
+		},
+		"emailLabel": {
+			"type": "string",
+			"default": "Email"
+		},
+		"emailPlaceholder": {
+			"type": "string",
+			"default": "you@company.com"
+		},
+		"messageLabel": {
+			"type": "string",
+			"default": "What's on your mind?"
+		},
+		"messagePlaceholder": {
+			"type": "string",
+			"default": "A project, a question, a recommendation for a good roaster."
+		},
+		"submitLabel": {
+			"type": "string",
+			"default": "Send it"
+		},
+		"note": {
+			"type": "string",
+			"default": "Goes straight to my inbox. No list, no autoreply."
+		},
+		"sentHeading": {
+			"type": "string",
+			"default": "It landed. Thanks."
+		},
+		"sentLine": {
+			"type": "string",
+			"default": "I read everything and reply to almost everything, usually within a couple of days."
+		},
+		"failedHeading": {
+			"type": "string",
+			"default": "That did not send."
+		},
+		"failedLine": {
+			"type": "string",
+			"default": "Something on my end dropped it, and I would rather tell you than pretend otherwise. Your message is still in the form — try again, or email me directly and skip this thing entirely."
+		},
+		"rateLimitedLine": {
+			"type": "string",
+			"default": "That is a few in a short space of time, so this one was held back rather than sent. Give it ten minutes and try again — or email me directly and skip this thing entirely."
+		},
+		"tryAgainLabel": {
+			"type": "string",
+			"default": "Try again"
+		},
+		"sendAnotherLabel": {
+			"type": "string",
+			"default": "Send another"
+		},
+		"readSomethingLabel": {
+			"type": "string",
+			"default": "Read something"
+		},
+		"emailInsteadLabel": {
+			"type": "string",
+			"default": "Email instead"
+		}
+	},
 	"supports": {
 		"anchor": false,
 		"html": false,
