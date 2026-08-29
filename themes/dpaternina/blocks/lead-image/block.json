@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/lead-image",
+	"title": "Post lead image",
+	"category": "theme",
+	"description": "The figure the design draws at the top of a post: the featured image with the attachment's own caption under it. Core's featured-image block has no caption attribute and no inner blocks, so there is nothing a template can put inside the figure it renders.",
+	"keywords": [ "featured", "image", "caption", "lead", "post" ],
+	"textdomain": "dpaternina",
+	"usesContext": [ "postId", "postType" ],
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"inserter": false,
+		"html": false,
+		"reusable": false,
+		"multiple": false,
+		"className": false,
+		"lock": false
+	}
+}

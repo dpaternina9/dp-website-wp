@@ -9,7 +9,10 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Theme\Blocks\LeadImage;
 use DP\Theme\Blocks\SeriesPartsLink;
+use WP_Block;
+use WP_Post;
 
 /**
  * The post: kicker, lead, series footer, and the two navigations under it.
@@ -317,6 +320,111 @@ final class SingleTest extends TemplateTestCase {
 
 		$this->assertStringContainsString( 'dp-post-lead-image', $html );
 		$this->assertStringNotContainsString( 'dp-post-lead-caption', $html );
+	}
+
+	/**
+	 * The lead image is asked for by name, and drawn whole.
+	 *
+	 * It used to be `core/post-featured-image` carrying the class
+	 * `dp-post-lead-image`, with a `<figcaption>` spliced into core's rendered
+	 * markup — `strrpos()` for the `</figure>` and `substr_replace()` to put the
+	 * caption in front of it. Two things were wrong with that and only one of
+	 * them was the fragility: the trigger was a bare CSS class (ADR-0018 rule 2),
+	 * so the editor drew a figure with no caption while the page drew one with,
+	 * and nothing in the template said why.
+	 *
+	 * The value it produced was right and is unchanged — the attachment's own
+	 * caption, which ADR-0016 requires — so what this asserts is the mechanism.
+	 *
+	 * @return void
+	 */
+	public function test_the_lead_image_is_asked_for_by_name_rather_than_by_class(): void {
+		$this->assertStringContainsString( 'wp:' . LeadImage::NAME, $this->theme_file( 'templates/single.html' ) );
+
+		foreach ( $this->theme_markup_files() as $relative => $markup ) {
+			$this->assertStringNotContainsString(
+				'"className":"' . LeadImage::LEAD_CLASS . '"',
+				$markup,
+				$relative . ' asks for the caption with a class again.'
+			);
+		}
+	}
+
+	/**
+	 * No theme source performs surgery on rendered HTML.
+	 *
+	 * The splice above was the last of it. `DP\Theme\Chrome\Navigation` still
+	 * runs one `preg_replace`, over a URL rather than over markup, which is why
+	 * this names the two functions that only ever appear when something is
+	 * cutting a string of HTML open.
+	 *
+	 * @return void
+	 */
+	public function test_no_theme_source_splices_into_rendered_markup(): void {
+		$offenders = array();
+
+		foreach ( $this->theme_code() as $relative => $source ) {
+			foreach ( array( 'substr_replace(', 'strrpos(' ) as $needle ) {
+				if ( str_contains( $source, $needle ) ) {
+					$offenders[] = $relative . ' — ' . $needle;
+				}
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$offenders,
+			'Rendered markup is a block\'s to write, not a string to cut open. Render the element instead.'
+		);
+	}
+
+	/**
+	 * The caption is the one on the post the block was given, not the global one.
+	 *
+	 * The splice read `get_the_ID()`, so inside a loop over other posts — a
+	 * related-posts grid, a query loop in a template part — it captioned
+	 * whichever post happened to be set up rather than the one the block was
+	 * rendering. The block reads its `postId` context first, the way
+	 * `DP\Theme\Blocks\WorkCardTitle` does.
+	 *
+	 * @return void
+	 */
+	public function test_the_caption_follows_the_blocks_post_context(): void {
+		$this->seed_categories();
+		$posts = $this->seed_posts( 2 );
+
+		set_post_thumbnail( $posts[0], $this->seed_attachment( 'The caption on the newer post.' ) );
+		set_post_thumbnail( $posts[1], $this->seed_attachment( 'The caption on the older post.' ) );
+
+		// Visiting the newer post is what sets the global post to it.
+		$page = $this->render( $this->permalink( $posts[0] ), 'single', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'The caption on the newer post.', $page );
+
+		$post = get_post();
+
+		$this->assertInstanceOf( WP_Post::class, $post );
+		$this->assertSame( $posts[0], $post->ID );
+
+		// And this is the same block, handed the older one instead.
+		$block = new WP_Block(
+			array(
+				'blockName'    => LeadImage::NAME,
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+			array(
+				'postId'   => $posts[1],
+				'postType' => 'post',
+			)
+		);
+
+		$html = $block->render();
+
+		$this->assertStringContainsString( 'The caption on the older post.', $html );
+		$this->assertStringNotContainsString( 'The caption on the newer post.', $html );
 	}
 
 	/**

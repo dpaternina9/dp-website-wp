@@ -12,9 +12,6 @@ namespace DP\Tests\Integration\Templates;
 use DP\Theme\Blocks\PageState;
 use DP\Theme\Patterns;
 use DP\Theme\Query\Pagination;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 
 /**
  * What `DP\Theme\Query\Pagination` computes, and what it is allowed to run on.
@@ -266,36 +263,5 @@ final class PaginationTest extends TemplateTestCase {
 			. $pager
 			. '</div>'
 			. '<!-- /wp:query -->';
-	}
-
-	/**
-	 * Every PHP file the theme ships, keyed by path.
-	 *
-	 * @return array<string, string>
-	 */
-	private function theme_sources(): array {
-		$root  = get_stylesheet_directory();
-		$found = array();
-
-		$files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root . '/src' ) );
-
-		foreach ( $files as $file ) {
-			if ( ! $file instanceof SplFileInfo || 'php' !== $file->getExtension() ) {
-				continue;
-			}
-
-			$path = $file->getPathname();
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the theme under test.
-			$source = file_get_contents( $path );
-
-			if ( is_string( $source ) ) {
-				$found[ substr( $path, strlen( $root ) + 1 ) ] = $source;
-			}
-		}
-
-		$this->assertNotEmpty( $found );
-
-		return $found;
 	}
 }

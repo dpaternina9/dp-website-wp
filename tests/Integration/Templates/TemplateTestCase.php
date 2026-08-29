@@ -11,6 +11,9 @@ namespace DP\Tests\Integration\Templates;
 
 use DP\Core\Content\ContentModel;
 use DP\Core\Content\Taxonomies;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 use WP_Post;
 use WP_Term;
 use WP_UnitTestCase;
@@ -403,6 +406,66 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 		$this->assertNotEmpty( $found );
 
 		return $found;
+	}
+
+	/**
+	 * Every PHP file the theme ships, keyed by path.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function theme_sources(): array {
+		$root  = get_stylesheet_directory();
+		$found = array();
+
+		$files = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root . '/src' ) );
+
+		foreach ( $files as $file ) {
+			if ( ! $file instanceof SplFileInfo || 'php' !== $file->getExtension() ) {
+				continue;
+			}
+
+			$path = $file->getPathname();
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the theme under test.
+			$source = file_get_contents( $path );
+
+			if ( is_string( $source ) ) {
+				$found[ substr( $path, strlen( $root ) + 1 ) ] = $source;
+			}
+		}
+
+		$this->assertNotEmpty( $found );
+
+		return $found;
+	}
+
+	/**
+	 * The same files with every comment removed.
+	 *
+	 * A docblock naming the mechanism it replaced is documentation, not a call.
+	 * Any assertion about what the theme *does* has to read code rather than
+	 * prose, or writing down why something was deleted re-introduces it.
+	 *
+	 * @return array<string, string>
+	 */
+	protected function theme_code(): array {
+		$stripped = array();
+
+		foreach ( $this->theme_sources() as $relative => $source ) {
+			$code = '';
+
+			foreach ( token_get_all( $source ) as $token ) {
+				if ( is_array( $token ) && in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+					continue;
+				}
+
+				$code .= is_array( $token ) ? $token[1] : $token;
+			}
+
+			$stripped[ $relative ] = $code;
+		}
+
+		return $stripped;
 	}
 
 	/**

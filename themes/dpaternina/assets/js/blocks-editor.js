@@ -69,6 +69,7 @@
 		'dpaternina/resume-download',
 		'dpaternina/feed-link',
 		'dpaternina/filter-pills',
+		'dpaternina/lead-image',
 		'dpaternina/work-card-title',
 		'dpaternina/series-index',
 		'dpaternina/series-planned',
