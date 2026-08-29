@@ -4600,3 +4600,479 @@ p.dp-404-note {
 		transform: none;
 	}
 }
+
+/* -------------------------------------------------------------------------
+ * Watch — the featured panel, the video grid, and the gear list
+ *
+ * Transcribed from the Watch view in dpaternina.dc.html (the `isWatch`
+ * section, the `videoCard()` styles and the GEAR grid). The markup comes from
+ * `dp/watch-featured` and `dp/video-grid` in dp-core plus the theme's own
+ * `watch-gear` pattern; everything visual lives here.
+ *
+ * Two facts shape the card styles:
+ *
+ * **The glow art is the card's own look, not an error state.** The design's
+ * comment says so: a thumbnail the cache has not fetched yet "fails silently"
+ * onto a per-card radial glow, each tile with its own placement so a cold row
+ * reads as a set of cards rather than five copies of one failure. The glow
+ * cycles by `:nth-child` (the design's GLOW array), the hue by tone class —
+ * `--dp-*` for the fill, per the token rule.
+ *
+ * **The footer link is the whole card's press.** `.dp-vg-link::after`
+ * stretches the card's one anchor over the card, so the design's card-sized
+ * click target needs no script and no second link; the click-to-play script
+ * upgrades exactly that anchor.
+ * ---------------------------------------------------------------------- */
+
+.dp-vg-card,
+.dp-watch-featured {
+	--dp-vg-hue: var(--dp-teal);
+	--dp-vg-text: var(--hue-teal);
+}
+
+.dp-vg-card.dp-tone-pink,
+.dp-watch-featured.dp-tone-pink {
+	--dp-vg-hue: var(--dp-pink);
+	--dp-vg-text: var(--hue-pink);
+}
+
+.dp-vg-card.dp-tone-gold,
+.dp-watch-featured.dp-tone-gold {
+	--dp-vg-hue: var(--dp-gold);
+	--dp-vg-text: var(--hue-gold);
+}
+
+.dp-vg-card.dp-tone-purple,
+.dp-watch-featured.dp-tone-purple {
+	--dp-vg-hue: var(--dp-purple);
+	--dp-vg-text: var(--hue-purple);
+}
+
+/* ------------------------------------------------------ The featured panel */
+
+.dp-watch-featured {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+	gap: 0;
+	overflow: hidden;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+}
+
+.dp-watch-featured-media {
+	min-height: 300px;
+}
+
+.dp-vg-media {
+	position: relative;
+	overflow: hidden;
+}
+
+.dp-vg-card .dp-vg-media {
+	aspect-ratio: 16 / 9;
+}
+
+.dp-vg-art {
+	position: absolute;
+	inset: 0;
+	background:
+		radial-gradient(
+			circle at var(--dp-vg-glow-at, 32% 28%),
+			color-mix(in srgb, var(--dp-vg-hue) var(--dp-vg-glow-mix, 22%), transparent) 0%,
+			transparent 66%
+		),
+		var(--bg-page);
+}
+
+/* The monogram in the art is the theme's own asset, drawn here so the plugin
+   never has to know where a theme file lives (CLAUDE.md §2.1). */
+.dp-vg-art::after {
+	content: "";
+	position: absolute;
+	top: 18px;
+	right: 18px;
+	width: 22px;
+	height: 22px;
+	background: url(../img/dp-mark-white-128.png) center / contain no-repeat;
+	opacity: 0.2;
+}
+
+.dp-vg-art-center {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+}
+
+.dp-vg-art-center::after {
+	position: static;
+	width: 44px;
+	height: 44px;
+	opacity: 0.22;
+}
+
+.dp-vg-art-label,
+.dp-vg-when {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* Tile art facts: platform top left, runtime and date on the bottom line. */
+.dp-vg-card .dp-vg-art {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	padding: 18px;
+}
+
+.dp-vg-badge {
+	color: var(--dp-vg-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-vg-tile-foot {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+
+	/* Room for the top-right monogram, which is absolutely placed. */
+	padding-inline-end: 30px;
+}
+
+.dp-vg-dur {
+	color: color-mix(in srgb, var(--dp-vg-hue) 62%, var(--text-primary));
+	font-family: var(--font-mono);
+	font-size: clamp(1.5rem, 4.5vw, 2.25rem);
+	letter-spacing: var(--ls-tight);
+}
+
+/* A fetched thumbnail covers the art — the design's own layering. */
+.dp-vg-thumb {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.dp-vg-player {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	border: 0;
+}
+
+.dp-vg-live-badge {
+	position: absolute;
+	top: 20px;
+	left: 20px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 7px 14px;
+	border: var(--border-width) solid var(--dp-pink);
+	border-radius: var(--radius-pill);
+	background: color-mix(in srgb, var(--bg-page) 82%, transparent);
+	color: var(--hue-pink);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-vg-live-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: var(--radius-circle);
+	background: var(--dp-pink);
+	animation: dp-vg-pulse 2s var(--ease-standard) infinite;
+}
+
+@keyframes dp-vg-pulse {
+
+	50% {
+		opacity: 0.35;
+	}
+}
+
+.dp-watch-featured-body {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 40px;
+}
+
+p.dp-watch-featured-kicker {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	margin: 0;
+}
+
+.dp-vg-meta {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+h2.dp-watch-featured-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-2xl);
+	font-weight: var(--fw-bold);
+	letter-spacing: var(--ls-display);
+	line-height: var(--lh-snug);
+	text-wrap: balance;
+}
+
+p.dp-watch-featured-note {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-watch-featured-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-block-start: auto;
+	padding-block-start: 12px;
+}
+
+a.dp-watch-play,
+a.dp-watch-follow {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: var(--control-h-md);
+	padding: 0 20px;
+	border: var(--border-width) solid transparent;
+	border-radius: var(--radius-pill);
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	font-weight: var(--fw-semibold);
+	text-decoration: none;
+	transition:
+		transform var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard);
+}
+
+a.dp-watch-play {
+	background: var(--accent);
+	box-shadow: var(--shadow-sm);
+	color: var(--accent-contrast);
+}
+
+a.dp-watch-follow {
+	border-color: var(--border-subtle);
+	background: var(--bg-surface);
+	color: var(--text-primary);
+}
+
+a.dp-watch-play:hover,
+a.dp-watch-follow:hover {
+	transform: translateY(-1px);
+}
+
+a.dp-watch-follow:hover {
+	border-color: var(--accent-text);
+}
+
+p.dp-watch-players-note {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	line-height: var(--lh-relaxed);
+	text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------- The archive grid */
+
+.dp-vg {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+	gap: 20px;
+}
+
+.dp-vg-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--bg-surface);
+	transition:
+		transform var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard);
+}
+
+.dp-vg-card:hover {
+	border-color: var(--accent-text);
+	transform: translateY(-3px);
+}
+
+/* The design's GLOW array: each tile its own placement, cycling by five. */
+.dp-vg-card:nth-child(5n + 2) {
+	--dp-vg-glow-at: 68% 38%;
+	--dp-vg-glow-mix: 16%;
+}
+
+.dp-vg-card:nth-child(5n + 3) {
+	--dp-vg-glow-at: 50% 62%;
+	--dp-vg-glow-mix: 20%;
+}
+
+.dp-vg-card:nth-child(5n + 4) {
+	--dp-vg-glow-at: 28% 66%;
+	--dp-vg-glow-mix: 15%;
+}
+
+.dp-vg-card:nth-child(5n) {
+	--dp-vg-glow-at: 72% 24%;
+	--dp-vg-glow-mix: 21%;
+}
+
+.dp-vg-body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: 10px;
+	padding: 22px;
+}
+
+h3.dp-vg-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	font-weight: var(--fw-semibold);
+	letter-spacing: var(--ls-tight);
+	line-height: var(--lh-snug);
+	text-wrap: pretty;
+}
+
+p.dp-vg-note {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-vg-link {
+	margin-block-start: auto;
+	padding-block-start: 8px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-decoration: none;
+	text-transform: uppercase;
+	transition: color var(--dur-base) var(--ease-standard);
+}
+
+a.dp-vg-link:hover {
+	color: var(--accent-text);
+}
+
+/* The card-sized press: one anchor, stretched. A card that lost its link
+   (no identifier yet — ADR-0008) keeps the muted label and stretches nothing. */
+a.dp-vg-link::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+
+/* While the player is up, the card is the player's; the stretched press would
+   sit over its controls. */
+.dp-vg-media.is-playing {
+	z-index: 1;
+}
+
+/* ------------------------------------------------------------ The gear list */
+
+.dp-watch-gear-section p.dp-gear-intro {
+	margin: 0 0 40px;
+	max-width: var(--measure);
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-gear {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+	gap: 32px 40px;
+}
+
+.dp-gear-group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* The group label is a heading wearing the mono caps label voice; the base
+   `.dp-label` rule reaches only `p` and `span`, so the voice is restated here
+   and `.dp-label.dp-tone-*` colours it as it colours every other label. */
+h3.dp-gear-label {
+	margin: 0;
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-regular);
+	letter-spacing: var(--ls-caps);
+	line-height: normal;
+	text-transform: uppercase;
+}
+
+.dp-gear-item {
+	padding: 18px 0;
+	border-block-end: var(--border-width) solid var(--border-subtle);
+}
+
+p.dp-gear-name {
+	margin: 0 0 6px;
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	text-wrap: pretty;
+}
+
+p.dp-gear-note {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.dp-vg-card,
+	.dp-vg-card:hover,
+	a.dp-watch-play,
+	a.dp-watch-play:hover,
+	a.dp-watch-follow,
+	a.dp-watch-follow:hover {
+		transform: none;
+	}
+
+	.dp-vg-live-dot {
+		animation: none;
+	}
+}

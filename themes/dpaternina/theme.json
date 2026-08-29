@@ -425,7 +425,8 @@
     { "name": "dp-contact", "title": "Contact", "postTypes": [ "page" ] },
     { "name": "dp-series", "title": "Series index", "postTypes": [ "page" ] },
     { "name": "dp-uses", "title": "Uses", "postTypes": [ "page" ] },
-    { "name": "dp-colophon", "title": "Colophon", "postTypes": [ "page" ] }
+    { "name": "dp-colophon", "title": "Colophon", "postTypes": [ "page" ] },
+    { "name": "dp-watch", "title": "Watch", "postTypes": [ "page" ] }
   ],
   "templateParts": [
     { "name": "header", "title": "Header", "area": "header" },

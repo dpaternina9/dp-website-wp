@@ -140,6 +140,40 @@ export const SHARED_WORK_PAGE = {
 	title: 'Shared fixture — where I worked',
 } as const;
 
+/** The page carrying the `dp-watch` template, which the watch spec reads. */
+export const SHARED_WATCH_PAGE = {
+	slug: 'e2e-shared-watch',
+	title: 'Watch.',
+} as const;
+
+/**
+ * The Watch grid's entries.
+ *
+ * Three deliberate shapes. The Twitch VOD carries an identifier, so it is the
+ * featured panel (first by menu order, and the site is never live in this
+ * environment) and the one card whose press the click-to-play test can
+ * exercise — its embed URL is built client-side and asserted on, never
+ * loaded from Twitch by the page itself. The YouTube entry carries none, so
+ * the unlinked degradation is on the page, **and** so no render ever asks
+ * i.ytimg.com for a thumbnail from the test environment. The live entry
+ * exists to prove it does not render while nothing says the channel is live.
+ */
+export const SHARED_VIDEOS = {
+	featured: {
+		slug: 'e2e-shared-vod',
+		title: 'Watch fixture — the featured VOD',
+		ref: '2280918841',
+	},
+	unlinked: {
+		slug: 'e2e-shared-upload',
+		title: 'Watch fixture — the upload with no id yet',
+	},
+	live: {
+		slug: 'e2e-shared-live',
+		title: 'Watch fixture — the live entry nobody is streaming',
+	},
+} as const;
+
 /**
  * The work page's URL, for a spec that is about to visit it.
  *
@@ -163,6 +197,35 @@ export async function sharedWorkPageUrl(
 	if ( ! page ) {
 		throw new Error(
 			`The shared work page ("${ SHARED_WORK_PAGE.slug }") is missing. It is ` +
+				'established in tests/e2e/global-setup.ts, which runs before every ' +
+				'spec; if it is not there, global setup did not finish.'
+		);
+	}
+
+	return page.link;
+}
+
+/**
+ * The Watch page's URL, for a spec that is about to visit it.
+ *
+ * A lookup, like `sharedWorkPageUrl()` and for the same reason.
+ *
+ * @param requestUtils The suite's REST client.
+ * @return The page's permalink.
+ */
+export async function sharedWatchPageUrl(
+	requestUtils: RequestUtils
+): Promise< string > {
+	const found = await requestUtils.rest< Established[] >( {
+		path: '/wp/v2/pages',
+		params: { slug: SHARED_WATCH_PAGE.slug, status: 'any', per_page: 1 },
+	} );
+
+	const page = found[ 0 ];
+
+	if ( ! page ) {
+		throw new Error(
+			`The shared watch page ("${ SHARED_WATCH_PAGE.slug }") is missing. It is ` +
 				'established in tests/e2e/global-setup.ts, which runs before every ' +
 				'spec; if it is not there, global setup did not finish.'
 		);
@@ -444,6 +507,7 @@ async function establishSharedContent(
 	}
 
 	await establishPagerArchive( requestUtils );
+	await establishWatchContent( requestUtils );
 
 	await establish( requestUtils, 'pages', SHARED_WORK_PAGE.slug, {
 		title: SHARED_WORK_PAGE.title,
@@ -456,6 +520,74 @@ async function establishSharedContent(
 			dp_lead:
 				"There's no separate portfolio here. Three projects I'd show first, " +
 				"then every role I've held and everything that came out of each one.",
+		},
+	} );
+}
+
+/**
+ * Establish the Watch page and the three video entries the watch spec reads.
+ *
+ * The page's body carries the theme's gear pattern by reference rather than a
+ * copy of its markup, so the fixture cannot drift from the pattern it stands
+ * for; core inlines a `core/pattern` at render time.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function establishWatchContent(
+	requestUtils: RequestUtils
+): Promise< void > {
+	await establish( requestUtils, 'dp_video', SHARED_VIDEOS.featured.slug, {
+		title: SHARED_VIDEOS.featured.title,
+		menu_order: 1,
+		meta: {
+			dp_video_source: 'twitch',
+			dp_video_ref: SHARED_VIDEOS.featured.ref,
+			dp_tone: 'purple',
+			dp_duration: '2H 41M',
+			dp_when: 'AUG 2026',
+			dp_note: 'The card whose press the click-to-play test presses.',
+		},
+	} );
+
+	await establish( requestUtils, 'dp_video', SHARED_VIDEOS.unlinked.slug, {
+		title: SHARED_VIDEOS.unlinked.title,
+		menu_order: 2,
+		meta: {
+			dp_video_source: 'youtube',
+			dp_video_ref: '',
+			dp_tone: 'teal',
+			dp_duration: '18 MIN',
+			dp_when: 'JUL 2026',
+			dp_note:
+				'No identifier yet, so the card is visibly unlinked (ADR-0008).',
+		},
+	} );
+
+	await establish( requestUtils, 'dp_video', SHARED_VIDEOS.live.slug, {
+		title: SHARED_VIDEOS.live.title,
+		menu_order: 3,
+		meta: {
+			dp_video_source: 'twitch',
+			dp_tone: 'pink',
+			dp_live: true,
+			dp_live_meta: 'STREAMING NOW · 1H 12M IN',
+			dp_note:
+				'Renders only while Twitch says the channel is live, which this environment never is.',
+		},
+	} );
+
+	await establish( requestUtils, 'pages', SHARED_WATCH_PAGE.slug, {
+		title: SHARED_WATCH_PAGE.title,
+		// The admin stores a block theme's custom template under its slug,
+		// without the extension.
+		template: 'dp-watch',
+		content: '<!-- wp:pattern {"slug":"dpaternina/watch-gear"} /-->',
+		meta: {
+			// The design's own placeholder, verbatim. CLAUDE.md section 6: seed
+			// the copy as it is written and invent nothing that reads like a fact.
+			dp_lead:
+				'Not live at the moment. Long unedited streams live on Twitch, ' +
+				'shorter edited pieces on YouTube, and both end up here.',
 		},
 	} );
 }

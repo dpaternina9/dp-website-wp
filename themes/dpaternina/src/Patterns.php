@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace DP\Theme;
 
+use WP_Block_Patterns_Registry;
+
 /**
  * One category, so the design's components sit together in the inserter.
  *
@@ -34,12 +36,45 @@ final class Patterns {
 	public const CATEGORY = 'dpaternina';
 
 	/**
-	 * Attach the hook.
+	 * The pattern the Watch page's body starts from.
+	 */
+	public const WATCH_GEAR = 'dpaternina/watch-gear';
+
+	/**
+	 * Attach the hooks.
 	 *
 	 * @return void
 	 */
 	public function register(): void {
 		add_action( 'init', $this->register_category( ... ) );
+
+		/*
+		 * `dp-core`'s seeder asks what a seeded Watch page's body should be —
+		 * digest section 3.6 makes the gear list editor content, and the seed
+		 * has to start it from somewhere without the plugin learning this
+		 * theme's pattern slugs or markup (CLAUDE.md section 2.1). The same
+		 * seam shape as `dp_seed_chrome_links` and `dp_brand_logo_path`: the
+		 * plugin asks, the theme answers, and with the theme switched off
+		 * nothing answers and the seeder keeps its own placeholder.
+		 */
+		add_filter( 'dp_seed_watch_body', $this->watch_body( ... ) );
+	}
+
+	/**
+	 * Answer the seeder with the gear pattern's own markup.
+	 *
+	 * Read from the registry rather than from the file so there is exactly one
+	 * definition of the gear list, and a seeded body is byte-for-byte what
+	 * inserting the pattern in the editor would have produced.
+	 *
+	 * @param mixed $body Whatever an earlier filter decided — the seeder's own placeholder.
+	 * @return mixed The pattern's content, or the placeholder when the pattern is not registered.
+	 */
+	public function watch_body( mixed $body ): mixed {
+		$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( self::WATCH_GEAR );
+		$content = is_array( $pattern ) ? ( $pattern['content'] ?? null ) : null;
+
+		return is_string( $content ) && '' !== trim( $content ) ? $content : $body;
 	}
 
 	/**

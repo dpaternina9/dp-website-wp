@@ -495,7 +495,7 @@ final class ChromeTest extends TemplateTestCase {
 			);
 		}
 
-		foreach ( array( 'Work', 'About', 'Contact', 'All posts', 'Uses', 'Résumé', 'Colophon', 'Privacy', 'RSS' ) as $link ) {
+		foreach ( array( 'Work', 'Watch', 'About', 'Contact', 'All posts', 'Uses', 'Résumé', 'Colophon', 'Privacy', 'RSS' ) as $link ) {
 			$this->assertStringContainsString(
 				'>' . $link . '</a>',
 				$html,
@@ -505,17 +505,26 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
-	 * Watch is left out until it exists, rather than pointing at a 404.
+	 * Watch is in the SITE column now that Phase 12 ships it.
 	 *
-	 * The same rule Phase 5 applied to the header. Phase 12 adds the template
-	 * and the two links at once.
+	 * Phase 5 left it out rather than point at a 404; the digest's footer —
+	 * SITE (Work, Watch, About, Contact) — is whole now. Like every chrome
+	 * link it ships as a named button with no href (ADR-0018): the name in
+	 * List View is "Watch link", the seeder fills it, David sets it once on a
+	 * real site.
 	 *
 	 * @return void
 	 */
-	public function test_the_footer_leaves_watch_out_until_phase_12(): void {
+	public function test_the_footer_carries_watch_now_that_phase_12_ships(): void {
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertStringNotContainsString( '>Watch</a>', $html );
+		$this->assertStringContainsString( '>Watch</a>', $html );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test.
+		$part = file_get_contents( get_stylesheet_directory() . '/parts/footer.html' );
+
+		$this->assertIsString( $part );
+		$this->assertStringContainsString( '"name":"Watch link"', $part, 'The button announces itself in List View (ADR-0018 rule 2).' );
 	}
 
 	/**

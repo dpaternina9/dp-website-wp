@@ -747,9 +747,9 @@ final class Fixture {
 	 * rewriting it here would hide the problem instead of surfacing it. It is a
 	 * launch blocker, not a seed bug.
 	 *
-	 * Six more are the views the design draws from data rather than from a
-	 * `PAGES` entry: the front page, the writing index, Work, About, the résumé
-	 * and Contact. WordPress needs a page behind each of them anyway — a template
+	 * Seven more are the views the design draws from data rather than from a
+	 * `PAGES` entry: the front page, the writing index, Work, Watch, About, the
+	 * résumé and Contact. WordPress needs a page behind each of them anyway — a template
 	 * with nothing assigned to it is a template nobody can reach — so each is
 	 * seeded with **only the words the design actually prints**: the `<h1>` its
 	 * template binds to `core/post-title`, the deck it binds to `dp_lead`, and
@@ -759,7 +759,7 @@ final class Fixture {
 	 * written, and never write plausible-sounding facts about David to fill a
 	 * gap.
 	 *
-	 * The tenth, the series index, is a view the design does not draw at all —
+	 * The eleventh, the series index, is a view the design does not draw at all —
 	 * it had one series and never needed a list of them — so its two lines of
 	 * copy say they are placeholder rather than imitating a page that does not
 	 * exist.
@@ -779,7 +779,13 @@ final class Fixture {
 	 * - **`role`** is what Settings to Reading and Settings to Privacy should
 	 *   point at on a freshly seeded site: `front`, `posts`, `privacy`, or ''.
 	 *
-	 * @return list<array{key: string, slug: string, title: string, template: string, role: string, updated: string, deck: string, body: list<FixtureBlock>}>
+	 * One optional field, `body_filter`, names a filter the seeder runs the
+	 * rendered body through — the seam that lets the active theme start a page
+	 * from markup this plugin may not know (CLAUDE.md section 2.1). The Watch
+	 * page is the one page that uses it: its body is the theme's gear-list
+	 * pattern, which is content David owns from the first seed onwards.
+	 *
+	 * @return list<array{key: string, slug: string, title: string, template: string, role: string, updated: string, deck: string, body: list<FixtureBlock>, body_filter?: string}>
 	 */
 	public function pages(): array {
 		return array(
@@ -840,6 +846,37 @@ final class Fixture {
 					self::note(
 						'Nothing on this page is rendered. WordPress draws the posts index with the theme\'s "home" template, which ships its own hero — "Writing." and the line under it — because the index is a list of posts rather than a page anybody edits.',
 						'PLACEHOLDER — NOT RENDERED'
+					),
+				),
+			),
+			array(
+				'key'         => 'watch',
+				'slug'        => 'watch',
+				'title'       => 'Watch.',
+				'template'    => 'dp-watch',
+				'role'        => '',
+				'updated'     => '',
+
+				/*
+				 * The design's not-live lead, verbatim. Its live variant — "I am
+				 * live right now …" — swapped in at render time would override a
+				 * value David sets (ADR-0018 rule 3), so the deck is his copy and
+				 * stays whatever he writes; the live state announces itself in
+				 * the featured panel instead.
+				 */
+				'deck'        => 'Not live at the moment. Long unedited streams live on Twitch, shorter edited pieces on YouTube, and both end up here.',
+
+				/*
+				 * The body is the gear list — digest section 3.6, "a block, not a
+				 * post type" — and its markup is the theme's. The filter is the
+				 * seam; this callout is what a themeless seed leaves behind, and
+				 * it says so.
+				 */
+				'body_filter' => 'dp_seed_watch_body',
+				'body'        => array(
+					self::note(
+						'The gear list belongs here — the theme seeds it from its "Watch — the gear list" pattern. No theme answered when this page was seeded, so insert the pattern by hand.',
+						'PLACEHOLDER — GEAR LIST MISSING'
 					),
 				),
 			),

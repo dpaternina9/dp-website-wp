@@ -840,7 +840,7 @@ installing the previous tag.
 
 ---
 
-## Phase 12 — Watch (back in scope — 2026-08-29, and next up)
+## Phase 12 — Watch (built — 2026-08-29)
 
 Un-deferred: David moved it ahead of the accessibility pass and feeds. Built now,
 before launch.
@@ -852,8 +852,42 @@ before launch.
 - A Twitch Helix call for VOD thumbnails, cached in a transient, failing soft.
 
 Nothing about it is a route: David creates a Watch page and assigns the `dp-watch`
-template, exactly like the others. Until then the `dp-watch` template simply is not
-declared, and the Watch entry stays out of the nav menus rather than pointing at a 404.
+template, exactly like the others (the seeder does both on a seeded site). The Watch
+links in the footer's SITE column and on the 404's "or try one of these" grid are named
+buttons with no href, filled by the seeder and set once by David (ADR-0018); the header
+nav picks the page up the way it picks up every page, through the menu David owns.
+
+**How it is built** (`DP\Core\Watch`, plus `templates/dp-watch.html`,
+`patterns/watch-gear.php` and `assets/js/watch.js` in the theme):
+
+- **Thumbnail caching** is a static file under `uploads/dp-watch/`, written once by
+  `Watch\Thumbnails` and served by the web server — the same mechanism as the résumé's
+  `PdfCache`, chosen over sideloading into the media library because "thumbnails are
+  never uploaded" is a design property, and over a serving endpoint because a static
+  file needs no route and no PHP on the read path. YouTube images need no key
+  (`maxresdefault.jpg`, falling back to `hqdefault.jpg`, which is the only one YouTube
+  guarantees); Twitch VODs resolve through Helix `/videos` first. Failures are
+  negative-cached in a transient for fifteen minutes, each block render spends at most
+  a small budget of remote calls warming the cache, and a card with no cached file
+  simply keeps its glow art. The live preview refreshes when its file is five minutes
+  old, serving the stale frame if the refetch fails.
+- **The live check** (`Watch\LiveStatus`) is Helix `/streams`, cached two minutes in a
+  transient shared by both blocks, failing soft to "not live". The featured panel is
+  the design's rule exactly: live → the `dp_live` entry David wrote; not live → the
+  newest archived video, with the grid starting from the second.
+- **Credentials** — Twitch login, client ID, client secret — are a "Watch page"
+  section on Settings → General (`Watch\Settings`), never constants. The secret lives
+  in `wp_options`, an accepted single-author trade the field's own description
+  discloses. Unset, everything degrades: no live panel, no VOD thumbnails, and the
+  page still renders its archive.
+- **Click-to-play** is the theme's `watch.js`, enqueued only where the blocks render.
+  Cards ship as plain links to the video on its host; the press builds the iframe
+  (YouTube via `youtube-nocookie.com`; Twitch with the `parent` the browser knows),
+  respecting `prefers-reduced-motion` by not autoplaying.
+- **The gear list** is editor content David owns: the `dpaternina/watch-gear` pattern,
+  seeded as the Watch page's starting body through the `dp_seed_watch_body` seam —
+  the plugin never learns the theme's markup, and a themeless seed leaves a callout
+  saying the gear is missing.
 
 ---
 

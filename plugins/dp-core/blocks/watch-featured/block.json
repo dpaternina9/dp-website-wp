@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/watch-featured",
+	"version": "0.1.0",
+	"title": "Watch — featured panel",
+	"category": "dp",
+	"icon": "video-alt2",
+	"description": "The stream while it is live, or the newest archived video while it is not. Rendered from Videos and the Twitch live check, never written by hand.",
+	"keywords": [ "watch", "live", "stream", "video", "featured" ],
+	"textdomain": "dp-core",
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}

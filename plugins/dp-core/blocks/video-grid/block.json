@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/video-grid",
+	"version": "0.1.0",
+	"title": "Watch — video grid",
+	"category": "dp",
+	"icon": "grid-view",
+	"description": "Every published video, as cards. Players load only when a card is pressed. Rendered from Videos, never written by hand.",
+	"keywords": [ "watch", "videos", "grid", "archive", "vod" ],
+	"textdomain": "dp-core",
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}

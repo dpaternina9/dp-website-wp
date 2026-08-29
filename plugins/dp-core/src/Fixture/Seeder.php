@@ -562,7 +562,7 @@ final class Seeder {
 					'dp_updated' => $page['updated'],
 				),
 				slug: $page['slug'],
-				content: $this->markup->render( $page['body'] )
+				content: $this->page_body( $page )
 			);
 
 			if ( '' === $page['template'] ) {
@@ -575,6 +575,44 @@ final class Seeder {
 		}
 
 		return $ids;
+	}
+
+	/**
+	 * The starting body for one page, asked of the theme where the fixture says to.
+	 *
+	 * A `body_filter` on a fixture page is the same seam `dp_seed_chrome_links`
+	 * is: this plugin may not know the active theme's patterns or markup
+	 * (CLAUDE.md section 2.1), so where a page's starting body is the theme's —
+	 * the Watch page's gear list — the fixture names a filter, the theme answers
+	 * with finished block markup, and this writes what it is given without
+	 * looking inside. With no theme answering, the fixture's own placeholder
+	 * body is what seeds, and it says so on the page.
+	 *
+	 * @param array{body: list<FixtureBlock>, body_filter?: string} $page One fixture page.
+	 * @return string Block markup.
+	 */
+	private function page_body( array $page ): string {
+		$body   = $this->markup->render( $page['body'] );
+		$filter = $page['body_filter'] ?? '';
+
+		if ( '' === $filter ) {
+			return $body;
+		}
+
+		/**
+		 * Filters the block markup a seed run starts one page's body from.
+		 *
+		 * The active theme answers with finished markup — for the Watch page,
+		 * its gear-list pattern — and `dp-core` writes what it is given.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param string $body The fixture's own placeholder body.
+		 */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- the name comes from the compiled fixture, is always `dp_`-prefixed, and WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
+		$answer = apply_filters( $filter, $body );
+
+		return is_string( $answer ) && '' !== trim( $answer ) ? $answer : $body;
 	}
 
 	/**

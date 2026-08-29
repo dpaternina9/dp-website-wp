@@ -46,6 +46,8 @@ export const SERVER_RENDERED = [
 	'dp/timeline',
 	'dp/contact-form',
 	'dp/resume-ledger',
+	'dp/watch-featured',
+	'dp/video-grid',
 ];
 
 /**

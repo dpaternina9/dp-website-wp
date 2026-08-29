@@ -125,16 +125,16 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'planned_parts' => 5,
 
 				/*
-				 * Ten, where the design's `PAGES` has three. Six are the views
-				 * it draws from data rather than from a page — the front page,
-				 * the writing index, Work, About, the resume and Contact — and
-				 * WordPress needs a page behind each of them or four of the
-				 * theme's custom templates are assigned to nothing and cannot be
-				 * reached at all. The tenth is the series index, which the
-				 * design does not draw and which is the only way `/series/` is
-				 * anything but a 404.
+				 * Eleven, where the design's `PAGES` has three. Seven are the
+				 * views it draws from data rather than from a page — the front
+				 * page, the writing index, Work, Watch, About, the resume and
+				 * Contact — and WordPress needs a page behind each of them or
+				 * the theme's custom templates are assigned to nothing and
+				 * cannot be reached at all. The eleventh is the series index,
+				 * which the design does not draw and which is the only way
+				 * `/series/` is anything but a 404.
 				 */
-				'pages'         => 10,
+				'pages'         => 11,
 
 				/*
 				 * The permalink structure, `page_on_front`, `page_for_posts` and
@@ -533,6 +533,33 @@ final class ContentSeedTest extends WP_UnitTestCase {
 			$this->assertNotSame( '', get_post_meta( $page->ID, 'dp_lead', true ), $slug . ' has a deck.' );
 			$this->assertSame( 'UPDATED AUG 2026', get_post_meta( $page->ID, 'dp_updated', true ) );
 		}
+	}
+
+	/**
+	 * The Watch page starts from the theme's gear pattern, through the seam.
+	 *
+	 * Digest section 3.6: the gear list is editor content David owns, "a
+	 * block, not a post type". The plugin may not know the theme's markup, so
+	 * the body arrives through `dp_seed_watch_body` — with this theme active,
+	 * that is the `dpaternina/watch-gear` pattern, and the fixture's own
+	 * "gear list missing" callout is what a themeless seed would have left.
+	 *
+	 * @return void
+	 */
+	public function test_the_watch_page_starts_from_the_gear_pattern(): void {
+		$this->seeder->seed();
+
+		$page = $this->seeded_page( 'watch' );
+
+		$this->assertSame( 'dp-watch', get_page_template_slug( $page->ID ) );
+
+		$deck = get_post_meta( $page->ID, 'dp_lead', true );
+
+		$this->assertIsString( $deck );
+		$this->assertStringContainsString( 'Not live at the moment.', $deck );
+		$this->assertStringContainsString( 'What the stream runs on', $page->post_content );
+		$this->assertStringContainsString( 'dp-gear-group', $page->post_content );
+		$this->assertStringNotContainsString( 'GEAR LIST MISSING', $page->post_content, 'The theme answered the seam, so the placeholder callout must not seed.' );
 	}
 
 	/**

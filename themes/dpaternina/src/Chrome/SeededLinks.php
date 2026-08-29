@@ -103,6 +103,7 @@ final class SeededLinks {
 		'Home link'     => 'home',
 		'Writing link'  => 'posts',
 		'Work link'     => 'work',
+		'Watch link'    => 'watch',
 		'About link'    => 'about',
 		'Contact link'  => 'contact',
 		'Résumé link'   => 'resume',

@@ -1,0 +1,155 @@
+<?php
+/**
+ * Reading Twitch Helix responses.
+ *
+ * @package DP\Core
+ */
+
+declare( strict_types=1 );
+
+namespace DP\Core\Watch;
+
+/**
+ * Pure parsing of what the Twitch API answers.
+ *
+ * Deliberately WordPress-free, like `Timeline\Geometry` and for the same
+ * reason: everything here is testable without a bootstrap, so the HTTP layer
+ * (`TwitchApi`) stays a transcription — fetch, hand the body here, cache what
+ * comes back.
+ *
+ * Every method accepts the raw response body and answers `null` for anything
+ * malformed, because the caller's contract is "failing soft": a Helix response
+ * that cannot be read is treated exactly like a request that never landed.
+ */
+final class Helix {
+
+	/**
+	 * The width a substituted thumbnail template asks for.
+	 *
+	 * The design's tiles are 16:9 and the largest one renders around 640px
+	 * wide in a 1320px container; 1280×720 is the size the design itself
+	 * names for the live preview, so the VODs match it.
+	 *
+	 * @var int
+	 */
+	public const THUMB_WIDTH = 1280;
+
+	/**
+	 * The height a substituted thumbnail template asks for.
+	 *
+	 * @var int
+	 */
+	public const THUMB_HEIGHT = 720;
+
+	/**
+	 * Not to be instantiated: two related pure functions, namespaced.
+	 */
+	private function __construct() {}
+
+	/**
+	 * The app access token in an `oauth2/token` response.
+	 *
+	 * @param string $body The response body.
+	 * @return array{token: non-empty-string, expires: int}|null The token and its
+	 *                                          lifetime in seconds, or null.
+	 */
+	public static function token( string $body ): ?array {
+		$decoded = json_decode( $body, true );
+
+		if ( ! is_array( $decoded ) ) {
+			return null;
+		}
+
+		$token   = $decoded['access_token'] ?? null;
+		$expires = $decoded['expires_in'] ?? null;
+
+		if ( ! is_string( $token ) || '' === $token || ! is_numeric( $expires ) ) {
+			return null;
+		}
+
+		return array(
+			'token'   => $token,
+			'expires' => (int) $expires,
+		);
+	}
+
+	/**
+	 * Whether a `helix/streams` response says the channel is live.
+	 *
+	 * Helix answers an offline channel with `{"data": []}` — a valid response
+	 * meaning "no" — and anything else unreadable is `null`, meaning "the
+	 * question was not answered".
+	 *
+	 * @param string $body The response body.
+	 * @return bool|null
+	 */
+	public static function is_live( string $body ): ?bool {
+		$decoded = json_decode( $body, true );
+
+		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
+			return null;
+		}
+
+		foreach ( $decoded['data'] as $stream ) {
+			if ( is_array( $stream ) && 'live' === ( $stream['type'] ?? null ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * The thumbnail URL templates in a `helix/videos` response, by video id.
+	 *
+	 * A VOD still being processed carries an empty `thumbnail_url`; it is
+	 * omitted here rather than returned, so the caller's negative cache treats
+	 * it as "not available yet" and asks again later.
+	 *
+	 * @param string $body The response body.
+	 * @return array<string, non-empty-string>|null Id to URL template, or null
+	 *                                              when the body is not a videos
+	 *                                              response at all.
+	 */
+	public static function vod_thumbnails( string $body ): ?array {
+		$decoded = json_decode( $body, true );
+
+		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
+			return null;
+		}
+
+		$templates = array();
+
+		foreach ( $decoded['data'] as $video ) {
+			if ( ! is_array( $video ) ) {
+				continue;
+			}
+
+			$id       = $video['id'] ?? null;
+			$template = $video['thumbnail_url'] ?? null;
+
+			if ( is_string( $id ) && '' !== $id && is_string( $template ) && '' !== $template ) {
+				$templates[ $id ] = $template;
+			}
+		}
+
+		return $templates;
+	}
+
+	/**
+	 * Substitute the size placeholders in a thumbnail URL template.
+	 *
+	 * Helix hands back literal `%{width}` and `%{height}` — digest section 3.5
+	 * names them — and the result is only a URL once both are gone.
+	 *
+	 * @param string $template The URL template.
+	 * @return string The URL, at the size the Watch tiles use.
+	 */
+	public static function fill_thumbnail_template( string $template ): string {
+		return str_replace(
+			array( '%{width}', '%{height}' ),
+			array( (string) self::THUMB_WIDTH, (string) self::THUMB_HEIGHT ),
+			$template
+		);
+	}
+}

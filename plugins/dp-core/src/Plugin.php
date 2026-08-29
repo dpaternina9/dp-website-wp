@@ -80,6 +80,7 @@ final class Plugin {
 		( new Blocks\Blocks( plugin_dir_path( $this->file ) ) )->register();
 		( new Blocks\Timeline( plugin_dir_path( $this->file ) ) )->register();
 		Contact\Contact::create( plugin_dir_path( $this->file ) )->register();
+		Watch\Watch::create( plugin_dir_path( $this->file ) )->register();
 		Resume\Resume::create( plugin_dir_path( $this->file ) )->register();
 		Admin\Admin::create( $this->file, $this->version )->register();
 		Editor\Editor::create( $this->file, $this->version )->register();

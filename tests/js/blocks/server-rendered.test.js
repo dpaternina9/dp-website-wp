@@ -46,11 +46,13 @@ describe( 'the server-rendered blocks', () => {
 		__reset();
 	} );
 
-	it( 'names the three blocks the plugin renders in PHP', () => {
+	it( 'names the five blocks the plugin renders in PHP', () => {
 		expect( SERVER_RENDERED ).toEqual( [
 			'dp/timeline',
 			'dp/contact-form',
 			'dp/resume-ledger',
+			'dp/watch-featured',
+			'dp/video-grid',
 		] );
 	} );
 
@@ -83,6 +85,8 @@ describe( 'the server-rendered blocks', () => {
 		expect( registerServerRenderedBlocks() ).toEqual( [
 			'dp/contact-form',
 			'dp/resume-ledger',
+			'dp/watch-featured',
+			'dp/video-grid',
 		] );
 	} );
 

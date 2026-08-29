@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "themes/dpaternina/assets/css/components.css"
+        ],
+        "createdAt": "2026-08-29T18:55:21.386Z",
+        "reason": "design contract: design-source/components/PostRow.dc.html:45 specifies hover padding-left 10px with a padding-left transition; CLAUDE.md makes design-source the read-only contract"
+      }
+    ]
+  }
+}
