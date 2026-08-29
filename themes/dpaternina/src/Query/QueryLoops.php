@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Theme\Query;
 
+use DP\Core\Content\PostTypes;
 use WP_Block;
 use WP_Query;
 use WP_Taxonomy;
@@ -28,6 +29,17 @@ use WP_Term;
  * from another. Every loop this theme ships names itself; a query block that
  * does not is left entirely alone, which is what keeps a query David builds in
  * the editor out of this file's way.
+ *
+ * The two post types are named through `DP\Core\Content\PostTypes`, guarded by
+ * `class_exists()` the way `DP\Theme\Blocks\WorkCardTitle` guards its own —
+ * the theme does not repeat a slug `dp-core` owns. **The meta keys are still
+ * literals, and deliberately so:** `dp-core` declares no constant for any of the
+ * twenty-odd fields in `DP\Core\Content\Meta`, so there is nothing to
+ * reference, and inventing one here would be the theme naming a field it does
+ * not own — the opposite of the rule. The same three keys appear in
+ * `DP\Theme\Chrome\PostPresentation`'s allowlist alongside eight more, so
+ * closing this is one change across `dp-core` and both readers, not a rename in
+ * this file.
  *
  * The series archive is separate. Its ordering is not a loop variation but a
  * property of the archive itself — a series reads oldest part first, where an
@@ -98,7 +110,7 @@ final class QueryLoops {
 		}
 
 		return match ( $loop ) {
-			self::ROLES          => $this->newest_first( $query, 'dp_role', 'dp_end' ),
+			self::ROLES          => $this->roles( $query ),
 			self::FEATURED_SHIPS => $this->featured( $query ),
 			self::RELATED        => $this->related( $query ),
 			self::FEATURED       => $query,
@@ -296,6 +308,50 @@ final class QueryLoops {
 	}
 
 	/**
+	 * The homepage's quiet record strip: roles, the one that started last first.
+	 *
+	 * **`dp_start`, not `dp_end`.** This sorted on `dp_end` until now, which is
+	 * "the role that finished most recently" — a different list the moment two
+	 * roles overlap, which for a founder role running alongside a job is the
+	 * normal case rather than the edge one. Three things say `dp_start` and
+	 * agree with each other: this class's own docblock, the design
+	 * (`LANES.slice().sort((a, b) => b.start - a.start)`), and
+	 * `DP\Core\Resume\Ledger::lanes()`, which already sorts the résumé that
+	 * way and cites the same line. So the homepage and the résumé were printing
+	 * the same roles in two different orders.
+	 *
+	 * @param array<string, mixed> $query The query vars.
+	 * @return array<string, mixed>
+	 */
+	private function roles( array $query ): array {
+		if ( ! class_exists( PostTypes::class ) ) {
+			return $this->nothing( $query );
+		}
+
+		return $this->newest_first( $query, PostTypes::ROLE, 'dp_start' );
+	}
+
+	/**
+	 * A loop with nothing behind it, because `dp-core` is not active.
+	 *
+	 * Both variations below name a post type the plugin owns, so both have to say
+	 * something when it is gone. Returning the query untouched is the one answer
+	 * that must not be given: core drops an unregistered `postType` back to
+	 * `post` in `build_query_vars_from_query_block()`, so the record strip would
+	 * quietly fill with blog posts. `post__in => array( 0 )` is the same idiom
+	 * `related()` uses for the same reason — an empty `post__in` is ignored,
+	 * which would be the identical failure one step further along.
+	 *
+	 * @param array<string, mixed> $query The query vars.
+	 * @return array<string, mixed>
+	 */
+	private function nothing( array $query ): array {
+		$query['post__in'] = array( 0 );
+
+		return $query;
+	}
+
+	/**
 	 * Order a loop by a decimal-year meta field, newest first.
 	 *
 	 * `meta_value_num` rather than `meta_value` matters: the years are decimals,
@@ -332,7 +388,11 @@ final class QueryLoops {
 	 * @return array<string, mixed>
 	 */
 	private function featured( array $query ): array {
-		$query['post_type']   = 'dp_ship';
+		if ( ! class_exists( PostTypes::class ) ) {
+			return $this->nothing( $query );
+		}
+
+		$query['post_type']   = PostTypes::SHIP;
 		$query['post_status'] = 'publish';
 
 		// The filter and the ordering are the entire variation.

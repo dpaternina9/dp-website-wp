@@ -86,6 +86,75 @@ final class FrontPageTest extends TemplateTestCase {
 	}
 
 	/**
+	 * The strip sorts on when a role began, not on when it ended.
+	 *
+	 * The fixture above cannot tell the two apart: `seed_role()` derives a start
+	 * two years before the end it is given, so start order and end order are the
+	 * same list. These three are the design's own, with their real years, and
+	 * they disagree — a founder role that began first and has not finished ends
+	 * last by start and first by end.
+	 *
+	 * `dp_start` descending is what the class docblock on
+	 * `DP\Theme\Query\QueryLoops` states, what `dpaternina.dc.html` sorts roles
+	 * by (`LANES.slice().sort((a, b) => b.start - a.start)`), and what
+	 * `DP\Core\Resume\Ledger` already does — so a strip ordered by `dp_end`
+	 * put the homepage and the résumé in two different orders.
+	 *
+	 * @return void
+	 */
+	public function test_the_record_strip_sorts_on_when_a_role_began(): void {
+		$this->seed_role_between( 'Fanxie Lab', 'CTO and founder', 2016.0, 2026.9 );
+		$this->seed_role_between( 'MonsterInsights', 'Developer team lead', 2022.0, 2026.0 );
+		$this->seed_role_between( 'Globant', 'Developer', 2020.0, 2022.0 );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$order = array();
+
+		/*
+		 * Matched on the strip's own class. "Fanxie Lab" is also an `h3` in the
+		 * RIGHT NOW bento higher up the page, so a bare title match reads the
+		 * wrong element and puts it first whatever the strip did.
+		 */
+		foreach ( array( 'MonsterInsights', 'Globant', 'Fanxie Lab' ) as $org ) {
+			$this->assertSame(
+				1,
+				preg_match( '~dp-record-org[^"]*">' . preg_quote( $org, '~' ) . '</h3>~', $html, $found, PREG_OFFSET_CAPTURE ),
+				$org . ' is not on the strip at all.'
+			);
+
+			$position = $found[0][1];
+
+			$order[ $org ] = $position;
+		}
+
+		asort( $order );
+
+		$this->assertSame(
+			array( 'MonsterInsights', 'Globant', 'Fanxie Lab' ),
+			array_keys( $order ),
+			'Newest role first means the one that started most recently.'
+		);
+	}
+
+	/**
+	 * A role with a start that is not two years before its end.
+	 *
+	 * @param string $org   The organisation, which is the post title.
+	 * @param string $title The job title.
+	 * @param float  $start The decimal year it began.
+	 * @param float  $end   The decimal year it ended.
+	 * @return int
+	 */
+	private function seed_role_between( string $org, string $title, float $start, float $end ): int {
+		$post_id = $this->seed_role( $org, $title, $end );
+
+		update_post_meta( $post_id, 'dp_start', $start );
+
+		return $post_id;
+	}
+
+	/**
 	 * The record strip prints the fields core's own meta binding refuses.
 	 *
 	 * `core/post-meta` returns null for anything on a post type that is not
