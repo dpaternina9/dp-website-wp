@@ -1,0 +1,109 @@
+/**
+ * The editing form on a Role, a Shipped thing and a Video.
+ *
+ * These three post types have no single view: they are `public => false`, they
+ * render inside the timeline and the Watch grid, and nothing ever requests one
+ * of them as a page. So the canvas here is not a preview of anything, and
+ * CLAUDE.md's rule that the editor must look like the front end has nothing to
+ * be true of. It is a form, and it is styled as one.
+ *
+ * That is also why it paints its own light surface instead of inheriting the
+ * theme's. `@wordpress/components` renders against its own greys, and the
+ * dpaternina theme's editor styles make the canvas dark — a `SelectControl`
+ * dropped straight onto it draws dark text on a dark ground. Giving each field
+ * a white card makes the controls look exactly as they do in the sidebar, on
+ * this theme or on any other.
+ *
+ * Loaded by DP\Core\Editor\Editor on those three screens and nowhere else.
+ */
+
+.wp-block-dp-field-label,
+.wp-block-dp-meta-text,
+.wp-block-dp-meta-year,
+.wp-block-dp-meta-choice,
+.wp-block-dp-meta-flag,
+.wp-block-dp-meta-lines,
+.wp-block-dp-meta-reference {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	color: #1e1e1e;
+	font-family: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, oxygen-sans, ubuntu, cantarell, "Helvetica Neue", sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+	padding: 12px 16px;
+}
+
+/* The label sits on top of the paragraph it names, so the two read as one field. */
+.wp-block-dp-field-label {
+	border-bottom: 0;
+	border-radius: 4px 4px 0 0;
+	padding-bottom: 8px;
+}
+
+.dp-field-label-name {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.dp-field-label-help {
+	color: #757575;
+	display: block;
+	margin-top: 4px;
+}
+
+/*
+ * The bound paragraph immediately after a label. It is a plain core/paragraph —
+ * the value lives in post meta and core's bindings put it here — so the only
+ * thing this rule does is make it look like the input it is behaving as.
+ */
+[data-type="dp/field-label"] + [data-type="core/paragraph"] {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 0 0 4px 4px;
+	border-top: 0;
+	color: #1e1e1e;
+	font-family: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, oxygen-sans, ubuntu, cantarell, "Helvetica Neue", sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+	margin-block-start: 0;
+	padding: 0 16px 12px;
+}
+
+[data-type="dp/field-label"] + [data-type="core/paragraph"] p {
+	margin: 0;
+}
+
+.dp-meta-control-help {
+	color: #757575;
+	display: block;
+	margin-top: 4px;
+}
+
+.dp-meta-lines-row {
+	align-items: flex-end;
+	display: flex;
+	gap: 8px;
+}
+
+.dp-meta-lines-row .components-base-control {
+	flex: 1 1 auto;
+}
+
+.dp-meta-year-parts {
+	display: flex;
+	gap: 8px;
+}
+
+/*
+ * The one field whose line breaks are content: `dp_artifact` is a terminal
+ * session, and a proportional face makes a column of output unreadable.
+ */
+.dp-meta-text-monospace textarea {
+	font-family: "JetBrains Mono", ui-monospace, sfmono-regular, menlo, monospace;
+	font-size: 12px;
+	white-space: pre;
+}

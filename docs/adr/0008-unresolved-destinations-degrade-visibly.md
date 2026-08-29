@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted — 2026-08-20. Supersedes ADR-0006 §2's final paragraph.
+Accepted — 2026-08-20. Supersedes ADR-0006 §2's final paragraph. **Mostly
+superseded by
+[ADR-0018](0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md) —
+2026-08-26**: the destination classes this describes are deleted, so most links
+have no unresolved state to degrade from. The rule survives for the three named
+blocks that replace them.
 
 ## Context
 

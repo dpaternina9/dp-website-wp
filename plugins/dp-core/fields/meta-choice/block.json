@@ -1,0 +1,50 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/meta-choice",
+	"version": "0.1.0",
+	"title": "Field: one of a set",
+	"category": "dp",
+	"icon": "list-view",
+	"description": "A field that accepts a closed list of values and nothing else.",
+	"textdomain": "dp-core",
+	"attributes": {
+		"metaKey": {
+			"type": "string",
+			"default": ""
+		},
+		"label": {
+			"type": "string",
+			"default": ""
+		},
+		"help": {
+			"type": "string",
+			"default": ""
+		},
+		"options": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "object"
+			}
+		}
+	},
+	"usesContext": [
+		"postId",
+		"postType"
+	],
+	"supports": {
+		"inserter": false,
+		"html": false,
+		"reusable": false,
+		"multiple": true,
+		"anchor": false,
+		"align": false,
+		"customClassName": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false,
+		"lock": false
+	}
+}

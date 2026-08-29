@@ -30,9 +30,9 @@ use WP_Term;
  * the editor out of this file's way.
  *
  * The series archive is separate. Its ordering is not a loop variation but a
- * property of the archive itself — plan section 3.1 settles that a series is
- * ordered by `menu_order`, so that a planned part becoming a published one keeps
- * its place — and the main query is where that has to be said.
+ * property of the archive itself — a series reads oldest part first, where an
+ * archive defaults to newest first — and the main query is where that has to be
+ * said.
  */
 final class QueryLoops {
 
@@ -50,6 +50,16 @@ final class QueryLoops {
 	 * Featured shipped work, for the design's `WorkCard` grid.
 	 */
 	public const FEATURED_SHIPS = 'featured-ships';
+
+	/**
+	 * The three cards under a post: "KEEP READING".
+	 */
+	public const RELATED = 'related';
+
+	/**
+	 * How many cards the design's related grid holds.
+	 */
+	public const RELATED_COUNT = 3;
 
 	/**
 	 * Attach the hooks.
@@ -80,18 +90,150 @@ final class QueryLoops {
 		return match ( $loop ) {
 			self::ROLES          => $this->newest_first( $query, 'dp_role', 'dp_end' ),
 			self::FEATURED_SHIPS => $this->featured( $query ),
+			self::RELATED        => $this->related( $query ),
 			default              => $query,
 		};
 	}
 
 	/**
+	 * The three posts the design puts under a post, in the order it puts them.
+	 *
+	 * `dpaternina.dc.html` states the rule and the reason in one comment:
+	 * "Related: same category first, then whatever is newest, never the post you
+	 * are on." So it is two lists concatenated and cut to three — the same
+	 * category newest-first, then everything else newest-first — and that is not
+	 * an ordering `WP_Query` can express, because it is a preference between two
+	 * result sets rather than a sort of one.
+	 *
+	 * It is expressible as an explicit list, though, which is what this does:
+	 * two cheap `fields => ids` queries, concatenated, then handed back as
+	 * `post__in` with `orderby => post__in` so the loop draws them in exactly
+	 * that sequence. An empty result asks for post 0 rather than for nothing,
+	 * because a `post__in` of `array()` is ignored and would quietly turn the
+	 * grid into "the three newest posts on the site".
+	 *
+	 * @param array<string, mixed> $query The query vars.
+	 * @return array<string, mixed>
+	 */
+	private function related( array $query ): array {
+		$current = get_the_ID();
+		$current = false === $current ? 0 : $current;
+
+		$same  = $this->ids( self::RELATED_COUNT, $current, $this->categories_of( $current ) );
+		$rest  = $this->ids( self::RELATED_COUNT + count( $same ), $current, array() );
+		$order = $same;
+
+		foreach ( $rest as $id ) {
+			if ( ! in_array( $id, $order, true ) ) {
+				$order[] = $id;
+			}
+		}
+
+		$order = array_slice( $order, 0, self::RELATED_COUNT );
+
+		$query['post_type']      = 'post';
+		$query['post_status']    = 'publish';
+		$query['post__in']       = array() === $order ? array( 0 ) : $order;
+		$query['orderby']        = 'post__in';
+		$query['posts_per_page'] = self::RELATED_COUNT;
+
+		unset( $query['offset'] );
+
+		return $query;
+	}
+
+	/**
+	 * Published post IDs, newest first, optionally narrowed to some categories.
+	 *
+	 * @param int             $limit    How many at most.
+	 * @param int             $exclude  A post to leave out, or 0.
+	 * @param array<int, int> $category Category term IDs, or an empty list for all.
+	 * @return list<int>
+	 */
+	private function ids( int $limit, int $exclude, array $category ): array {
+		if ( $limit <= 0 ) {
+			return array();
+		}
+
+		$arguments = array(
+			'post_type'              => 'post',
+			'post_status'            => 'publish',
+			'fields'                 => 'ids',
+			'posts_per_page'         => $limit,
+			'orderby'                => 'date',
+			'order'                  => 'DESC',
+			'no_found_rows'          => true,
+			'ignore_sticky_posts'    => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		);
+
+		if ( $exclude > 0 ) {
+			$arguments['post__not_in'] = array( $exclude );
+		}
+
+		if ( array() !== $category ) {
+			$arguments['category__in'] = $category;
+		}
+
+		$found = new WP_Query( $arguments );
+		$ids   = array();
+
+		foreach ( $found->posts as $id ) {
+			if ( is_int( $id ) ) {
+				$ids[] = $id;
+			}
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * The categories one post carries.
+	 *
+	 * @param int $post_id The post.
+	 * @return list<int>
+	 */
+	private function categories_of( int $post_id ): array {
+		if ( $post_id <= 0 ) {
+			return array();
+		}
+
+		$terms = get_the_terms( $post_id, 'category' );
+
+		if ( ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$ids = array();
+
+		foreach ( $terms as $term ) {
+			if ( $term instanceof WP_Term ) {
+				$ids[] = $term->term_id;
+			}
+		}
+
+		return $ids;
+	}
+
+	/**
 	 * Put the series archive in part order rather than date order.
 	 *
-	 * "Start with these … newest last" is the design's own wording, and a series
-	 * is a reading order rather than a publication order: part 3 written after
-	 * part 5 still reads third. `menu_order` carries that, with the post date as
-	 * the tiebreak so a series whose parts were never ordered still comes out in
-	 * a stable, sensible sequence instead of an arbitrary one.
+	 * "Start with these … newest last" is the design's own wording: a series is
+	 * read from its oldest part, which is the opposite of what an archive does by
+	 * default.
+	 *
+	 * `menu_order` first, then the date. The theme is not the authority on either
+	 * half of that — it is a transcription of what
+	 * `DP\Core\Content\SeriesParts::published()` sorts on, and the two have to
+	 * match or the part numbers on the rows would disagree with the order the
+	 * rows are drawn in.
+	 *
+	 * The field went away with ADR-0016 and has come back, for a reason recorded
+	 * against `SeriesParts`: nothing could write `menu_order` on a `post` because
+	 * there was no screen for it, which is not the same as the field being
+	 * unwritable. `dp-core` now ships that screen. The date stays as the tiebreak,
+	 * so a series nobody has ordered still draws in publish order.
 	 *
 	 * @param WP_Query $query The query about to run.
 	 * @return void

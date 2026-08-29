@@ -198,6 +198,22 @@ input.wp-element-button:active,
 	font-size: var(--fs-sm);
 }
 
+/* The design system's fourth Button variant, from Button.jsx: transparent, no
+   border, `--text-secondary`, and a faint wash of the text colour on hover. The
+   blog index's empty state is the only place the design reaches for it. */
+.dp-button-ghost .wp-block-button__link {
+	border-color: transparent;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-secondary);
+}
+
+.dp-button-ghost .wp-block-button__link:hover {
+	background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+	box-shadow: none;
+	color: var(--text-secondary);
+}
+
 /* A link that is a link, not a button: the footer's columns and the design's
    mono caps "→" affordances. Same block, no chrome.
 
@@ -229,10 +245,12 @@ input.wp-element-button:active,
 	color: var(--text-primary);
 }
 
-/* A destination David has not created yet keeps its button and loses its href
-   (DP\Theme\Chrome\Navigation, ADR-0008). Dimmed and unclickable, so it reads
-   as "not wired up" rather than as a link that does nothing — and so the front
-   end shows what the site editor shows instead of quietly showing less. */
+/* One of the theme's three computed links, with nothing behind it yet: it keeps
+   its button and loses its href (DP\Theme\Blocks\DerivedLink, ADR-0008).
+   Dimmed and unclickable, so it reads as "not wired up" rather than as a link
+   that does nothing. ADR-0018 narrowed this to those three — every other link
+   on the site is one David set in the site editor, and an unset one is simply a
+   button with no link, which is what the editor shows him too. */
 .dp-destination-unset {
 	cursor: default;
 
@@ -618,14 +636,16 @@ p.dp-footer-line {
 }
 
 /*
- * The footer's three groups are `dp-to-*` links, not a menu. Digest §2 lists
- * them as SITE / WRITING / MORE, and until this phase there was one
- * `core/navigation` block with no `ref` in the first group — which meant the
- * footer could only ever show the same menu as the header, and the third group
- * did not exist. A per-group menu is not available to a theme: `ref` is a post
- * ID, a template file cannot name one, and a filter that supplies it on the
- * server leaves the block editor drawing a different menu from the one the
- * front end renders. ADR-0011.
+ * The footer's three groups are ordinary links, not a menu. Digest §2 lists
+ * them as SITE / WRITING / MORE, and there was once one `core/navigation` block
+ * with no `ref` in the first group — which meant the footer could only ever show
+ * the same menu as the header, and the third group did not exist. A per-group
+ * menu is not available to a theme: `ref` is a post ID, a template file cannot
+ * name one, and a filter that supplies it on the server leaves the block editor
+ * drawing a different menu from the one the front end renders. ADR-0011.
+ *
+ * Each is a `core/button` David gives a link, in the site editor, once
+ * (ADR-0018). The theme ships the words and the styling and no URL.
  */
 .dp-footer-links .wp-block-button__link,
 .dp-footer-cats a {
@@ -671,7 +691,15 @@ p.dp-footer-line {
 	align-items: center;
 }
 
-.dp-footer-meta.wp-block-buttons {
+/*
+ * A group rather than one row of buttons, because one of the three links is not
+ * a `core/button` at all: RSS is `dpaternina/feed-link`, which renders its own
+ * `wp-block-buttons` wrapper (ADR-0018), and `core/buttons` admits `core/button`
+ * and nothing else. So Privacy and Colophon share a `wp:buttons` and the feed
+ * sits beside it, with the same 20px between all three either way.
+ */
+.dp-footer-meta.wp-block-group,
+.dp-footer-meta .wp-block-buttons {
 	gap: 20px;
 }
 

@@ -1,0 +1,23 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/work-card-title",
+	"title": "Work card — title",
+	"category": "theme",
+	"description": "The title on a work card, linked to that thing's row on the timeline below it. The address is an entry key dp-core computes plus a query variable and a fragment, so no template can carry it; a post with no row on the chart draws the title with the link inert.",
+	"keywords": [ "work", "card", "title", "timeline" ],
+	"textdomain": "dpaternina",
+	"usesContext": [ "postId", "postType" ],
+	"attributes": {
+		"level": {
+			"type": "number",
+			"default": 3
+		}
+	},
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}

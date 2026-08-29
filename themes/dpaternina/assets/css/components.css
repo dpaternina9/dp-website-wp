@@ -64,6 +64,7 @@
 .wp-site-blocks main > .dp-cta-band,
 .wp-site-blocks main > .dp-home-hero,
 .wp-site-blocks main > .dp-hero,
+.wp-site-blocks main > .dp-post-after,
 .wp-site-blocks main > .dp-section {
 	margin-block-start: 0;
 }
@@ -410,11 +411,11 @@ p.dp-badge.is-tone-purple {
 /* -------------------------------------------------------------------------
  * FilterPills
  *
- * `core/categories` with the design's pill drawn over it. Real links to real
+ * `dpaternina/filter-pills`, in its `filter` variation. Real links to real
  * archives, which is the component's own instruction and what keeps filtering
- * working with JavaScript off (CLAUDE.md §1.7). The leading All pill is spliced
- * in by DP\Theme\Chrome\FilterPills; `current-cat` is `wp_list_categories`'s own
- * class, set from the queried object.
+ * working with JavaScript off (CLAUDE.md §1.7). `cat-item` and `current-cat` are
+ * the class names `wp_list_categories` used to write and the block keeps, so
+ * every rule below and every selector in the e2e suite still says what it said.
  * ---------------------------------------------------------------------- */
 
 ul.dp-filter-pills {
@@ -484,10 +485,10 @@ ul.dp-filter-pills a:hover {
 	color: var(--text-primary);
 }
 
-/* The current pill. `current-cat` is wp_list_categories's own class, set from
-   the queried object; `aria-current` is what the All pill and the timeline's
-   three filters carry, because neither of those is a category. Same pill, same
-   state, two ways of saying which one you are looking at. */
+/* The current pill. `current-cat` is the class the block puts on the `<li>`;
+   `aria-current` is on the anchor, and the timeline's three filters — which are
+   not categories at all — carry only that. Same pill, same state, two ways of
+   saying which one you are looking at. */
 ul.dp-filter-pills > li.current-cat a,
 ul.dp-filter-pills a[aria-current="page"] {
 	border-color: var(--dp-teal);
@@ -522,6 +523,7 @@ ul.dp-filter-pills a[aria-current="page"] {
 }
 
 .dp-row {
+	position: relative;
 	display: grid;
 	align-items: baseline;
 	gap: 28px;
@@ -587,15 +589,33 @@ h3.dp-row-title a {
 	text-decoration: none;
 }
 
-p.dp-row-excerpt {
+/*
+ * `core/post-excerpt` renders a `<div>` wrapping a `<p>`, so a rule written
+ * against `p.dp-row-excerpt` matched nothing at all: every list row was drawing
+ * its excerpt at `--fs-base` in core's flow-layout 24px block gap, with no
+ * measure on it. The design's inversion — the *compact* variant takes the
+ * larger `--fs-base` and the list variant the smaller `--fs-sm`, which
+ * `PostRow.logic.js` flags as "not a typo in the export" — could not be seen
+ * because both were rendering at the same size.
+ */
+.dp-row .dp-row-excerpt {
 	max-width: var(--measure);
 	margin: 0;
 	color: var(--text-secondary);
 	font-size: var(--fs-sm);
 	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
 }
 
-.dp-row-compact p.dp-row-excerpt {
+.dp-row .dp-row-excerpt p {
+	margin: 0;
+	color: inherit;
+	font-size: inherit;
+	line-height: inherit;
+}
+
+.dp-row-compact .dp-row-excerpt,
+.dp-row-compact .dp-row-excerpt p {
 	font-size: var(--fs-base);
 }
 
@@ -772,8 +792,8 @@ h3.dp-card-title a {
    design's own note on WorkCard, where the whole card is the control. Here the
    title is the link and this pseudo-element is the rest of the card, which is
    what gives a mouse the target the design draws and a keyboard exactly one tab
-   stop instead of a card's worth of them. The href is derived at render time by
-   DP\Theme\Blocks\Timeline. */
+   stop instead of a card's worth of them. The anchor and its derived href are
+   DP\Theme\Blocks\WorkCardTitle's. */
 h3.dp-card-title a.dp-card-open::after {
 	position: absolute;
 	inset: 0;
@@ -1388,11 +1408,24 @@ h1.dp-post-title {
 	flex-wrap: wrap;
 	padding-bottom: 32px;
 	border-bottom: var(--border-width) solid var(--border-subtle);
+	margin-block-start: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
+}
+
+/* The 26px monogram the design puts in front of the name. Decoration —
+   `alt=""` in the design — so it is the row's own `::before`, which in a flex
+   container is a flex item and lands exactly where the design's `<img>` does. */
+.dp-post-byline::before {
+	width: 26px;
+	height: 26px;
+	flex: none;
+	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
+	content: "";
 }
 
 .dp-post-byline p,
@@ -1402,7 +1435,26 @@ h1.dp-post-title {
 	color: inherit;
 	font-family: inherit;
 	font-size: inherit;
+	line-height: inherit;
 	letter-spacing: inherit;
+}
+
+/*
+ * The design writes the two middle dots as their own spans, between flex items
+ * with a 16px gap on each side. Generated content reproduces that exactly: the
+ * dot sits inside the element that follows it, the row's gap supplies the space
+ * before it, and this supplies the space after. A separator is decoration, so
+ * it is content rather than markup — the same call the breadcrumb's slash makes.
+ */
+.dp-post-byline > *:not(:first-child)::before {
+	padding-inline-end: 16px;
+	content: "·";
+}
+
+/* A read time nobody computed leaves an empty paragraph, and an empty paragraph
+   in this row would be a separator with nothing after it. */
+.dp-post-byline p:empty {
+	display: none;
 }
 
 .dp-post-byline a {
@@ -1410,25 +1462,95 @@ h1.dp-post-title {
 	text-decoration: none;
 }
 
+/*
+ * The lead image is a figure with two children, and the second is the caption.
+ * The design's inner box carries the border, the radius and the surface behind
+ * a picture that has not loaded; here the `<img>` is that box, because
+ * `core/post-featured-image` renders the figure and the image and nothing in
+ * between. `object-fit` is what keeps the 16/9 crop honest once it has.
+ */
 figure.dp-post-lead-image {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
 	margin-block: 32px 0;
 }
 
 figure.dp-post-lead-image img {
+	overflow: hidden;
+	width: 100%;
+	border: var(--border-width) solid var(--border-subtle);
 	border-radius: var(--radius-md);
+	background: var(--bg-surface);
 	aspect-ratio: 16 / 9;
+	object-fit: cover;
 }
 
-p.dp-post-standfirst {
+figcaption.dp-post-lead-caption {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/*
+ * The standfirst, which is the post's own first paragraph.
+ *
+ * It used to be a bound paragraph above `core/post-content`, fed by a `dp_lead`
+ * meta field with no editor control — so on every post David wrote it was an
+ * empty element the rule above had to hide. The design's standfirst is simply the
+ * opening paragraph set larger, so that is what this styles: position, not a
+ * block style variation, which keeps `CoreStylesTest`'s promise that the house
+ * blocks offer no variations and leaves David nothing to remember to apply.
+ *
+ * Three selectors' worth of specificity, deliberately. Core's
+ * `:root :where(.is-layout-flow) > :first-child` is two units (ADR-0008), and a
+ * bare `.dp-post-standfirst` would have lost to it in the canvas and won on the
+ * page. `.dp-post` scopes it to a post: `core/post-content` also renders a page,
+ * whose deck is a separate element above the body.
+ *
+ * A post that opens on a heading or an image has no first paragraph, nothing
+ * matches, and nothing is styled — which is the right answer, not a gap.
+ */
+.dp-post .wp-block-post-content > p:first-child {
 	max-width: var(--measure);
-	margin-block: 32px 0;
 	color: var(--text-primary);
 	font-size: var(--fs-md);
 	line-height: var(--lh-relaxed);
 }
 
-p.dp-post-standfirst:empty {
-	display: none;
+/*
+ * Core hands every child of a flow-layout `core/group` a `margin-block-start`
+ * of the global block gap, and a group this stylesheet turns into a flex row or
+ * a grid keeps those margins on top of its own `gap`. Phase 7b found eighteen
+ * elements spaced that way on the home page alone; these are the compositions
+ * this phase adds, plus the four it inherited that already had the fault.
+ *
+ * The rule carries `.wp-block-group` as well as the component class so it beats
+ * core's layout rule on specificity rather than on load order — the hazard
+ * ADR-0008 describes, which differs between the front end and the canvas.
+ */
+.dp-post-after.wp-block-group > *,
+.dp-post-byline.wp-block-group > *,
+.dp-featured-panel.wp-block-group > *,
+.dp-row.wp-block-group > *,
+.dp-empty.wp-block-group > *,
+.dp-blog-filter.wp-block-group > *,
+.dp-crumbs.wp-block-group > *,
+.dp-pagination.wp-block-group > *,
+.dp-at-end.wp-block-group > *,
+.dp-archive-outro.wp-block-group > *,
+.dp-series-outro.wp-block-group > *,
+.dp-series-footer-inner.wp-block-group > *,
+.dp-series-footer-head.wp-block-group > *,
+.dp-series-hero-badges.wp-block-group > *,
+.dp-keep-reading.wp-block-group > *,
+.dp-related-card.wp-block-group > *,
+.dp-part-row.wp-block-group > *,
+.dp-part-body.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 .dp-post-after {
@@ -1464,17 +1586,52 @@ p.dp-post-standfirst:empty {
 	background: var(--bg-surface);
 }
 
-.dp-series-footer .wp-block-post-terms {
-	margin: 0;
+/*
+ * The head of the frame: a pink kicker over the series title on the left, and
+ * "ALL PARTS →" on the right. The build used to draw the term list *as* the
+ * title in pink, which collapsed two of the design's three elements into one and
+ * gave the title the kicker's colour.
+ */
+.dp-series-footer-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px 20px;
+	flex-wrap: wrap;
+}
+
+p.dp-series-footer-kicker {
+	margin-block: 0 8px;
 	color: var(--hue-pink);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-series-footer .dp-series-footer-title {
+	margin: 0;
+	color: var(--text-primary);
 	font-family: var(--font-display);
 	font-size: var(--fs-lg);
+	line-height: var(--lh-snug);
 	letter-spacing: var(--ls-tight);
 }
 
-.dp-series-footer .wp-block-post-terms a {
+.dp-series-footer .dp-series-footer-title a {
 	color: inherit;
 	text-decoration: none;
+}
+
+.dp-series-footer-action .wp-block-button__link {
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+	white-space: nowrap;
 }
 
 .dp-part-nav {
@@ -1522,8 +1679,34 @@ p.dp-post-standfirst:empty {
 	text-align: right;
 }
 
+/*
+ * Core renders the label and the title as two inline runs; the design draws them
+ * as two blocks with a gap between. The gap differs by card — 10px on a series
+ * part, 12px on a neighbouring post — which is the design's, not a rounding.
+ *
+ * `arrow: "none"` on both blocks is load-bearing. Core builds the label into its
+ * `$format` and then *overwrites that format* when an arrow is asked for, so a
+ * block with `label` and `arrow` and `showTitle` renders the arrow and silently
+ * drops the label. The arrows are therefore part of the label text, which is
+ * also where the design puts them.
+ */
+/* stylelint-disable selector-class-pattern -- `post-navigation-link__label` is
+   core's own BEM class, written by core/post-navigation-link's render callback,
+   and is no more ours to rename than `wp-block-button__link`. */
+.dp-part-nav .post-navigation-link__label,
+.dp-post-nav .post-navigation-link__label {
+	display: block;
+	margin-block-end: 10px;
+}
+
+.dp-post-nav .post-navigation-link__label {
+	margin-block-end: 12px;
+}
+/* stylelint-enable selector-class-pattern */
+
 .dp-part-nav a,
 .dp-post-nav a {
+	display: block;
 	color: var(--text-primary);
 	font-family: var(--font-display);
 	font-size: var(--fs-base);
@@ -1531,6 +1714,97 @@ p.dp-post-standfirst:empty {
 	letter-spacing: var(--ls-tight);
 	text-decoration: none;
 	text-transform: none;
+}
+
+/* A part card with nothing on that side of it renders as an empty bordered box
+   otherwise; the design draws the card only when there is a part to point at. */
+.dp-part-nav .wp-block-post-navigation-link:not(:has(a)),
+.dp-post-nav .wp-block-post-navigation-link:not(:has(a)) {
+	display: none;
+}
+
+/* -------------------------------------------------------------------------
+ * "Keep reading" — the three cards under a post
+ *
+ * The loop behind them is `dpLoop: related` in DP\Theme\Query\QueryLoops: the
+ * same category first, then whatever is newest, never the post you are on,
+ * which is the design's own rule stated in its own comment.
+ * ---------------------------------------------------------------------- */
+
+.dp-keep-reading {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	padding-block-start: 8px;
+}
+
+.dp-related {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.dp-related > li {
+	display: flex;
+	margin: 0;
+	padding: 0;
+}
+
+.dp-related > li::before {
+	content: none;
+}
+
+.dp-related-card {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 10px;
+	padding: 22px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-lg);
+	background: var(--band);
+	transition:
+		transform var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard);
+}
+
+.dp-related > li:hover .dp-related-card {
+	border-color: var(--accent-text);
+	transform: translateY(-3px);
+}
+
+p.dp-related-kicker,
+p.dp-related-read {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+/* The read time is pushed to the bottom of the card, so three cards of
+   different title lengths still line their last rows up. */
+p.dp-related-read {
+	margin-block-start: auto;
+}
+
+p.dp-related-title {
+	margin: 0;
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+p.dp-related-title a {
+	color: inherit;
+	text-decoration: none;
 }
 
 /* -------------------------------------------------------------------------
@@ -1542,22 +1816,6 @@ p.dp-post-standfirst:empty {
 	margin-inline: auto;
 	padding-block: 72px 32px;
 	padding-inline: var(--gutter);
-}
-
-.dp-crumbs {
-	display: flex;
-	align-items: center;
-	gap: 8px 12px;
-	flex-wrap: wrap;
-	margin-block-end: 24px;
-}
-
-.dp-crumbs .wp-block-button__link {
-	color: var(--accent-text);
-	font-family: var(--font-mono);
-	font-size: var(--fs-xs);
-	letter-spacing: var(--ls-caps);
-	text-transform: uppercase;
 }
 
 h1.dp-archive-title {
@@ -1580,13 +1838,123 @@ p.dp-archive-deck,
 	line-height: var(--lh-relaxed);
 }
 
-/* "Other categories" — the current one is the page you are already on, so it is
-   taken out of the band rather than listed as somewhere to go. */
-.dp-category-band .current-cat {
-	display: none;
+/* The breadcrumb: an accent-text link, a slash nobody reads out, and the word
+   for what kind of archive this is. The slash is generated content because the
+   design marks its own `aria-hidden`, and a separator that exists only to be
+   looked at is exactly what generated content is for. */
+.dp-crumbs {
+	display: flex;
+	align-items: center;
+	gap: 8px 12px;
+	flex-wrap: wrap;
+	margin-block-end: 24px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
 }
 
-.dp-category-band ul {
+.dp-crumbs .wp-block-button__link {
+	color: var(--accent-text);
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+}
+
+p.dp-crumb-here {
+	margin: 0;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	letter-spacing: inherit;
+	text-transform: inherit;
+}
+
+p.dp-crumb-here::before {
+	padding-inline-end: 12px;
+	content: "/";
+}
+
+p.dp-archive-count {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-archive {
+	padding-bottom: 64px;
+}
+
+/* The archive's list is closed at the top as well as the bottom; the index's is
+   not, because the pill row already rules it off. Same rows, one extra line. */
+.dp-archive .dp-rows-ruled {
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+/* An archive with nothing in it is one quiet line here, not the index's panel.
+   Both are the design's; they are different states of different views. */
+p.dp-archive-empty {
+	margin: 0;
+	padding-block: 48px;
+	color: var(--text-muted);
+	font-size: var(--fs-base);
+}
+
+.dp-archive-outro,
+.dp-series-outro {
+	display: flex;
+	align-items: center;
+	gap: 16px 24px;
+	flex-wrap: wrap;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-archive-outro {
+	justify-content: space-between;
+	margin-block-start: 32px;
+	padding-block-start: 24px;
+}
+
+.dp-series-outro {
+	margin-block-start: 36px;
+	padding-block-start: 24px;
+}
+
+p.dp-archive-outro-line {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+/* "Other categories" — the design filters the current term out of the list it
+   builds. `dpaternina/filter-pills` marks the current term instead of dropping
+   it, so it is taken out here. Marking and hiding rather than omitting keeps one
+   render path for both variations, and keeps the mark available to the filter
+   row, where the same term is the one that has to look selected. */
+.dp-band.dp-category-band > .dp-section {
+	padding-block: var(--section-y-sm) 120px;
+}
+
+h2.dp-category-band-title {
+	margin-block: 0 20px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-bold);
+	letter-spacing: var(--ls-tight);
+}
+
+ul.dp-category-pills {
 	display: flex;
 	gap: 10px;
 	flex-wrap: wrap;
@@ -1595,27 +1963,53 @@ p.dp-archive-deck,
 	list-style: none;
 }
 
-.dp-category-band li::before {
+ul.dp-category-pills > li {
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+
+ul.dp-category-pills > li::before {
 	content: none;
 }
 
-.dp-category-band a {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	min-height: var(--target-min);
-	padding: 8px 16px;
-	border: var(--border-width) solid var(--border-subtle);
-	border-radius: var(--radius-pill);
-	color: var(--text-secondary);
-	font-size: var(--fs-sm);
-	text-decoration: none;
-	transition: border-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
+ul.dp-category-pills > li.current-cat {
+	display: none;
 }
 
-.dp-category-band a:hover {
-	border-color: var(--text-muted);
+ul.dp-category-pills a {
+	display: inline-flex;
+	box-sizing: border-box;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--target-min);
+	padding: 0 16px;
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-pill);
+	background: var(--bg-surface);
 	color: var(--text-primary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-decoration: none;
+	text-transform: uppercase;
+	transition:
+		color var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard),
+		background var(--dur-base) var(--ease-standard);
+}
+
+ul.dp-category-pills a:hover {
+	border-color: var(--text-muted);
+}
+
+/* The count is `--text-muted` where the name is `--text-primary`, which needs
+   an element of its own. `core/categories` wrote it as a bare text node after
+   the anchor and this theme moved it with a regular expression; the block writes
+   the `<span>` in the first place. */
+ul.dp-category-pills .dp-cat-count {
+	color: var(--text-muted);
 }
 
 .dp-pagination {
@@ -1629,27 +2023,123 @@ p.dp-archive-deck,
 	border-top: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-pagination .wp-block-query-pagination-numbers,
-.dp-pagination .wp-block-query-pagination-previous,
-.dp-pagination .wp-block-query-pagination-next {
+/* The mono range on the left — "1–10 OF 24 POSTS" — bound to
+   DP\Theme\Query\ArchiveFacts, because a count is not a field on anything and
+   no core block prints one. */
+p.dp-pagination-range {
+	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }
 
-.dp-pagination a {
+/* Two classes, because `core/query-pagination`'s flex layout prints its own
+   one-class rule into the head and the two would otherwise be settled by load
+   order — the hazard ADR-0008 and the Phase 7.2 note both describe. */
+.dp-pagination .dp-pagination-steps,
+.dp-pagination .wp-block-query-pagination-numbers {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/*
+ * `pageStyle` and `stepStyle`, from the design's own script block. They differ
+ * in three declarations — the numbered pill is square-ish and carries a current
+ * state, the step is wider and carries a disabled one — so everything they share
+ * is written once.
+ *
+ * `box-sizing` is the property the design never declares and always relies on:
+ * it draws both of these as `<button>` elements, which the user-agent stylesheet
+ * gives `border-box`. Rendered as anchors at `content-box` they measure 36 plus
+ * padding plus border, which is what David saw on the work page's chips and
+ * called huge. FilterPills.logic.js settles it in prose; this is the same fix in
+ * a second place.
+ */
+.dp-pagination .page-numbers,
+.dp-pagination .wp-block-query-pagination-previous,
+.dp-pagination .wp-block-query-pagination-next {
+	display: inline-flex;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--target-min);
+	border: var(--border-width) solid var(--border-subtle);
+	border-radius: var(--radius-pill);
+	background: transparent;
 	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
 	text-decoration: none;
+	text-transform: uppercase;
+	transition:
+		color var(--dur-base) var(--ease-standard),
+		border-color var(--dur-base) var(--ease-standard),
+		background var(--dur-base) var(--ease-standard);
+}
+
+.dp-pagination .page-numbers {
+	min-width: var(--target-min);
+	padding: 8px 14px;
+}
+
+.dp-pagination .wp-block-query-pagination-previous,
+.dp-pagination .wp-block-query-pagination-next {
+	padding: 8px 18px;
+}
+
+/* The numbers block is a wrapper, not a pill. It carries neither class above. */
+.dp-pagination .wp-block-query-pagination-numbers {
+	min-height: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
 }
 
 .dp-pagination a:hover {
+	border-color: var(--text-muted);
 	color: var(--text-primary);
 }
 
-.dp-pagination .current {
+.dp-pagination .page-numbers.current {
+	border-color: var(--dp-teal);
+	background: color-mix(in srgb, var(--dp-teal) 14%, transparent);
 	color: var(--hue-teal);
+}
+
+/* A step with nowhere to go. Core drops it; the design draws it dimmed, and
+   DP\Theme\Query\Pagination puts it back as a `<span>` — no href, so it is
+   neither focusable nor able to reach a page that does not exist. */
+.dp-pagination .dp-page-step-disabled {
+	color: var(--text-muted);
+	cursor: default;
+	opacity: 0.45;
+}
+
+/* The panel that closes the archive, on its last page only. */
+.dp-at-end {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px 24px;
+	flex-wrap: wrap;
+	margin-block-start: 32px;
+	padding-block-start: 28px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+p.dp-at-end-line {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
 }
 
 .dp-empty {
@@ -1661,7 +2151,35 @@ p.dp-archive-deck,
 	border-block: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-empty h3 {
+/* The count line leads with the monogram at 30px and three tenths opacity. It
+   is a background rather than an `<img>` for the same reason the featured
+   panel's mark is: the design marks it `alt=""`, so it is decoration, and a
+   decorative image that is not in the document cannot be announced, cannot be
+   linked and needs nothing from the editor. The container's own `::before` is a
+   flex item, which is what puts it beside the text rather than inside it. */
+p.dp-empty-count {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-empty-count::before {
+	width: 30px;
+	height: 30px;
+	flex: none;
+	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
+	content: "";
+	opacity: 0.3;
+}
+
+h3.dp-empty-title {
 	max-width: 28ch;
 	margin: 0;
 	font-family: var(--font-display);
@@ -1671,12 +2189,18 @@ p.dp-archive-deck,
 	text-wrap: balance;
 }
 
-.dp-empty p {
+p.dp-empty-line {
 	max-width: var(--measure);
 	margin: 0;
 	color: var(--text-secondary);
 	font-size: var(--fs-base);
 	line-height: var(--lh-relaxed);
+}
+
+.dp-empty-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
 }
 
 /* -------------------------------------------------------------------------
@@ -1707,7 +2231,33 @@ p.dp-archive-deck,
 }
 
 .dp-series-hero-inner {
+	position: relative;
 	max-width: var(--container-md);
+}
+
+/* The SERIES badge and, beside it, how much of the series exists —
+   "3 PARTS UP · 4 DRAFTED", counted by DP\Theme\Query\ArchiveFacts from the
+   same two queries the two lists below are drawn from. */
+.dp-series-hero-badges {
+	display: flex;
+	align-items: center;
+	gap: 12px 20px;
+	flex-wrap: wrap;
+	margin-block-end: 28px;
+}
+
+p.dp-series-written {
+	margin: 0;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-series-written:empty {
+	display: none;
 }
 
 h1.dp-series-hero-title {
@@ -1720,6 +2270,10 @@ h1.dp-series-hero-title {
 	text-wrap: balance;
 }
 
+/* The deck is the term's own description, bound through
+   DP\Theme\Query\ArchiveFacts. The second selector styles
+   `core/term-description` to match, for a hero that draws the block instead. */
+p.dp-series-hero-deck,
 .dp-series-hero .wp-block-term-description p {
 	max-width: var(--measure);
 	margin: 0;
@@ -1728,7 +2282,26 @@ h1.dp-series-hero-title {
 	line-height: var(--lh-relaxed);
 }
 
-.dp-series-section h2 {
+p.dp-series-hero-deck:empty {
+	display: none;
+}
+
+/*
+ * The two sections are not the same shape and the build used to give them one
+ * class. "Start with these" is `padding: 8px var(--gutter) 48px` and its deck
+ * clears 20px; "Still to come" is `0 var(--gutter) 64px` and its deck clears 8,
+ * because the first row of the list below it draws its own rule.
+ */
+.dp-series-published {
+	container: dp-parts / inline-size;
+	padding-block: 8px 48px;
+}
+
+.dp-series-planned-section {
+	padding-block: 0 64px;
+}
+
+h2.dp-series-section-title {
 	margin-block: 0 8px;
 	font-family: var(--font-display);
 	font-size: var(--fs-xl);
@@ -1737,12 +2310,157 @@ h1.dp-series-hero-title {
 	letter-spacing: var(--ls-tight);
 }
 
-.dp-series-section > p {
+p.dp-series-section-deck {
 	max-width: var(--measure);
 	margin-block: 0 20px;
 	color: var(--text-secondary);
 	font-size: var(--fs-base);
 	line-height: var(--lh-relaxed);
+}
+
+p.dp-series-section-deck-tight {
+	margin-block-end: 8px;
+}
+
+/* -------------------------------------------------------------------------
+ * The published parts
+ *
+ * Three columns — the number and its date, the title and its note, and the
+ * affordance — not the compact `PostRow` the build reused. The design's own
+ * `seriesOut.rowStyle` is `120px minmax(0, 1fr) 110px`, and it collapses to one
+ * column below 700px. The threshold is the page's width in the design tool, so
+ * here it is a container query on the section, which is the page's width until
+ * the page is wider than the container.
+ * ---------------------------------------------------------------------- */
+
+.dp-parts {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+	list-style: none;
+}
+
+.dp-parts > li {
+	display: block;
+	margin: 0;
+	padding: 0;
+}
+
+.dp-parts > li::before {
+	content: none;
+}
+
+.dp-part-row {
+	display: grid;
+	align-items: baseline;
+	gap: 28px;
+	grid-template-columns: 120px minmax(0, 1fr) 110px;
+	padding-block: 26px;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+p.dp-part-number {
+	margin: 0;
+	color: var(--hue-pink);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-part-number:empty {
+	display: none;
+}
+
+/* One line — "MAR 15, 2026 · 9 MIN READ" — from two blocks, because the date's
+   format belongs to `core/post-date` and the read time to a meta field. Inline
+   children and a generated separator put them back into the single text run the
+   design writes. */
+.dp-part-meta {
+	margin-block-start: 6px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-part-meta > * {
+	display: inline;
+	margin: 0;
+	color: inherit;
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	letter-spacing: inherit;
+}
+
+.dp-part-meta > *:not(:first-child)::before {
+	content: " · ";
+}
+
+.dp-part-meta p:empty {
+	display: none;
+}
+
+h3.dp-part-title {
+	margin-block: 0 8px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	line-height: var(--lh-snug);
+	letter-spacing: var(--ls-tight);
+	text-wrap: pretty;
+}
+
+h3.dp-part-title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.dp-part-note {
+	max-width: var(--measure);
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+	line-height: var(--lh-relaxed);
+	text-wrap: pretty;
+}
+
+.dp-part-note p {
+	margin: 0;
+	color: inherit;
+	font-size: inherit;
+	line-height: inherit;
+}
+
+a.dp-part-status {
+	display: block;
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-align: right;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+
+@container dp-parts (width < 700px) {
+
+	.dp-part-row {
+		align-items: start;
+		gap: 10px;
+		grid-template-columns: minmax(0, 1fr);
+		padding-block: 22px;
+	}
+
+	a.dp-part-status {
+		text-align: left;
+	}
 }
 
 /* Still to come — rendered by DP\Theme\Blocks\SeriesPlanned, which carries no
@@ -1756,18 +2474,14 @@ h1.dp-series-hero-title {
 	border-top: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-planned-part,
-.dp-planned-years {
+.dp-planned-part {
+	min-width: 60px;
 	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
-}
-
-.dp-planned-part {
-	min-width: 60px;
 }
 
 .dp-planned-body {
@@ -1802,6 +2516,63 @@ p.dp-planned-note {
 
 .dp-featured {
 	padding-bottom: 40px;
+}
+
+/* The list below the panel closes the view: `padding: 0 var(--gutter) 120px`. */
+.dp-blog {
+	padding-bottom: 120px;
+}
+
+/*
+ * The pill row's own margins. The design wraps `FilterPills` in a div rather
+ * than spacing the component itself, because the same component is used on the
+ * work page inside different surroundings.
+ *
+ * Two classes and a child combinator, not one class, and the reason is worth
+ * stating because it is a new corner of the hazard ADR-0008 describes. Core's
+ * flow-layout rule for a *first* child is
+ * `:root :where(.is-layout-flow) > :first-child`, and `:first-child` is a
+ * pseudo-class — so that selector is two units of specificity, not the one its
+ * `:where()` makes it look like. A one-class rule loses to it outright rather
+ * than on load order, and this row is the first child of its section.
+ */
+.dp-section.dp-blog > .dp-blog-filter {
+	margin-block: 24px 20px;
+}
+
+/*
+ * The two mono affordances between the pills and the list.
+ *
+ * The design draws two: the pink one into the series, and a muted "BROWSE BY
+ * CATEGORY →". The second is not built, because it has nowhere to go — the
+ * design's own handler opens one specific category archive, which CLAUDE.md
+ * §5.1 forbids the theme from naming, and there is no categories index in the
+ * design or in this site to point at instead. It is a question for David rather
+ * than a guess; the row's geometry is identical either way.
+ */
+.dp-quicklinks.wp-block-buttons {
+	display: flex;
+	gap: 12px 28px;
+	flex-wrap: wrap;
+	margin-block: 0 32px;
+	padding-block-end: 24px;
+	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-quicklinks .wp-block-button__link {
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: normal;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-quicklink-series .wp-block-button__link {
+	color: var(--hue-pink);
+}
+
+.dp-quicklink-series .wp-block-button__link:hover {
+	color: var(--dp-pink);
 }
 
 .dp-featured-list {
@@ -1861,27 +2632,22 @@ h2.dp-featured-title a {
 	line-height: inherit;
 }
 
-.dp-featured-meta {
-	gap: 4px 12px;
+/* One line, not two elements. `featured.meta` is `p.cat + ' · ' + p.read`
+   — a single string the design draws in a single div, with no link inside it
+   because the whole panel is the click target. DP\Theme\Chrome\PostPresentation
+   assembles it under the `card-meta` key. */
+p.dp-featured-meta {
+	margin: 0;
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
+	line-height: normal;
 	letter-spacing: var(--ls-caps);
 	text-transform: uppercase;
 }
 
-.dp-featured-meta p,
-.dp-featured-meta .wp-block-post-terms {
-	margin: 0;
-	color: inherit;
-	font-family: inherit;
-	font-size: inherit;
-	letter-spacing: inherit;
-}
-
-.dp-featured-meta a {
-	color: inherit;
-	text-decoration: none;
+p.dp-featured-meta:empty {
+	display: none;
 }
 
 .dp-featured-art {

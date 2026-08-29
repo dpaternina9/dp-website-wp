@@ -120,18 +120,36 @@ final class ContentModelTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * `supports` is trimmed to what is used.
+	 * The canvas is a locked form, and cannot become a second place for prose.
 	 *
-	 * No editor: a role's prose is `dp_detail`, a shipped thing's is `dp_detail`
-	 * plus `dp_bullets`, and a video has none. An editor nobody writes in is an
-	 * editor somebody eventually writes in, and then there are two places a
-	 * description can live.
+	 * This assertion used to be `editor` is **off**, and the reasoning it carried
+	 * was sound: a role's prose is `dp_detail`, a shipped thing's is `dp_detail`
+	 * plus `dp_bullets`, a video has none, and an editor nobody writes in is an
+	 * editor somebody eventually writes in — after which a description has two
+	 * places to live.
+	 *
+	 * What that reasoning did not know is what `use_block_editor_for_post_type()`
+	 * checks. Without `editor` in `supports` there is no block editor at all for
+	 * the type: no canvas, no `template`, no `template_lock`, and the only offer
+	 * WordPress makes for a registered field is the raw Custom Fields table. All
+	 * three of these types opened in the classic editor for that reason, and the
+	 * thirty fields on them had no control of any kind.
+	 *
+	 * So `editor` is on, and what keeps the old reasoning true is the pair below
+	 * it: the canvas opens as the generated form, and `template_lock => 'all'`
+	 * means nothing can be added to it, moved in it or removed from it. There is
+	 * still exactly one place a description can live.
 	 *
 	 * @return void
 	 */
-	public function test_a_post_type_has_no_editor(): void {
+	public function test_the_canvas_is_a_locked_form(): void {
 		foreach ( PostTypes::all() as $post_type ) {
-			$this->assertFalse( post_type_supports( $post_type, 'editor' ), $post_type . ' has no editor.' );
+			$object = get_post_type_object( $post_type );
+
+			$this->assertNotNull( $object );
+			$this->assertTrue( post_type_supports( $post_type, 'editor' ), $post_type . ' has no block editor, so it has no canvas to put a form in.' );
+			$this->assertSame( 'all', $object->template_lock, $post_type . ' has a canvas anything can be written in.' );
+			$this->assertNotEmpty( $object->template, $post_type . ' opens on an empty locked canvas.' );
 			$this->assertFalse( post_type_supports( $post_type, 'comments' ), $post_type . ' takes no comments.' );
 		}
 
@@ -355,17 +373,25 @@ final class ContentModelTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The term meta behind a series deck is registered the same way.
+	 * A series carries no registered meta of ours either.
+	 *
+	 * `dp_series_deck` was the last one, and a `dp_series` term already had a
+	 * core field for the sentence it held: `description`, with a textarea on both
+	 * term screens, a column in the list table and a place in a WXR export. The
+	 * meta is unregistered and the deck is the description, and this is the
+	 * mirror of the guard ADR-0016 left on the post type — the assertion that
+	 * stops a term field growing back.
 	 *
 	 * @return void
 	 */
-	public function test_the_series_deck_is_registered_term_meta(): void {
+	public function test_a_series_carries_no_registered_meta_of_ours(): void {
 		$registered = get_registered_meta_keys( 'term', Taxonomies::SERIES );
 
-		$this->assertArrayHasKey( 'dp_series_deck', $registered );
-		$this->assertSame( 'string', $registered['dp_series_deck']['type'] );
-		$this->assertIsCallable( $registered['dp_series_deck']['auth_callback'] );
-		$this->assertIsArray( $registered['dp_series_deck']['show_in_rest'] );
+		$this->assertArrayNotHasKey( 'dp_series_deck', $registered );
+
+		foreach ( array_keys( $registered ) as $key ) {
+			$this->assertStringStartsNotWith( 'dp_', (string) $key, sprintf( '"%s" is registered on the series taxonomy again.', $key ) );
+		}
 	}
 
 	/**
@@ -390,9 +416,10 @@ final class ContentModelTest extends WP_UnitTestCase {
 	 * No two fields are registered under the same key with different meanings.
 	 *
 	 * `dp_start`, `dp_range` and `dp_detail` are deliberately shared between roles
-	 * and shipped things, and `dp_lead` between posts and pages. Each of those is
-	 * the same field on two types, which is fine. A key that meant two different
-	 * things would not be.
+	 * and shipped things, and `dp_tone` between videos and nothing else now that
+	 * the native `post` type carries no fields at all (ADR-0016). Each of those is
+	 * the same field on the types that have it, which is fine. A key that meant
+	 * two different things would not be.
 	 *
 	 * @return void
 	 */
@@ -416,6 +443,26 @@ final class ContentModelTest extends WP_UnitTestCase {
 
 		$this->assertArrayHasKey( 'dp_start', $types );
 		$this->assertArrayHasKey( 'dp_lead', $types );
+	}
+
+	/**
+	 * The native `post` type is registered with no meta fields at all.
+	 *
+	 * Eight of them used to live here — a kicker, a tone, a read time, a
+	 * standfirst, a hero caption, a part number, a year range and a note — and
+	 * every one was derivable from the post's own content, its terms, its date or
+	 * the attachment behind its featured image. None had an editor control, so
+	 * none could ever hold a value David put there. ADR-0016 deletes them, and
+	 * this is the assertion that stops one growing back by habit.
+	 *
+	 * @return void
+	 */
+	public function test_a_post_carries_no_registered_meta_of_ours(): void {
+		$this->assertArrayNotHasKey( 'post', ( new Meta( new MetaAuth() ) )->post_fields() );
+
+		foreach ( array_keys( get_registered_meta_keys( 'post', 'post' ) ) as $key ) {
+			$this->assertStringStartsNotWith( 'dp_', (string) $key, sprintf( '"%s" is registered on the post type again.', $key ) );
+		}
 	}
 
 	/**

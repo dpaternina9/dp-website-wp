@@ -415,4 +415,40 @@ test.describe( 'the house style in the editor', () => {
 
 		expect( styles ).toEqual( [] );
 	} );
+
+	/*
+	 * The three links this theme computes are registered in PHP with a render
+	 * callback and nothing else, which is enough for the front end and not for
+	 * the editor: a block the server knows about and the client does not draws
+	 * as core’s `core/missing` — "Your site doesn't include support for the
+	 * dpaternina/feed-link block" — inside a template that renders perfectly on
+	 * the site (ADR-0009). That failure exists only in the canvas, so it can
+	 * only be caught in a browser, which is why this assertion is here rather
+	 * than in the integration suite.
+	 */
+	test( 'the theme’s computed links exist in the editor’s registry', async ( {
+		admin,
+		page,
+	} ) => {
+		await admin.createNewPost();
+
+		const registered = await page.evaluate( () =>
+			[
+				'dpaternina/series-parts-link',
+				'dpaternina/resume-download',
+				'dpaternina/feed-link',
+			].map( ( name ) => ( {
+				name,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				edit: !! ( window as any ).wp.blocks.getBlockType( name )?.edit,
+			} ) )
+		);
+
+		for ( const block of registered ) {
+			expect(
+				block.edit,
+				`${ block.name } has no client-side edit, so the site editor draws it as core/missing.`
+			).toBe( true );
+		}
+	} );
 } );

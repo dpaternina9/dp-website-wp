@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace DP\Core\Content;
 
 /**
- * Registers digest section 3 as typed, REST-exposed, authorised post and term meta.
+ * Registers digest section 3 as typed, REST-exposed, authorised post meta.
  *
  * This is what stands in for ACF (`docs/plan.md`): `register_post_meta()` with an
  * explicit JSON-schema per field, so the editor, the REST API, the block bindings
@@ -29,6 +29,23 @@ namespace DP\Core\Content;
  * - **`org` is never a meta field.** For a role the post title *is* the
  *   organisation, for a shipped thing it is the thing's name. Duplicating either
  *   into meta would create two places to rename it from.
+ *
+ * **The native `post` type is absent from this table on purpose.** Digest
+ * section 3.1 once listed eight fields on it — a kicker, a tone, a read time, a
+ * standfirst, a hero caption, a part number, a year range and a planned-part
+ * note — and every one of them was already knowable from the post's own content,
+ * its terms, or the attachment behind its featured image. None of the eight ever
+ * had an editor control, so the only thing they could do on a post David wrote
+ * by hand was be empty. They are derived now, at the point of render, and the
+ * places that derive them are named in ADR-0016.
+ *
+ * **No taxonomy appears here either.** The one term field this plugin ever
+ * registered was `dp_series_deck`, the standfirst under a series title — and a
+ * `dp_series` term already had a core field for one or two sentences about
+ * itself: `description`, with a textarea on both term screens, a column in the
+ * list table, a REST property and a place in a WXR export. The deck is that
+ * field now, which is why `register_term_meta()` is not called from this file.
+ * Before registering anything here, check whether the object already has it.
  */
 final class Meta {
 
@@ -46,10 +63,10 @@ final class Meta {
 	 */
 	public function register(): void {
 		/*
-		 * The two argument arrays are written out here rather than returned from
-		 * a shared builder. A helper returning `array<string, mixed>` would make
-		 * both calls unverifiable: static analysis can only check these against
-		 * `register_post_meta()`'s declared shape while they are literals.
+		 * The argument array is written out here rather than returned from a
+		 * shared builder. A helper returning `array<string, mixed>` would make the
+		 * call unverifiable: static analysis can only check this against
+		 * `register_post_meta()`'s declared shape while it is a literal.
 		 */
 		foreach ( $this->post_fields() as $post_type => $fields ) {
 			foreach ( $fields as $field ) {
@@ -68,24 +85,6 @@ final class Meta {
 				);
 			}
 		}
-
-		foreach ( $this->term_fields() as $taxonomy => $fields ) {
-			foreach ( $fields as $field ) {
-				register_term_meta(
-					$taxonomy,
-					$field->key,
-					array(
-						'type'              => $field->type,
-						'description'       => $field->description,
-						'single'            => true,
-						'default'           => $field->default_value(),
-						'sanitize_callback' => $this->sanitizer( $field ),
-						'auth_callback'     => $this->auth->term_meta( ... ),
-						'show_in_rest'      => array( 'schema' => $this->schema( $field ) ),
-					)
-				);
-			}
-		}
 	}
 
 	/**
@@ -95,7 +94,6 @@ final class Meta {
 	 */
 	public function post_fields(): array {
 		return array(
-			'post'           => $this->post_type_post_fields(),
 			'page'           => $this->page_fields(),
 			PostTypes::ROLE  => $this->role_fields(),
 			PostTypes::SHIP  => $this->ship_fields(),
@@ -104,21 +102,13 @@ final class Meta {
 	}
 
 	/**
-	 * The term meta table, keyed by taxonomy.
+	 * The fields declared for one post type.
 	 *
-	 * @return array<string, list<MetaField>>
+	 * @param string $post_type The post type.
+	 * @return list<MetaField> Empty when this plugin declares nothing for the type.
 	 */
-	public function term_fields(): array {
-		return array(
-			Taxonomies::SERIES => array(
-				new MetaField(
-					'dp_series_deck',
-					'string',
-					__( 'The standfirst under the series title on its archive.', 'dp-core' ),
-					multiline: true
-				),
-			),
-		);
+	public function fields_for( string $post_type ): array {
+		return $this->post_fields()[ $post_type ] ?? array();
 	}
 
 	/**
@@ -129,69 +119,13 @@ final class Meta {
 	public function all_keys(): array {
 		$keys = array();
 
-		foreach ( array( $this->post_fields(), $this->term_fields() ) as $table ) {
-			foreach ( $table as $fields ) {
-				foreach ( $fields as $field ) {
-					$keys[] = $field->key;
-				}
+		foreach ( $this->post_fields() as $fields ) {
+			foreach ( $fields as $field ) {
+				$keys[] = $field->key;
 			}
 		}
 
 		return array_values( array_unique( $keys ) );
-	}
-
-	/**
-	 * Fields on the native `post` type. Digest section 3.1.
-	 *
-	 * @return list<MetaField>
-	 */
-	private function post_type_post_fields(): array {
-		return array(
-			new MetaField(
-				'dp_kicker',
-				'string',
-				__( 'Overrides the coloured token above the title. Empty means derive it: the series part if there is one, otherwise the category.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_tone',
-				'string',
-				__( 'Which hue the kicker and the badge take.', 'dp-core' ),
-				allowed: Tone::meta_values()
-			),
-			new MetaField(
-				'dp_read_time',
-				'string',
-				__( 'Reading time as it is printed, e.g. "6 MIN READ". Computed on save, stored, and overridable by hand.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_lead',
-				'string',
-				__( 'The standfirst paragraph above the body.', 'dp-core' ),
-				multiline: true
-			),
-			new MetaField(
-				'dp_hero_caption',
-				'string',
-				__( 'Mono caps caption under the lead image.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_series_part',
-				'integer',
-				__( 'Which part of its series this post is. 0 when it belongs to none.', 'dp-core' ),
-				minimum: 0.0
-			),
-			new MetaField(
-				'dp_series_years',
-				'string',
-				__( 'The years a planned part will cover, e.g. "1995 — 2007". Planned parts only.', 'dp-core' )
-			),
-			new MetaField(
-				'dp_series_note',
-				'string',
-				__( 'One line describing a planned part, shown under "Still to come". Planned parts only.', 'dp-core' ),
-				multiline: true
-			),
-		);
 	}
 
 	/**
@@ -204,12 +138,14 @@ final class Meta {
 			new MetaField(
 				'dp_lead',
 				'string',
+				__( 'Deck', 'dp-core' ),
 				__( 'The deck under the page title.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_updated',
 				'string',
+				__( 'Updated stamp', 'dp-core' ),
 				__( 'The mono caps stamp at the top of the page, e.g. "UPDATED AUG 2026". Overrides the modified date.', 'dp-core' )
 			),
 		);
@@ -225,29 +161,34 @@ final class Meta {
 			new MetaField(
 				'dp_role_title',
 				'string',
+				__( 'Job title', 'dp-core' ),
 				__( 'The job title. The post title holds the organisation.', 'dp-core' )
 			),
-			$this->year_field( 'dp_start', __( 'When the role began, as a decimal year. The fraction is the month: 2026.4 is May 2026.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'When the role ended, as a decimal year. An ongoing role ends at today.', 'dp-core' ) ),
+			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When the role began, as a decimal year. The fraction is the month: 2026.4 is May 2026.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Ended', 'dp-core' ), __( 'When the role ended, as a decimal year. An ongoing role ends at today.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',
+				__( 'Range as printed', 'dp-core' ),
 				__( 'The range exactly as it is printed, e.g. "2016 — now". Never derived from the dates: "now" is a choice.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_detail',
 				'string',
+				__( 'Detail', 'dp-core' ),
 				__( 'What the job was and what it owned. Two or three sentences.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_stack',
 				'string',
+				__( 'Stack line', 'dp-core' ),
 				__( 'The mono caps stack line, e.g. "PHP · VUE.JS · REST APIS".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_accent',
 				'string',
+				__( 'Accent', 'dp-core' ),
 				__( 'An accent this lane owns, overriding the default teal. A lane with one also earns a legend swatch.', 'dp-core' ),
 				allowed: Tone::meta_values()
 			),
@@ -264,71 +205,86 @@ final class Meta {
 			new MetaField(
 				'dp_role_id',
 				'integer',
+				__( 'Role it came from', 'dp-core' ),
 				__( 'The role this hangs off. A shipped thing with no role does not appear on the timeline.', 'dp-core' ),
+				reference: PostTypes::ROLE,
 				minimum: 0.0
 			),
-			$this->year_field( 'dp_start', __( 'When work on it began, as a decimal year.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'When it shipped, or today if it is still going, as a decimal year.', 'dp-core' ) ),
+			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When work on it began, as a decimal year.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Shipped', 'dp-core' ), __( 'When it shipped, or today if it is still going, as a decimal year.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',
+				__( 'Range as printed', 'dp-core' ),
 				__( 'The range exactly as it is printed, e.g. "2023 — now".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_headline',
 				'string',
+				__( 'Headline', 'dp-core' ),
 				__( 'One line, in the display face, at the top of the expanded panel.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_detail',
 				'string',
+				__( 'Detail', 'dp-core' ),
 				__( 'What it is and who it is for.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_line',
 				'string',
+				__( 'Card line', 'dp-core' ),
 				__( 'One short sentence, written for the card above the timeline. Not the same copy as the detail: the card gets a line, the expanded panel gets the paragraph.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_bullets',
 				'array',
+				__( 'Constraints', 'dp-core' ),
 				__( 'The constraints that shaped it. Three is the house maximum.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_ship_role',
 				'string',
+				__( 'What David did', 'dp-core' ),
 				__( 'What David did on it, e.g. "Everything". Distinct from the role it hangs off.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_stack',
 				'string',
+				__( 'Stack line', 'dp-core' ),
 				__( 'The mono caps stack line for this piece of work.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_artifact_label',
 				'string',
+				__( 'Artifact label', 'dp-core' ),
 				__( 'The label above the artifact block, e.g. "WP-CLI SESSION".', 'dp-core' )
 			),
 			new MetaField(
 				'dp_artifact',
 				'string',
+				__( 'Artifact', 'dp-core' ),
 				__( 'A preformatted terminal or code sample. Line breaks are content here, so they survive.', 'dp-core' ),
-				multiline: true
+				multiline: true,
+				preformatted: true
 			),
-			new MetaField( 'dp_stat1', 'string', __( 'The first statistic. An em dash means the number is not in yet.', 'dp-core' ) ),
-			new MetaField( 'dp_stat1_label', 'string', __( 'What the first statistic counts.', 'dp-core' ) ),
-			new MetaField( 'dp_stat2', 'string', __( 'The second statistic.', 'dp-core' ) ),
-			new MetaField( 'dp_stat2_label', 'string', __( 'What the second statistic counts.', 'dp-core' ) ),
+			new MetaField( 'dp_stat1', 'string', __( 'Statistic one', 'dp-core' ), __( 'The first statistic. An em dash means the number is not in yet.', 'dp-core' ) ),
+			new MetaField( 'dp_stat1_label', 'string', __( 'Statistic one label', 'dp-core' ), __( 'What the first statistic counts.', 'dp-core' ) ),
+			new MetaField( 'dp_stat2', 'string', __( 'Statistic two', 'dp-core' ), __( 'The second statistic.', 'dp-core' ) ),
+			new MetaField( 'dp_stat2_label', 'string', __( 'Statistic two label', 'dp-core' ), __( 'What the second statistic counts.', 'dp-core' ) ),
 			new MetaField(
 				'dp_featured',
 				'boolean',
+				__( 'Featured on a work card', 'dp-core' ),
 				__( 'Whether this appears as a WorkCard above the timeline.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_writeup_id',
 				'integer',
+				__( 'Write-up', 'dp-core' ),
 				__( 'A post that writes this up, if one exists. 0 when there is none.', 'dp-core' ),
+				reference: 'post',
 				minimum: 0.0
 			),
 		);
@@ -344,36 +300,42 @@ final class Meta {
 			new MetaField(
 				'dp_video_source',
 				'string',
+				__( 'Source', 'dp-core' ),
 				__( 'Where the video is hosted.', 'dp-core' ),
 				allowed: VideoSource::meta_values()
 			),
 			new MetaField(
 				'dp_video_ref',
 				'string',
+				__( 'Platform identifier', 'dp-core' ),
 				__( 'The platform identifier: a Twitch VOD id or a YouTube video id. Read according to the source.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_tone',
 				'string',
+				__( 'Tone', 'dp-core' ),
 				__( 'Which hue the card takes. The design codes the platform with it.', 'dp-core' ),
 				allowed: Tone::meta_values()
 			),
-			new MetaField( 'dp_duration', 'string', __( 'Runtime as it is printed, e.g. "2H 41M".', 'dp-core' ) ),
-			new MetaField( 'dp_when', 'string', __( 'When it went out, e.g. "AUG 2026".', 'dp-core' ) ),
+			new MetaField( 'dp_duration', 'string', __( 'Runtime', 'dp-core' ), __( 'Runtime as it is printed, e.g. "2H 41M".', 'dp-core' ) ),
+			new MetaField( 'dp_when', 'string', __( 'When it went out', 'dp-core' ), __( 'When it went out, e.g. "AUG 2026".', 'dp-core' ) ),
 			new MetaField(
 				'dp_note',
 				'string',
+				__( 'Note', 'dp-core' ),
 				__( 'One line under the title.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_live',
 				'boolean',
+				__( 'Live now', 'dp-core' ),
 				__( 'Whether this is the live-now panel rather than an archived video.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_live_meta',
 				'string',
+				__( 'Live strapline', 'dp-core' ),
 				__( 'The live strapline, e.g. "STREAMING NOW · 1H 12M IN".', 'dp-core' )
 			),
 		);
@@ -386,13 +348,15 @@ final class Meta {
 	 * value is a 400 with a readable message, not a silent zero.
 	 *
 	 * @param string $key         Meta key.
+	 * @param string $label       The short name of the field.
 	 * @param string $description What it holds.
 	 * @return MetaField
 	 */
-	private function year_field( string $key, string $description ): MetaField {
+	private function year_field( string $key, string $label, string $description ): MetaField {
 		return new MetaField(
 			$key,
 			'number',
+			$label,
 			$description,
 			is_year: true,
 			minimum: (float) Year::MIN_YEAR,
@@ -423,6 +387,7 @@ final class Meta {
 	private function schema( MetaField $field ): array {
 		$schema = array(
 			'type'        => $field->type,
+			'title'       => $field->label,
 			'description' => $field->description,
 		);
 

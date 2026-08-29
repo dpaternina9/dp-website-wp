@@ -1,0 +1,40 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/filter-pills",
+	"title": "Category pills",
+	"category": "theme",
+	"description": "The site's categories as the design's pills — real links to real archives, which is what makes them work with JavaScript switched off. Two variations: the filter row that leads with an All pill, and the archive band that prints each category's count.",
+	"keywords": [ "categories", "filter", "pills", "archive", "taxonomy" ],
+	"textdomain": "dpaternina",
+	"attributes": {
+		"variant": {
+			"type": "string",
+			"default": "filter",
+			"enum": [ "filter", "band" ]
+		}
+	},
+	"variations": [
+		{
+			"name": "filter",
+			"title": "Category pills — filter row",
+			"description": "The blog index's filter. Leads with an All pill pointing at the posts index, and prints no counts.",
+			"attributes": { "variant": "filter" },
+			"isDefault": true,
+			"isActive": [ "variant" ]
+		},
+		{
+			"name": "band",
+			"title": "Category pills — other categories",
+			"description": "The band under a category archive. Prints each category's count, and the archive you are already on is not offered.",
+			"attributes": { "variant": "band" },
+			"isActive": [ "variant" ]
+		}
+	],
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}

@@ -15,6 +15,8 @@
  *   year  -> dp_range   the range as it is printed, uppercased by the stylesheet
  *   org   -> org        derived: the title of the role this ship hangs off
  *   title -> the post title, which is also the link into the timeline
+ *            (dpaternina/work-card-title; the href is the chart's entry key,
+ *            which is dp-core's to compute, so no template can carry it)
  *   line  -> dp_line    the card's own sentence
  *
  * `stack` is in the same fixture entry and is deliberately **not** here: the
@@ -40,7 +42,7 @@
 <!-- /wp:paragraph --></div>
 <!-- /wp:group -->
 
-<!-- wp:post-title {"level":3,"isLink":false,"className":"dp-card-title dp-card-open"} /-->
+<!-- wp:dpaternina/work-card-title {"level":3} /-->
 
 <!-- wp:paragraph {"className":"dp-card-line","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"dp_line"}}}}} -->
 <p class="dp-card-line"></p>

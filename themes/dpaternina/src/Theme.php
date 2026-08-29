@@ -61,6 +61,7 @@ final class Theme {
 	private function register(): void {
 		$destinations = new Chrome\Destinations();
 		$navigation   = new Chrome\Navigation( $destinations );
+		$archive      = new Query\ArchiveFacts();
 
 		( new Assets( $this ) )->register();
 		( new CorePresets() )->register();
@@ -69,16 +70,25 @@ final class Theme {
 		( new Blocks\AllowedBlocks() )->register();
 		( new Blocks\ContactForm( $this ) )->register();
 		( new Blocks\CoreStyles() )->register();
+		( new Blocks\EditorScript( $this ) )->register();
+		( new Blocks\FeedLink() )->register();
+		( new Blocks\FilterPills( $destinations ) )->register();
+		( new Blocks\LeadImage() )->register();
 		( new Blocks\Markup() )->register();
+		( new Blocks\ResumeDownload() )->register();
+		( new Blocks\SeriesIndex( $archive ) )->register();
+		( new Blocks\SeriesPartsLink() )->register();
 		( new Blocks\SeriesPlanned() )->register();
 		( new Blocks\TemplateHierarchy() )->register();
 		( new Blocks\Timeline( $this ) )->register();
-		$destinations->register();
+		( new Blocks\WorkCardTitle() )->register();
 		$navigation->register();
-		( new Chrome\Brand( $this->directory, $navigation ) )->register();
-		( new Chrome\FilterPills( $destinations ) )->register();
+		( new Chrome\Brand( $this->directory ) )->register();
 		( new Chrome\PostPresentation() )->register();
+		( new Chrome\SeededLinks() )->register();
 		( new Chrome\SiteFacts() )->register();
+		$archive->register();
+		( new Query\Pagination() )->register();
 		( new Query\QueryLoops() )->register();
 	}
 

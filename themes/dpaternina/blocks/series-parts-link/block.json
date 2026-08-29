@@ -1,0 +1,17 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dpaternina/series-parts-link",
+	"title": "Series — all parts",
+	"category": "theme",
+	"description": "Links to the archive of the series the post being read belongs to. The URL is a property of the post, so no template can carry it; a post in no series draws the link inert.",
+	"keywords": [ "series", "parts", "archive", "link" ],
+	"textdomain": "dpaternina",
+	"usesContext": [ "postId" ],
+	"editorScript": "dpaternina-blocks",
+	"supports": {
+		"html": false,
+		"reusable": false,
+		"lock": false
+	}
+}

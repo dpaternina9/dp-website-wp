@@ -24,13 +24,9 @@
 
 <!-- wp:post-excerpt {"moreText":"","showMoreOnNewLine":false,"excerptLength":34,"className":"dp-featured-lead"} /-->
 
-<!-- wp:group {"className":"dp-featured-meta","layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group dp-featured-meta"><!-- wp:post-terms {"term":"category"} /-->
-
-<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"core/post-meta","args":{"key":"dp_read_time"}}}}} -->
-<p></p>
+<!-- wp:paragraph {"className":"dp-featured-meta","metadata":{"bindings":{"content":{"source":"dpaternina/post","args":{"key":"card-meta"}}}}} -->
+<p class="dp-featured-meta"></p>
 <!-- /wp:paragraph --></div>
-<!-- /wp:group --></div>
 <!-- /wp:group -->
 
 <!-- wp:group {"className":"dp-featured-art","layout":{"type":"default"}} -->
@@ -42,7 +38,15 @@
 <!-- /wp:group -->
 
 <!-- wp:group {"tagName":"section","className":"dp-section dp-blog","layout":{"type":"default"}} -->
-<section class="wp-block-group dp-section dp-blog"><!-- wp:categories {"className":"dp-filter-pills"} /-->
+<section class="wp-block-group dp-section dp-blog"><!-- wp:group {"className":"dp-blog-filter","layout":{"type":"default"}} -->
+<div class="wp-block-group dp-blog-filter"><!-- wp:dpaternina/filter-pills {"variant":"filter"} /--></div>
+<!-- /wp:group -->
+
+<!-- wp:buttons {"className":"dp-quicklinks"} -->
+<div class="wp-block-buttons dp-quicklinks"><!-- wp:button {"className":"dp-button-quiet dp-quicklink dp-quicklink-series","metadata":{"name":"Series link"}} -->
+<div class="wp-block-button dp-button-quiet dp-quicklink dp-quicklink-series"><a class="wp-block-button__link wp-element-button">Read my life story in order →</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
 
 <!-- wp:pattern {"slug":"dpaternina/post-row-list"} /--></section>
 <!-- /wp:group --></main>

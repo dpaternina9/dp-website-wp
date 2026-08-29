@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for the header, the footer and the destinations they link to.
+ * Integration tests for the header, the footer and the links in them.
  *
  * @package DP\Tests
  */
@@ -9,19 +9,26 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Templates;
 
+use DP\Theme\Blocks\DerivedLink;
+use DP\Theme\Blocks\FeedLink;
 use DP\Theme\Chrome\Destinations;
-use DP\Theme\Chrome\Navigation;
+use DP\Theme\Chrome\PostPresentation;
 
 /**
- * CLAUDE.md §5.1, in the one place it is easiest to break.
+ * What the chrome ships, and what it does with what David puts in it.
  *
- * The header and the footer are where a theme normally hardcodes an href, and
- * this one may not. Every link in them says which destination it wants and is
- * given a URL at render time, from a Reading setting, from core's feed link, or
- * from the page carrying a template David assigned. The tests below check both
- * halves of that: that a destination which exists resolves, and that one which
- * does not leaves a visible, inert control rather than a link to a 404 or a
- * hole in the page (ADR-0008).
+ * The header and the footer used to be where this theme resolved a dozen hrefs
+ * at render time from a `dp-to-…` class. ADR-0018 deletes that. A link to a page
+ * David made is a link he sets in the site editor, so what these tests assert
+ * changed shape completely:
+ *
+ * - the shipped markup carries the design's **words** and no URL, which is
+ *   CLAUDE.md §5.1 satisfied by shipping nothing rather than by computing
+ *   something;
+ * - a URL David *does* set survives rendering — the defect ADR-0018 was written
+ *   for, and the two tests that reproduce it are the most important in this
+ *   file;
+ * - the one link in the footer nobody can type, the feed, is a named block.
  */
 final class ChromeTest extends TemplateTestCase {
 
@@ -71,164 +78,161 @@ final class ChromeTest extends TemplateTestCase {
 		$this->assertStringContainsString( 'dp-menu-close', $html );
 	}
 
+	/*
+	 * -------------------------------------------- The defect ADR-0018 is about
+	 */
+
 	/**
-	 * The contact button points at whatever page carries the contact template.
+	 * A link David sets on a button in a template part is the link that renders.
+	 *
+	 * **This is the bug.** `Navigation::resolve_destination()` ended in an
+	 * unconditional `set_attribute( 'href', $url )` on any button carrying a
+	 * destination class, on the never-written-down assumption that the shipped
+	 * templates carry no href and there is therefore never one to preserve. That
+	 * stopped being true the moment the site editor was opened: an edit is saved
+	 * as a `wp_template_part` post, that markup *does* carry an href, and the
+	 * filter threw it away — while the editor, which renders saved markup and
+	 * never runs the filter, went on showing it. Nothing reported it.
+	 *
+	 * The fixture is the theme's own header with a URL put on every button that
+	 * ships without one, which is exactly what David does when he sets those
+	 * links once. Under the old code every one of them came back stripped.
 	 *
 	 * @return void
 	 */
-	public function test_the_contact_button_resolves_through_the_assigned_template(): void {
-		$contact = $this->seed_page( 'Say hello', Navigation::TEMPLATES['contact'] );
+	public function test_a_link_set_on_a_shipped_header_button_survives_rendering(): void {
+		$target = home_url( '/somewhere-david-chose/' );
+
+		$this->override( 'wp_template_part', 'header', $this->linked( 'parts/header.html', $target ) );
 
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $contact ) ) . '"', $html );
+		$this->assertSame(
+			2,
+			substr_count( $html, 'href="' . esc_url( $target ) . '"' ),
+			"Both of the header's contact buttons must keep the link David gave them."
+		);
 		$this->assertStringContainsString( 'Get in touch', $html );
 	}
 
 	/**
-	 * Renaming that page changes the link, because the link was never the name.
+	 * Nothing this theme registers touches a rendered button.
 	 *
-	 * Pretty permalinks are switched on for the duration: with the plain
-	 * structure the test suite installs, every page URL is `?page_id=N` and a
-	 * rename would be invisible, so the test would pass without proving
-	 * anything. Nothing clears the theme's cache by hand either — the point is
-	 * that saving the page does.
+	 * The two tests above prove the symptom is gone; this one names the cause,
+	 * and it is the assertion that fails loudest against the old code. Two
+	 * filters used to sit on `render_block_core/button` — the destination
+	 * resolver and the series link — so every button on every page went through
+	 * a `WP_HTML_Tag_Processor` that was willing to call `set_attribute( 'href',
+	 * … )` on it. The rule ADR-0018 puts in force is that code never overwrites a
+	 * value an author set, and the cheapest way to keep it for `core/button` is
+	 * for nothing to be listening at all. The two links that used to arrive this
+	 * way are blocks of their own now.
 	 *
 	 * @return void
 	 */
-	public function test_moving_the_contact_page_moves_the_link(): void {
-		$this->set_permalink_structure( '/%postname%/' );
-
-		$contact = $this->seed_page( 'Say hello', Navigation::TEMPLATES['contact'] );
-		$before  = $this->permalink( $contact );
-
-		$this->assertStringContainsString(
-			'href="' . esc_url( $before ) . '"',
-			$this->render( home_url( '/' ), 'front-page', self::HIERARCHY )
+	public function test_nothing_filters_a_rendered_button(): void {
+		$this->assertFalse(
+			has_filter( 'render_block_core/button' ),
+			'Something is filtering every button again. A link David sets is his; '
+			. 'a computed link is a block of its own (ADR-0018).'
 		);
 
-		wp_update_post(
-			array(
-				'ID'        => $contact,
-				'post_name' => 'talk-to-me',
-			)
+		$target = home_url( '/wherever-he-pointed-it/' );
+		$markup = sprintf(
+			'<!-- wp:button {"url":"%1$s","className":"dp-button-quiet"} -->'
+				. '<div class="wp-block-button dp-button-quiet">'
+				. '<a class="wp-block-button__link wp-element-button" href="%1$s">Get in touch</a>'
+				. '</div><!-- /wp:button -->',
+			esc_url( $target )
 		);
 
-		$after = $this->permalink( $contact );
-
-		$this->assertNotSame( $before, $after, 'The rename has to change the URL, or the test proves nothing.' );
-
-		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-
-		$this->assertStringContainsString( 'href="' . esc_url( $after ) . '"', $html );
-		$this->assertStringNotContainsString( 'href="' . esc_url( $before ) . '"', $html );
-
-		$this->set_permalink_structure( '' );
+		$this->assertStringContainsString( 'href="' . esc_url( $target ) . '"', do_blocks( $markup ) );
 	}
 
 	/**
-	 * With no page behind it, the button stays put and stops being a link.
+	 * The same is true of a whole template, not only of a part.
 	 *
-	 * ADR-0008. The previous behaviour dropped the whole block, and this test
-	 * used to assert that. It was wrong in the way that matters: the site
-	 * editor draws the same button from the same saved markup and cannot know
-	 * the front end threw it away, so "it is there when I edit it and gone when
-	 * I look at the site" was the only symptom of a resolver returning nothing
-	 * — whether because David had not made the page or because the resolver was
-	 * broken. Both now look the same, and both look like something.
+	 * A `wp_template` post is the other thing the site editor writes, and it is
+	 * the one that carried the four home-page buttons David reported missing.
 	 *
 	 * @return void
 	 */
-	public function test_a_destination_with_no_page_stays_visible_and_inert(): void {
+	public function test_a_link_set_on_a_template_button_survives_rendering(): void {
+		$target = home_url( '/the-page-i-picked/' );
+
+		$this->override( 'wp_template', 'front-page', $this->linked( 'templates/front-page.html', $target ) );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertSame( 'dpaternina//front-page', $this->resolved_template() );
+		$this->assertGreaterThan(
+			0,
+			substr_count( $html, 'href="' . esc_url( $target ) . '"' ),
+			'A button linked in the site editor must render that link.'
+		);
+		$this->assertStringContainsString( 'See the work', $html );
+		$this->assertStringContainsString( 'Full timeline', $html );
+	}
+
+	/*
+	 * ------------------------------------------------ What the theme does ship
+	 */
+
+	/**
+	 * The shipped chrome carries the design's words, and David supplies the URLs.
+	 *
+	 * That the words are all still there is the half worth asserting here:
+	 * stripping a class off fourteen buttons is exactly the edit that loses one
+	 * of them. That none of them ships a link to a page is asserted over every
+	 * file the theme ships, in
+	 * `DP\Tests\Integration\NoHardcodedRoutesTest`.
+	 *
+	 * @return void
+	 */
+	public function test_the_shipped_chrome_ships_the_designs_words(): void {
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		foreach ( array( 'Get in touch', 'Work', 'About', 'Contact', 'All posts', 'Uses', 'Résumé', 'Colophon', 'Privacy' ) as $label ) {
+			$this->assertStringContainsString( $label, $html, sprintf( 'The chrome has lost "%s".', $label ) );
+		}
+	}
+
+	/**
+	 * An unset button is a button, not a dimmed one.
+	 *
+	 * ADR-0008's inert treatment is kept for the three links that are computed
+	 * and can fail to resolve. A `core/button` David has not linked yet is not
+	 * one of those: it is an ordinary button with no link, drawn identically in
+	 * the editor and on the page, and dimming it would tell a visitor about a
+	 * setup step rather than about anything on the site.
+	 *
+	 * @return void
+	 */
+	public function test_an_unlinked_button_is_not_marked_as_a_failed_destination(): void {
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
 		$this->assertStringContainsString( 'Get in touch', $html );
 		$this->assertStringContainsString( 'Say hi', $html );
-		$this->assertStringContainsString( Navigation::UNRESOLVED_CLASS, $html );
-		$this->assertStringContainsString( 'data-dp-destination="contact"', $html );
-		$this->assertStringContainsString( 'aria-disabled="true"', $html );
-	}
-
-	/**
-	 * The "Full timeline" link is on the page whether or not it can point anywhere.
-	 *
-	 * This is the bug David reported, from both ends. The button is in
-	 * `front-page.html`, it renders in the site editor because the editor draws
-	 * the saved markup, and on the front end it was being removed entirely by
-	 * `Navigation::resolve_destination()`. Two separate causes could produce
-	 * that — no page carrying `dp-work`, or a resolver that could not find the
-	 * page that does — and neither left a trace. The first case is asserted
-	 * here; `test_a_cached_map_from_an_older_release_still_resolves` covers the
-	 * second.
-	 *
-	 * @return void
-	 */
-	public function test_the_full_timeline_link_survives_an_unresolved_work_page(): void {
-		$without = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-
-		$this->assertStringContainsString( 'Full timeline', $without );
-		$this->assertStringContainsString( 'data-dp-destination="work"', $without );
-		$this->assertMatchesRegularExpression(
-			'~<a[^>]*data-dp-destination="work"[^>]*>~',
-			$without
-		);
-		$this->assertDoesNotMatchRegularExpression(
-			'~<a[^>]*data-dp-destination="work"[^>]*href=~',
-			$without,
-			'An unresolved destination must not invent an href.'
-		);
-
-		$work = $this->seed_page( 'What I have built', Navigation::TEMPLATES['work'] );
-
-		$with = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-
-		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $work ) ) . '"', $with );
-		$this->assertDoesNotMatchRegularExpression(
-			'~<a[^>]*data-dp-destination="work"[^>]*' . preg_quote( Navigation::UNRESOLVED_CLASS, '~' ) . '~',
-			$with,
-			'A destination that resolves must not also be marked unset.'
+		$this->assertStringNotContainsString(
+			DerivedLink::UNRESOLVED_CLASS,
+			$html,
+			'Nothing on the front page is a computed link, so nothing there can be an unresolved one.'
 		);
 	}
 
+	/*
+	 * ---------------------------------------------------------- The blog index
+	 */
+
 	/**
-	 * A map cached by an older release resolves instead of reading as "no page".
-	 *
-	 * The transient used to be keyed by whatever `_wp_page_template` held, and
-	 * `dp-work.html` and `dp-work` are the same template under two spellings.
-	 * When the write side started normalising them, every install already
-	 * holding the old map answered "no such page" for four destinations at once
-	 * until something happened to save a page — which is exactly what David saw
-	 * on :8888, and exactly the kind of failure a cache should not be able to
-	 * cause.
+	 * The posts index follows Settings to Reading, under any name.
 	 *
 	 * @return void
 	 */
-	public function test_a_cached_map_from_an_older_release_still_resolves(): void {
-		$work = $this->seed_page( 'What I have built', Navigation::TEMPLATES['work'] );
-
-		set_transient(
-			Destinations::CACHE_KEY,
-			array( Navigation::TEMPLATES['work'] . '.html' => $work ),
-			DAY_IN_SECONDS
-		);
-
-		$navigation = new Navigation( new Destinations() );
-
-		$this->assertSame( $this->permalink( $work ), $navigation->url_for( 'work' ) );
-	}
-
-	/**
-	 * The posts destination follows Settings to Reading, under any name.
-	 *
-	 * @return void
-	 */
-	public function test_the_posts_destination_follows_the_reading_setting(): void {
+	public function test_the_posts_index_follows_the_reading_setting(): void {
 		$page = $this->seed_posts_page( 'Field notes' );
 
-		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-
-		$this->assertStringContainsString( 'href="' . esc_url( $this->permalink( $page ) ) . '"', $html );
-		$this->assertStringContainsString( 'All posts', $html );
+		$this->assertSame( $this->permalink( $page ), ( new Destinations() )->posts_index() );
 	}
 
 	/**
@@ -236,7 +240,7 @@ final class ChromeTest extends TemplateTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_the_posts_destination_falls_back_to_the_site_root(): void {
+	public function test_the_posts_index_falls_back_to_the_site_root(): void {
 		$destinations = new Destinations();
 
 		$this->assertSame( home_url( '/' ), $destinations->posts_index() );
@@ -265,7 +269,42 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
+	 * `dp-core` can still ask the theme where the blog is, and only that.
+	 *
+	 * The `dp_destination_url` seam survives ADR-0018 with one name behind it.
+	 * The plugin's contact panel offers "read something" after a message is sent
+	 * and may not decide for itself which page that is; every other name the
+	 * filter used to answer was a page David nominates by assigning a template,
+	 * which is now a link he sets rather than a URL anyone derives.
+	 *
+	 * @return void
+	 */
+	public function test_the_plugin_seam_answers_the_posts_index_and_nothing_else(): void {
+		$page = $this->seed_posts_page( 'Field notes' );
+
+		$this->assertSame(
+			$this->permalink( $page ),
+			apply_filters( 'dp_destination_url', null, 'posts' )
+		);
+
+		foreach ( array( 'contact', 'work', 'about', 'resume', 'uses', 'colophon', 'privacy', 'series', 'home', 'nonsense' ) as $gone ) {
+			$this->assertNull(
+				apply_filters( 'dp_destination_url', null, $gone ),
+				sprintf( '"%s" is not a destination any more (ADR-0018).', $gone )
+			);
+		}
+	}
+
+	/*
+	 * ------------------------------------------------------------- The feed
+	 */
+
+	/**
 	 * The footer links the feed through core rather than through a path.
+	 *
+	 * `SiteFooter.dc.html` calls RSS "the one real href in the whole design", and
+	 * it is also the one href in the design that is wrong for WordPress: where
+	 * the feed lives follows the permalink setting. So it is a named block.
 	 *
 	 * @return void
 	 */
@@ -273,85 +312,35 @@ final class ChromeTest extends TemplateTestCase {
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
 		$this->assertStringContainsString( 'href="' . esc_url( get_feed_link() ) . '"', $html );
-		$this->assertStringContainsString( 'RSS', $html );
+		$this->assertStringContainsString( 'data-dp-destination="' . FeedLink::DESTINATION . '"', $html );
+		$this->assertStringContainsString( '>RSS</a>', $html );
 	}
 
 	/**
-	 * Every template the chrome names is one WordPress will actually offer.
+	 * Changing the permalink structure moves the feed, and the link with it.
 	 *
-	 * This is the assertion that catches a spelling difference nobody would
-	 * notice by reading: WordPress offers a block theme's custom templates to
-	 * the admin under their slugs, so a page assigned Contact from the dropdown
-	 * stores `dp-contact` and a resolver looking for `dp-contact.html` finds
-	 * nothing, forever, in silence.
+	 * The reason this is a block and not a link somebody types.
 	 *
 	 * @return void
 	 */
-	public function test_every_named_template_is_one_the_admin_offers(): void {
-		$offered = array_keys( wp_get_theme()->get_post_templates()['page'] ?? array() );
+	public function test_the_feed_link_follows_the_permalink_structure(): void {
+		$plain = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertNotEmpty( $offered );
+		$this->assertStringContainsString( 'href="' . esc_url( get_feed_link() ) . '"', $plain );
 
-		foreach ( Navigation::TEMPLATES as $destination => $template ) {
-			$this->assertContains(
-				$template,
-				$offered,
-				sprintf( 'The "%s" destination names a template the admin does not offer.', $destination )
-			);
-		}
+		$this->set_permalink_structure( '/%postname%/' );
+
+		$pretty = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'href="' . esc_url( get_feed_link() ) . '"', $pretty );
+		$this->assertStringContainsString( '/feed/', $pretty );
+
+		$this->set_permalink_structure( '' );
 	}
 
-	/**
-	 * A page assigned its template the way the admin assigns it still resolves.
-	 *
-	 * @return void
+	/*
+	 * -------------------------------------------------------------- The mark
 	 */
-	public function test_a_page_assigned_through_rest_still_resolves(): void {
-		$contact = $this->seed_page( 'Say hello' );
-
-		$updated = wp_update_post(
-			array(
-				'ID'            => $contact,
-				'page_template' => Navigation::TEMPLATES['contact'],
-			),
-			true
-		);
-
-		$this->assertIsInt( $updated );
-		$this->assertSame( Navigation::TEMPLATES['contact'], get_page_template_slug( $contact ) );
-
-		delete_transient( Destinations::CACHE_KEY );
-
-		$navigation = new Navigation( new Destinations() );
-
-		$this->assertSame( $this->permalink( $contact ), $navigation->url_for( 'contact' ) );
-	}
-
-	/**
-	 * Every destination the theme offers resolves or is deliberately absent.
-	 *
-	 * @return void
-	 */
-	public function test_every_named_destination_resolves_or_is_absent(): void {
-		$navigation = new Navigation( new Destinations() );
-
-		$this->seed_page( 'Say hello', Navigation::TEMPLATES['contact'] );
-
-		delete_transient( Destinations::CACHE_KEY );
-
-		foreach ( Navigation::DESTINATIONS as $destination ) {
-			$url = $navigation->url_for( $destination );
-
-			$this->assertTrue(
-				null === $url || '' !== $url,
-				sprintf( '"%s" must resolve to a real URL or to nothing at all.', $destination )
-			);
-		}
-
-		$this->assertNotNull( $navigation->url_for( 'contact' ) );
-		$this->assertNull( $navigation->url_for( 'work' ), 'No page carries the work template yet.' );
-		$this->assertNull( $navigation->url_for( 'nonsense' ) );
-	}
 
 	/**
 	 * The brand mark is an image David can swap, everywhere it is drawn.
@@ -360,11 +349,7 @@ final class ChromeTest extends TemplateTestCase {
 	 * `core/site-title`, which meant the only way to change it was to edit a
 	 * stylesheet and ship a release. `core/site-logo` reads the `site_logo`
 	 * option instead, so the header bar, the mobile panel's head, the footer and
-	 * the top of the home page all draw whatever David chose. This asserts the
-	 * block is there four times and that the old mechanism is not.
-	 *
-	 * Four rather than three since the home hero gained its own: the design opens
-	 * the front page with the monogram at 40px and the theme drew nothing there.
+	 * the top of the home page all draw whatever David chose.
 	 *
 	 * @return void
 	 */
@@ -393,26 +378,37 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
-	 * The footer prints the year, and the year is the site's.
+	 * The mark links home, and core is what links it.
 	 *
-	 * `SiteFooter.logic.js` computes `new Date().getFullYear()` and the design
-	 * prints "© 2026 DAVID PATERNINA". ADR-0006 recorded dropping the year as a
-	 * deviation, on the reasoning that a template part is static markup — which
-	 * is true of the markup and not of a block binding, which is the mechanism
-	 * for exactly this. `wp_date()` reads the site's timezone, so the line turns
-	 * over when David's year does rather than when a visitor's does.
+	 * This test used to assert the opposite: that the mark carried
+	 * `data-dp-destination="home"`, because `Brand::link_home()` filtered the
+	 * block and rewrote the href to `home_url( '/' )` — which is what core had
+	 * already put there. Its own docblock named the motive, "the right URL and
+	 * the wrong provenance", and the cost was that the theme silently overrode
+	 * core's homepage-logo linking setting to get it. ADR-0018 deletes the
+	 * filter. The URL is unchanged; nothing of ours produces it any more.
 	 *
 	 * @return void
 	 */
-	public function test_the_footer_copyright_carries_the_year(): void {
-		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-		$year = (string) wp_date( 'Y' );
+	public function test_the_mark_links_home_through_core(): void {
+		update_option( 'site_logo', $this->seed_logo() );
 
-		$this->assertStringContainsString(
-			'© ' . $year . ' David Paternina',
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertMatchesRegularExpression(
+			'~<div class="[^"]*wp-block-site-logo[^"]*"><a href="'
+				. preg_quote( esc_url( home_url( '/' ) ), '~' )
+				. '" class="custom-logo-link" rel="home"~',
 			$html,
-			'The design\'s © line carries the year; the binding is dpaternina/site.'
+			"Core's own link, with core's own attributes on it."
 		);
+		$this->assertStringNotContainsString(
+			'data-dp-destination="home"',
+			$html,
+			'The mark is core\'s link now. Nothing of ours stamps it.'
+		);
+
+		delete_option( 'site_logo' );
 	}
 
 	/**
@@ -420,8 +416,8 @@ final class ChromeTest extends TemplateTestCase {
 	 *
 	 * This is `core/site-logo`'s own behaviour and is deliberately not papered
 	 * over: a mark drawn from PHP when the option is empty would appear on the
-	 * page and not in the editor's canvas, which is the divergence ADR-0008
-	 * exists to stop. `dp-core`'s seeder is what stops a real site being blank.
+	 * page and not in the editor's canvas. `dp-core`'s seeder is what stops a
+	 * real site being blank.
 	 *
 	 * @return void
 	 */
@@ -454,29 +450,6 @@ final class ChromeTest extends TemplateTestCase {
 	}
 
 	/**
-	 * The mark links home through the resolver, not through an href in a file.
-	 *
-	 * Core links its logo to `home_url()` directly, which is the right URL by
-	 * the wrong route: every other link in this chrome says which destination it
-	 * wants and is given one at render time, and `data-dp-destination` is what
-	 * makes that visible. The mark answers the same way.
-	 *
-	 * @return void
-	 */
-	public function test_the_mark_links_home_through_a_destination(): void {
-		update_option( 'site_logo', $this->seed_logo() );
-
-		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
-
-		$this->assertMatchesRegularExpression(
-			'~<a[^>]*data-dp-destination="home"[^>]*href="' . preg_quote( esc_url( home_url( '/' ) ), '~' ) . '"~',
-			$html
-		);
-
-		delete_option( 'site_logo' );
-	}
-
-	/**
 	 * The mark still announces the site to a screen reader.
 	 *
 	 * The old markup got its accessible name from a site title nobody could
@@ -497,13 +470,17 @@ final class ChromeTest extends TemplateTestCase {
 		delete_option( 'site_logo' );
 	}
 
+	/*
+	 * ------------------------------------------------------------ The footer
+	 */
+
 	/**
 	 * The footer has the design's three groups, and they are not one menu.
 	 *
-	 * Digest §2: SITE / WRITING / MORE. Until this phase the first group was a
+	 * Digest §2: SITE / WRITING / MORE. The first group was once a
 	 * `core/navigation` block with no `ref`, which resolved to the same menu as
 	 * the header — so the footer could only ever mirror it, and MORE did not
-	 * exist at all. Every link now names a destination.
+	 * exist at all. Every link is now an ordinary one David sets.
 	 *
 	 * @return void
 	 */
@@ -518,66 +495,164 @@ final class ChromeTest extends TemplateTestCase {
 			);
 		}
 
-		foreach ( array( 'work', 'about', 'contact', 'posts', 'uses', 'resume', 'colophon', 'privacy', 'feed' ) as $destination ) {
+		foreach ( array( 'Work', 'About', 'Contact', 'All posts', 'Uses', 'Résumé', 'Colophon', 'Privacy', 'RSS' ) as $link ) {
 			$this->assertStringContainsString(
-				'data-dp-destination="' . $destination . '"',
+				'>' . $link . '</a>',
 				$html,
-				sprintf( 'The footer names no link asking for "%s".', $destination )
+				sprintf( 'The footer names no link reading "%s".', $link )
 			);
 		}
-
-		$this->assertStringContainsString( 'Uses', $html );
-		$this->assertStringContainsString( 'Colophon', $html );
-		$this->assertStringContainsString( 'Privacy', $html );
 	}
 
 	/**
 	 * Watch is left out until it exists, rather than pointing at a 404.
 	 *
-	 * The same rule Phase 5 applied to the header. Phase 12 adds the template,
-	 * the destination and the two links at once.
+	 * The same rule Phase 5 applied to the header. Phase 12 adds the template
+	 * and the two links at once.
 	 *
 	 * @return void
 	 */
 	public function test_the_footer_leaves_watch_out_until_phase_12(): void {
 		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
 
-		$this->assertStringNotContainsString( 'dp-to-watch', $html );
-		$this->assertNotContains( 'watch', Navigation::DESTINATIONS );
+		$this->assertStringNotContainsString( '>Watch</a>', $html );
 	}
 
 	/**
-	 * Uses and Colophon resolve through the template David assigned them.
+	 * The footer prints the year, and the year is the site's.
+	 *
+	 * `SiteFooter.logic.js` computes `new Date().getFullYear()` and the design
+	 * prints "© 2026 DAVID PATERNINA". `wp_date()` reads the site's timezone, so
+	 * the line turns over when David's year does rather than when a visitor's
+	 * does.
 	 *
 	 * @return void
 	 */
-	public function test_uses_and_colophon_resolve_through_their_templates(): void {
-		$uses     = $this->seed_page( 'What I use', Navigation::TEMPLATES['uses'] );
-		$colophon = $this->seed_page( 'How this is made', Navigation::TEMPLATES['colophon'] );
+	public function test_the_footer_copyright_carries_the_year(): void {
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+		$year = (string) wp_date( 'Y' );
 
-		$navigation = new Navigation( new Destinations() );
+		$this->assertStringContainsString(
+			'© ' . $year . ' David Paternina',
+			$html,
+			'The design\'s © line carries the year; the binding is dpaternina/site.'
+		);
+	}
 
-		$this->assertSame( $this->permalink( $uses ), $navigation->url_for( 'uses' ) );
-		$this->assertSame( $this->permalink( $colophon ), $navigation->url_for( 'colophon' ) );
+	/*
+	 * --------------------------------------------------------------- The tone
+	 */
+
+	/**
+	 * The tone filter is attached to the blocks that actually ask for it.
+	 *
+	 * It used to run on bare `render_block`, which meant parsing a class
+	 * attribute for every block on every page to find two paragraphs. Narrowing
+	 * it means the list of block types has to keep matching the markup, so the
+	 * markup is what this reads.
+	 *
+	 * @return void
+	 */
+	public function test_every_block_asking_for_a_tone_is_one_the_filter_listens_to(): void {
+		$asking = array();
+
+		foreach ( $this->theme_markup_files() as $relative => $markup ) {
+			if ( ! str_contains( $markup, PostPresentation::TONE_CLASS ) ) {
+				continue;
+			}
+
+			preg_match_all( '~<!--\s+wp:([a-z0-9/-]+)\s+(\{.*?\})\s+(?:/)?-->~', $markup, $blocks, PREG_SET_ORDER );
+
+			foreach ( $blocks as $block ) {
+				if ( ! str_contains( $block[2], PostPresentation::TONE_CLASS ) ) {
+					continue;
+				}
+
+				$name = str_contains( $block[1], '/' ) ? $block[1] : 'core/' . $block[1];
+
+				$asking[ $name ] = $relative;
+			}
+		}
+
+		$this->assertNotEmpty( $asking, 'Nothing asks for a tone, so this test proves nothing.' );
+
+		foreach ( $asking as $name => $relative ) {
+			$this->assertContains(
+				$name,
+				PostPresentation::TONE_BLOCKS,
+				sprintf(
+					'%s carries %s on a %s, which PostPresentation::TONE_BLOCKS does not list, so the tone is silently dropped.',
+					$relative,
+					PostPresentation::TONE_CLASS,
+					$name
+				)
+			);
+		}
 	}
 
 	/**
-	 * Privacy follows Settings to Privacy, which is core's own nomination.
+	 * The tone still lands on the badge above a post's title.
 	 *
 	 * @return void
 	 */
-	public function test_privacy_follows_the_privacy_setting(): void {
-		$navigation = new Navigation( new Destinations() );
+	public function test_the_tone_class_still_reaches_the_badge(): void {
+		$this->seed_categories();
+		$this->seed_series();
 
-		update_option( 'wp_page_for_privacy_policy', 0 );
+		$posts = $this->seed_posts( 2 );
 
-		$this->assertNull( $navigation->url_for( 'privacy' ), 'No page chosen means no link, not a link to the root.' );
+		$this->file_under_series( $posts[0] );
 
-		$page = $this->seed_page( 'What I keep' );
+		$this->assertStringContainsString(
+			'is-tone-pink',
+			$this->render( $this->permalink( $posts[0] ), 'single', array( 'single.php', 'index.php' ) )
+		);
 
-		update_option( 'wp_page_for_privacy_policy', $page );
+		$this->assertStringContainsString(
+			'is-tone-teal',
+			$this->render( $this->permalink( $posts[1] ), 'single', array( 'single.php', 'index.php' ) )
+		);
+	}
 
-		$this->assertSame( $this->permalink( $page ), $navigation->url_for( 'privacy' ) );
+	/*
+	 * ------------------------------------------------------------------ Both
+	 */
+
+	/**
+	 * The chrome is on every template this phase ships.
+	 *
+	 * @return void
+	 */
+	public function test_every_template_is_wrapped_in_the_chrome(): void {
+		$this->seed_categories();
+		$this->seed_series();
+		$this->seed_posts( 2 );
+		$this->file_under_series( $this->posts[0] );
+
+		$page = $this->seed_posts_page();
+
+		$category = get_category_link( $this->categories['dev'] );
+		$series   = get_term_link( $this->series );
+
+		$this->assertIsString( $category );
+		$this->assertIsString( $series );
+
+		$views = array(
+			'front-page'         => array( home_url( '/' ), self::HIERARCHY ),
+			'home'               => array( $this->permalink( $page ), array( 'home.php', 'index.php' ) ),
+			'single'             => array( $this->permalink( $this->posts[0] ), array( 'single.php', 'index.php' ) ),
+			'category'           => array( $category, array( 'category.php', 'index.php' ) ),
+			'taxonomy-dp_series' => array( $series, array( 'taxonomy-dp_series.php', 'index.php' ) ),
+		);
+
+		foreach ( $views as $type => $view ) {
+			$html = $this->render( $view[0], $type, $view[1] );
+
+			$this->assertStringContainsString( 'dp-header', $html, $type . ' has a header.' );
+			$this->assertStringContainsString( 'dp-footer', $html, $type . ' has a footer.' );
+			$this->assertStringContainsString( 'dp-cta-band', $html, $type . ' closes on the CTA band.' );
+			$this->assertStringContainsString( '<main', $html, $type . ' has a main landmark.' );
+		}
 	}
 
 	/**
@@ -614,42 +689,5 @@ final class ChromeTest extends TemplateTestCase {
 		);
 
 		return $attachment;
-	}
-
-	/**
-	 * The chrome is on every template this phase ships.
-	 *
-	 * @return void
-	 */
-	public function test_every_template_is_wrapped_in_the_chrome(): void {
-		$this->seed_categories();
-		$this->seed_series();
-		$this->seed_posts( 2 );
-		$this->file_under_series( $this->posts[0], 1 );
-
-		$page = $this->seed_posts_page();
-
-		$category = get_category_link( $this->categories['dev'] );
-		$series   = get_term_link( $this->series );
-
-		$this->assertIsString( $category );
-		$this->assertIsString( $series );
-
-		$views = array(
-			'front-page'         => array( home_url( '/' ), self::HIERARCHY ),
-			'home'               => array( $this->permalink( $page ), array( 'home.php', 'index.php' ) ),
-			'single'             => array( $this->permalink( $this->posts[0] ), array( 'single.php', 'index.php' ) ),
-			'category'           => array( $category, array( 'category.php', 'index.php' ) ),
-			'taxonomy-dp_series' => array( $series, array( 'taxonomy-dp_series.php', 'index.php' ) ),
-		);
-
-		foreach ( $views as $type => $view ) {
-			$html = $this->render( $view[0], $type, $view[1] );
-
-			$this->assertStringContainsString( 'dp-header', $html, $type . ' has a header.' );
-			$this->assertStringContainsString( 'dp-footer', $html, $type . ' has a footer.' );
-			$this->assertStringContainsString( 'dp-cta-band', $html, $type . ' closes on the CTA band.' );
-			$this->assertStringContainsString( '<main', $html, $type . ' has a main landmark.' );
-		}
 	}
 }

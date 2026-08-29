@@ -15,6 +15,7 @@ use DP\Core\Content\ContentModel;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\SeriesParts;
 use DP\Core\Content\Taxonomies;
+use DP\Core\Editor\FieldForm;
 use DP\Core\Fixture\Fixture;
 use DP\Core\Fixture\Seeder;
 use WP_Post;
@@ -69,6 +70,22 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Put the URL shape back for whatever runs next.
+	 *
+	 * The seeder now sets `permalink_structure`, and `$wp_rewrite` keeps its copy
+	 * in memory for the whole process — so a run that left it set would hand the
+	 * next test in the file a different site from the one it asked for. The
+	 * transaction rolls the option back; nothing rolls the object back.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		$this->set_permalink_structure( '' );
+
+		parent::tear_down();
+	}
+
+	/**
 	 * The run produces the counts the design implies.
 	 *
 	 * @return void
@@ -78,14 +95,64 @@ final class ContentSeedTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'categories'    => 5,
-				'series'        => 1,
+
+				/*
+				 * Six, not the design's five. The sixth is seeded empty so that
+				 * the state a category archive draws for a term with nothing in
+				 * it is reachable; the design fills all five of its own, so that
+				 * state had never been looked at.
+				 */
+				'categories'    => 6,
+
+				/*
+				 * Two, not the design's one. The second is placeholder, and it
+				 * exists because "the only series" is a special case the theme
+				 * used to be able to rely on: with one term, "the series this
+				 * post is in" and "the series" cannot be told apart.
+				 */
+				'series'        => 2,
 				'roles'         => 6,
 				'shipped'       => 4,
 				'videos'        => 6,
-				'posts'         => 7,
-				'planned_parts' => 4,
-				'pages'         => 3,
+
+				/*
+				 * Seven from the design, twenty-two of filler that says so.
+				 * `posts_per_page` is ten and the index holds one post back, so
+				 * this is what makes three pages, a middle page, and an
+				 * end-of-archive panel reachable at all.
+				 */
+				'posts'         => 29,
+				'planned_parts' => 5,
+
+				/*
+				 * Ten, where the design's `PAGES` has three. Six are the views
+				 * it draws from data rather than from a page — the front page,
+				 * the writing index, Work, About, the resume and Contact — and
+				 * WordPress needs a page behind each of them or four of the
+				 * theme's custom templates are assigned to nothing and cannot be
+				 * reached at all. The tenth is the series index, which the
+				 * design does not draw and which is the only way `/series/` is
+				 * anything but a 404.
+				 */
+				'pages'         => 10,
+
+				/*
+				 * The permalink structure, `page_on_front`, `page_for_posts` and
+				 * the privacy page. The theme ships both a `front-page` and a
+				 * `home` template, which is the design's shape, and neither is
+				 * reachable until Reading says so; and under the empty structure
+				 * a fresh install starts with, none of the design's paths exists
+				 * at all.
+				 */
+				'settings'      => 4,
+
+				/*
+				 * The header, the footer, the front page, the blog index and
+				 * the 404 — saved with their links in, because ADR-0018 leaves
+				 * a shipped button with no href and a seeded site has nobody to
+				 * set them.
+				 */
+				'chrome_links'  => 5,
 
 				/*
 				 * The site logo, which the seeder sets from the file the theme
@@ -352,6 +419,10 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	/**
 	 * The two published parts are filed under the series, in order.
 	 *
+	 * Order is the publish date, oldest first, so the numbering the design prints
+	 * — part 1 then part 2 — falls out of the dates the fixture already had. The
+	 * seed writes no part numbers because there are none to write (ADR-0016).
+	 *
 	 * @return void
 	 */
 	public function test_the_series_is_wired_up(): void {
@@ -362,7 +433,8 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertInstanceOf( WP_Term::class, $term );
 		$this->assertStringContainsString(
 			'The long version of how I got here',
-			$this->term_text( $term->term_id, 'dp_series_deck' )
+			$term->description,
+			"The fixture's deck is seeded into the term description, which is where a series' deck lives."
 		);
 
 		$parts     = new SeriesParts();
@@ -376,8 +448,7 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertSame( 'The workaholic years, and why I stopped', get_the_title( $published[1] ) );
 
 		$this->assertSame( 'Before any of it was a job', $planned[0]->title );
-		$this->assertSame( '1995 — 2007', $planned[0]->years );
-		$this->assertSame( 3, $planned[0]->part, 'Planned parts continue the numbering, they do not restart it.' );
+		$this->assertStringContainsString( 'A borrowed computer', $planned[0]->note, "The note is the draft's own excerpt." );
 		$this->assertSame( 'The exhausting year', $planned[3]->title );
 	}
 
@@ -449,24 +520,354 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Pages are pages, with no template assigned and no opinion about their slug.
-	 *
-	 * CLAUDE.md section 5.1: David creates every page and picks its template. The
-	 * seed supplies content, not routing.
+	 * The design's three block-kit pages still carry their deck and their date.
 	 *
 	 * @return void
 	 */
-	public function test_pages_carry_content_and_no_routing(): void {
+	public function test_the_block_kit_pages_carry_their_content(): void {
 		$this->seeder->seed();
 
 		foreach ( array( 'uses', 'colophon', 'privacy' ) as $slug ) {
-			$page = get_page_by_path( $slug, OBJECT, 'page' );
+			$page = $this->seeded_page( $slug );
 
-			$this->assertInstanceOf( WP_Post::class, $page, $slug . ' was seeded.' );
-			$this->assertSame( '', get_page_template_slug( $page->ID ), $slug . ' has no template assigned.' );
-			$this->assertNotSame( '', get_post_meta( $page->ID, 'dp_lead', true ) );
+			$this->assertNotSame( '', get_post_meta( $page->ID, 'dp_lead', true ), $slug . ' has a deck.' );
 			$this->assertSame( 'UPDATED AUG 2026', get_post_meta( $page->ID, 'dp_updated', true ) );
 		}
+	}
+
+	/**
+	 * Every page the fixture assigns a template to gets that template.
+	 *
+	 * The value is the custom template's slug, without the extension, because
+	 * that is what the admin stores and what `wp_update_post()` would accept.
+	 *
+	 * @return void
+	 */
+	public function test_each_page_carries_the_template_the_fixture_names(): void {
+		$this->seeder->seed();
+
+		foreach ( $this->fixture->pages() as $page ) {
+			$post = $this->seeded_page( $page['slug'] );
+
+			$this->assertSame(
+				$page['template'],
+				get_page_template_slug( $post->ID ),
+				$page['slug'] . ' carries the template the fixture names.'
+			);
+		}
+	}
+
+	/**
+	 * Every template the theme offers has a page assigned to it.
+	 *
+	 * A `customTemplates` entry with nothing assigned is a view that renders
+	 * nowhere, which is the state four of the six were in: the theme declared
+	 * `dp-work`, `dp-about`, `dp-resume` and `dp-contact` and the seed created no
+	 * page that could ever use them.
+	 *
+	 * @return void
+	 */
+	public function test_every_custom_template_the_theme_offers_is_assigned(): void {
+		$this->seeder->seed();
+
+		$offered = array_keys( wp_get_theme()->get_page_templates( null, 'page' ) );
+
+		$this->assertNotEmpty( $offered, 'The active theme offers custom templates, so this is looking at something.' );
+
+		$assigned = array();
+
+		foreach ( $this->fixture->pages() as $page ) {
+			if ( '' !== $page['template'] ) {
+				$assigned[] = $page['template'];
+			}
+		}
+
+		sort( $offered );
+		sort( $assigned );
+
+		$this->assertSame( $offered, $assigned, 'Every custom template has exactly one page, and no page names one the theme does not have.' );
+	}
+
+	/**
+	 * Reading and Privacy point at the pages the run just made.
+	 *
+	 * `page_for_posts` does nothing at all while `show_on_front` is `posts`, so
+	 * the three are asserted together or the assertion is worthless.
+	 *
+	 * @return void
+	 */
+	public function test_reading_and_privacy_point_at_the_seeded_pages(): void {
+		$this->seeder->seed();
+
+		$this->assertSame( 'page', get_option( 'show_on_front' ) );
+		$this->assertSame( $this->seeded_page( 'home' )->ID, $this->setting( 'page_on_front' ) );
+		$this->assertSame( $this->seeded_page( 'writing' )->ID, $this->setting( 'page_for_posts' ) );
+		$this->assertSame( $this->seeded_page( 'privacy' )->ID, $this->setting( 'wp_page_for_privacy_policy' ) );
+	}
+
+	/**
+	 * A fresh run gives the three settings back rather than leaving them dangling.
+	 *
+	 * `show_on_front` set to `page` with a deleted `page_on_front` is a site
+	 * whose front page renders nothing, which is a worse state than the one the
+	 * seed found.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_releases_the_settings_it_set(): void {
+		$this->seeder->seed();
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( 'posts', get_option( 'show_on_front' ) );
+		$this->assertSame( 0, $this->setting( 'page_on_front' ) );
+		$this->assertSame( 0, $this->setting( 'page_for_posts' ) );
+		$this->assertSame( 0, $this->setting( 'wp_page_for_privacy_policy' ) );
+	}
+
+	/**
+	 * It leaves alone a Reading setting pointing at a page David chose.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_leaves_a_front_page_it_did_not_set(): void {
+		$this->seeder->seed();
+
+		$mine = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_title'  => 'The one David picked',
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->assertIsInt( $mine );
+
+		update_option( 'page_on_front', $mine );
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( $mine, $this->setting( 'page_on_front' ) );
+		$this->assertSame( 'page', get_option( 'show_on_front' ) );
+	}
+
+	/**
+	 * A seeded site serves the paths the design draws, not query strings.
+	 *
+	 * This is the assertion the first version of this work did not have, and the
+	 * gap it left was invisible from the inside: the sweep that checked every
+	 * page drove itself from `get_permalink()`, so it was asking WordPress what
+	 * URL it would generate and then checking that WordPress could resolve it.
+	 * Under an empty `permalink_structure` that is `?page_id=47`, which returns
+	 * 200 and proves nothing, while every path in the design 404s.
+	 *
+	 * So this asserts the shape as well as the resolution, and it resolves
+	 * through `url_to_postid()`, which runs the URL back through the rewrite
+	 * rules rather than through the function that produced it.
+	 *
+	 * @return void
+	 */
+	public function test_a_seeded_site_serves_paths_rather_than_query_strings(): void {
+		$this->seeder->seed();
+
+		$this->assertSame( $this->fixture->permalink_structure(), get_option( 'permalink_structure' ) );
+
+		foreach ( $this->fixture->pages() as $page ) {
+			$post = $this->seeded_page( $page['slug'] );
+			$url  = get_permalink( $post );
+
+			$this->assertIsString( $url );
+			$this->assertStringNotContainsString( '?', $url, $page['slug'] . ' has a path, not a query string.' );
+			$this->assertSame(
+				'front' === $page['role'] ? home_url( '/' ) : home_url( '/' . $page['slug'] . '/' ),
+				$url
+			);
+
+			/*
+			 * `go_to()` parses the URL the way a request does, through the
+			 * rewrite rules, so this is the half `get_permalink()` cannot
+			 * vouch for. It is uniform across all three roles because the
+			 * queried object of a static front page and of the posts page is
+			 * the page itself.
+			 */
+			$this->go_to( $url );
+
+			$this->assertSame(
+				$post->ID,
+				get_queried_object_id(),
+				$page['slug'] . ' is what its own path resolves to.'
+			);
+		}
+	}
+
+	/**
+	 * `dp_series`' rewrite exists, which under a plain structure it does not.
+	 *
+	 * CLAUDE.md section 5.1 names it as one of the only two registered rewrites
+	 * in the project. A rewrite is a rewrite rule, and a site with an empty
+	 * `permalink_structure` generates no rewrite rules at all — so the one route
+	 * this project owns was, on every freshly seeded site, absent.
+	 *
+	 * @return void
+	 */
+	public function test_the_series_archive_lives_under_its_own_path(): void {
+		$this->seeder->seed();
+
+		$term = get_term_by( 'slug', $this->fixture->series()['slug'], Taxonomies::SERIES );
+
+		$this->assertInstanceOf( WP_Term::class, $term );
+
+		$link = get_term_link( $term );
+
+		$this->assertIsString( $link );
+		$this->assertSame(
+			home_url( '/' . ( new Taxonomies() )->rewrite_slug() . '/' . $term->slug . '/' ),
+			$link
+		);
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertIsArray( $rules );
+		$this->assertNotEmpty( $rules, 'A structure with no rules behind it is a structure that 404s.' );
+
+		$matched = array_filter(
+			$rules,
+			static fn ( $target ): bool => is_string( $target ) && str_contains( $target, 'dp_series=' )
+		);
+
+		$this->assertNotEmpty( $matched, 'The series taxonomy has rewrite rules.' );
+
+		/*
+		 * Core's own taxonomies are in the same boat and for the same reason:
+		 * `register_taxonomy()` adds no permastruct on a site with no permalink
+		 * structure, so a flush that ran before they were re-registered would
+		 * write a rule set with no category archives in it and
+		 * `wp_rewrite_rules()` would serve that from the option forever.
+		 */
+		$categories = array_filter(
+			$rules,
+			static fn ( $target ): bool => is_string( $target ) && str_contains( $target, 'category_name=' )
+		);
+
+		$this->assertNotEmpty( $categories, 'Core\'s category archives survived the flush too.' );
+	}
+
+	/**
+	 * A structure David already chose is not replaced.
+	 *
+	 * Any non-empty structure gives the routes their rules, so there is nothing
+	 * to gain by overwriting one — and everything to lose, since it would
+	 * invalidate every URL on the site.
+	 *
+	 * @return void
+	 */
+	public function test_a_permalink_structure_already_set_is_left_alone(): void {
+		$this->set_permalink_structure( '/%year%/%postname%/' );
+
+		$report = $this->seeder->seed();
+
+		$this->assertSame( '/%year%/%postname%/', get_option( 'permalink_structure' ) );
+		$this->assertSame( 3, $report->count( 'settings' ), 'Three settings, not four: the structure was already there.' );
+	}
+
+	/**
+	 * A fresh run gives the structure back, and leaves one it did not set.
+	 *
+	 * The third case is the one that matters and the one a value comparison gets
+	 * wrong: `.wp-env.json` sets *this exact structure* at `wp-env start`, so
+	 * "the option matches the fixture" is not evidence that this script wrote it.
+	 * The index records the write, and only a recorded write is undone.
+	 *
+	 * @return void
+	 */
+	public function test_a_fresh_run_releases_only_the_structure_it_set(): void {
+		$this->seeder->seed();
+
+		Seeder::create()->wipe();
+
+		$this->assertSame( '', get_option( 'permalink_structure' ), 'What it set, it gives back.' );
+
+		$this->set_permalink_structure( '/%year%/%postname%/' );
+
+		Seeder::create()->seed();
+		Seeder::create()->wipe();
+
+		$this->assertSame( '/%year%/%postname%/', get_option( 'permalink_structure' ), 'A different structure is left alone.' );
+
+		$this->set_permalink_structure( $this->fixture->permalink_structure() );
+
+		Seeder::create()->seed();
+		Seeder::create()->wipe();
+
+		$this->assertSame(
+			$this->fixture->permalink_structure(),
+			get_option( 'permalink_structure' ),
+			'And so is the same structure, when somebody else put it there.'
+		);
+	}
+
+	/**
+	 * The environment and the fixture agree on the URL shape.
+	 *
+	 * The value is written twice on purpose and the halves do different jobs, so
+	 * the risk is that one moves and the other does not.
+	 *
+	 * `.wp-env.json` sets the structure at `wp-env start`, through WP-CLI's own
+	 * `rewrite structure --hard`. That is the only thing here that can write the
+	 * `.htaccess` Apache needs before a request ever reaches PHP: `got_mod_rewrite()`
+	 * is false under WP-CLI, and the way past it is the `apache_modules` key in
+	 * the `wp-cli.yml` wp-env already ships — a piece of environment
+	 * configuration, not something a plugin should assert on a guess.
+	 *
+	 * The seeder sets the same structure when it finds none, which is what makes
+	 * `wp dp seed` correct on a site wp-env did not build, and what makes
+	 * `get_term_link()` return `/series/life-story/` at the moment the chrome
+	 * links are saved rather than `?dp_series=life-story`.
+	 *
+	 * @return void
+	 */
+	public function test_the_environment_and_the_fixture_want_the_same_urls(): void {
+		$path = dirname( __DIR__, 2 ) . '/.wp-env.json';
+
+		$this->assertFileIsReadable( $path );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test.
+		$json = file_get_contents( $path );
+
+		$this->assertIsString( $json );
+		$this->assertStringContainsString(
+			"wp rewrite structure '" . $this->fixture->permalink_structure() . "' --hard",
+			$json,
+			'.wp-env.json sets the structure the fixture names, or a reset gives a site whose paths 404.'
+		);
+	}
+
+	/**
+	 * A setting that holds a post ID.
+	 *
+	 * @param string $option The option name.
+	 * @return int
+	 */
+	private function setting( string $option ): int {
+		$stored = get_option( $option );
+
+		$this->assertIsNumeric( $stored, $option . ' holds a post ID.' );
+
+		return (int) $stored;
+	}
+
+	/**
+	 * A page the run created, looked up the way a person would.
+	 *
+	 * @param string $slug The slug the fixture starts it with.
+	 * @return WP_Post
+	 */
+	private function seeded_page( string $slug ): WP_Post {
+		$page = get_page_by_path( $slug, OBJECT, 'page' );
+
+		$this->assertInstanceOf( WP_Post::class, $page, $slug . ' was seeded.' );
+
+		return $page;
 	}
 
 	/**
@@ -560,9 +961,15 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$this->assertSame( count( $this->fixture->roles() ), $report->count( 'roles' ) );
 		$this->assertSame( count( $this->fixture->ships() ), $report->count( 'shipped' ) );
 		$this->assertSame( count( $this->fixture->videos() ), $report->count( 'videos' ) );
-		$this->assertSame( count( $this->fixture->posts() ), $report->count( 'posts' ) );
+		$this->assertSame(
+			count( $this->fixture->posts() ) + count( $this->fixture->filler_posts() ),
+			$report->count( 'posts' )
+		);
 		$this->assertSame( count( $this->fixture->pages() ), $report->count( 'pages' ) );
-		$this->assertSame( count( $this->fixture->planned_parts() ), $report->count( 'planned_parts' ) );
+		$this->assertSame(
+			count( $this->fixture->planned_parts() ) + count( $this->fixture->extra_planned_parts() ),
+			$report->count( 'planned_parts' )
+		);
 		$this->assertSame( count( $this->fixture->categories() ), $report->count( 'categories' ) );
 	}
 
@@ -599,21 +1006,6 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Read a term meta value that should be text.
-	 *
-	 * @param int    $term_id  The term.
-	 * @param string $meta_key The field.
-	 * @return string
-	 */
-	private function term_text( int $term_id, string $meta_key ): string {
-		$value = get_term_meta( $term_id, $meta_key, true );
-
-		$this->assertIsString( $value, $meta_key . ' is text.' );
-
-		return $value;
-	}
-
-	/**
 	 * Find a seeded post of one type by its title.
 	 *
 	 * `get_page_by_title()` is deprecated, and `convertDeprecationsToExceptions`
@@ -638,5 +1030,44 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		}
 
 		$this->fail( sprintf( 'No %s titled "%s" was seeded.', $post_type, $title ) );
+	}
+
+	/**
+	 * Every timeline post the seeder writes opens with its editing form.
+	 *
+	 * The editor applies a post type's `template` only while the post is an
+	 * `auto-draft` — `setupEditor()` checks exactly that — and everything here is
+	 * published the moment it exists. So a seeded Role whose content were empty
+	 * would open on a blank locked canvas with no way to reach any of its seven
+	 * fields, which is the defect this phase set out to remove and would have
+	 * reintroduced on the only site anybody looks at.
+	 *
+	 * @return void
+	 */
+	public function test_every_seeded_timeline_post_opens_with_its_form(): void {
+		$this->seeder->seed();
+
+		$form = new FieldForm();
+
+		foreach ( PostTypes::all() as $post_type ) {
+			$posts = get_posts(
+				array(
+					'post_type'   => $post_type,
+					'numberposts' => -1,
+					'post_status' => 'any',
+				)
+			);
+
+			$this->assertNotEmpty( $posts, $post_type . ' seeded nothing.' );
+
+			foreach ( $posts as $post ) {
+				$this->assertInstanceOf( WP_Post::class, $post );
+				$this->assertSame(
+					$form->markup( $post_type ),
+					$post->post_content,
+					$post->post_title . ' would open on an empty locked canvas.'
+				);
+			}
+		}
 	}
 }

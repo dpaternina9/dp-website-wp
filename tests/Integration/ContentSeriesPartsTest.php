@@ -21,9 +21,9 @@ use WP_UnitTestCase;
  *
  * A planned part is a draft post carrying the series term. That decision has one
  * cost — draft titles in a series become public — and the whole of the rest of
- * the design depends on that cost being *exactly* one title, one year range and
- * one note. A draft's body and a draft's URL must not be reachable from anything
- * the series template is handed.
+ * the design depends on that cost being *exactly* one title and one note. A
+ * draft's body and a draft's URL must not be reachable from anything the series
+ * template is handed.
  *
  * The plan says the template is "written to make leaking body content impossible
  * rather than merely unlikely". Impossible means structural, so these tests
@@ -78,30 +78,35 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	/**
 	 * Create a part of the series.
 	 *
+	 * Two positioning arguments, because a series has two. `$day` is a day in
+	 * January 2026 and orders a series nobody has arranged; `$order` is
+	 * `menu_order` and is what the ordering screen writes. A call that passes no
+	 * `$order` is describing a series in the state every series is in until
+	 * somebody drags a row, which is what most of these tests are about.
+	 *
 	 * @param string $title  The title.
 	 * @param string $status `publish` or `draft`.
-	 * @param int    $part   Its number, which is also its `menu_order`.
-	 * @param string $years  The years a planned part covers.
-	 * @param string $note   The line under a planned part.
+	 * @param int    $day    Day of the month, which fixes the order when nothing else does.
+	 * @param string $note   The line under a planned part, stored as the excerpt.
+	 * @param int    $order  `menu_order`, or zero for a part nobody has placed.
 	 * @return int The post ID.
 	 */
-	private function part( string $title, string $status, int $part, string $years = '', string $note = '' ): int {
+	private function part( string $title, string $status, int $day, string $note = '', int $order = 0 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_title'   => $title,
 				'post_status'  => $status,
 				'post_content' => self::SECRET_BODY,
+				'post_excerpt' => $note,
 				'post_name'    => sanitize_title( $title ),
-				'menu_order'   => $part,
+				'post_date'    => sprintf( '2026-01-%02d 09:00:00', $day ),
+				'menu_order'   => $order,
 			)
 		);
 
 		$this->assertIsInt( $post_id );
 
 		wp_set_post_terms( $post_id, array( $this->series ), Taxonomies::SERIES, false );
-		update_post_meta( $post_id, 'dp_series_part', $part );
-		update_post_meta( $post_id, 'dp_series_years', $years );
-		update_post_meta( $post_id, 'dp_series_note', $note );
 
 		return $post_id;
 	}
@@ -137,7 +142,7 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	public function test_the_two_lists_are_disjoint(): void {
 		$first  = $this->part( 'The job that taught me what care looks like', 'publish', 1 );
 		$second = $this->part( 'The workaholic years', 'publish', 2 );
-		$this->part( 'Before any of it was a job', 'draft', 3, '1995 — 2007', 'A borrowed computer.' );
+		$this->part( 'Before any of it was a job', 'draft', 3, 'A borrowed computer.' );
 
 		$published = $this->parts->published( $this->series );
 		$planned   = $this->parts->planned( $this->series );
@@ -148,15 +153,15 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Planned parts come back in `menu_order`, which is what publishing preserves.
+	 * Planned parts come back oldest first, which is the order they will be read.
 	 *
 	 * @return void
 	 */
 	public function test_planned_parts_are_ordered(): void {
-		$this->part( 'The exhausting year', 'draft', 6, '2011 — 2012', '' );
-		$this->part( 'Before any of it was a job', 'draft', 3, '1995 — 2007', '' );
-		$this->part( 'The first office', 'draft', 5, '2011', '' );
-		$this->part( 'Learning the hard way', 'draft', 4, '2008 — 2010', '' );
+		$this->part( 'The exhausting year', 'draft', 6 );
+		$this->part( 'Before any of it was a job', 'draft', 3 );
+		$this->part( 'The first office', 'draft', 5 );
+		$this->part( 'Learning the hard way', 'draft', 4 );
 
 		$titles = array_map(
 			static fn ( PlannedPart $part ): string => $part->title,
@@ -175,7 +180,7 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A planned part carries its three fields and its number.
+	 * A planned part carries the two things the design draws.
 	 *
 	 * @return void
 	 */
@@ -184,27 +189,86 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 			'Before any of it was a job',
 			'draft',
 			3,
-			'1995 — 2007',
 			'A borrowed computer, a dial-up connection, and no idea this was work people paid for.'
 		);
 
 		$planned = $this->parts->planned( $this->series )[0];
 
 		$this->assertSame( 'Before any of it was a job', $planned->title );
-		$this->assertSame( '1995 — 2007', $planned->years );
 		$this->assertSame( 'A borrowed computer, a dial-up connection, and no idea this was work people paid for.', $planned->note );
-		$this->assertSame( 3, $planned->part );
 	}
 
 	/**
-	 * A planned part with no number reports null rather than nought.
+	 * A draft with no excerpt gets no note, rather than the top of its body.
+	 *
+	 * This is the sharp edge of moving the note onto the excerpt.
+	 * `get_the_excerpt()` falls back to trimming `post_content`, so reaching for
+	 * the convenient function here would print the opening of an unfinished piece
+	 * of writing under a public heading — the exact leak this whole file exists to
+	 * make impossible.
 	 *
 	 * @return void
 	 */
-	public function test_an_unnumbered_planned_part_has_no_number(): void {
-		$this->part( 'Something not yet placed', 'draft', 0 );
+	public function test_a_draft_without_an_excerpt_has_an_empty_note(): void {
+		$this->part( 'Something not yet described', 'draft', 3 );
 
-		$this->assertNull( $this->parts->planned( $this->series )[0]->part );
+		$this->assertSame( '', $this->parts->planned( $this->series )[0]->note );
+	}
+
+	/**
+	 * A published part's number is its position, oldest first.
+	 *
+	 * Nothing stores it. `dp_series_part` was a registered field with no editor
+	 * control, so it was zero on every post David wrote and the design's numbered
+	 * badges drew blank; the number is the reading order, and the reading order is
+	 * the dates (ADR-0016).
+	 *
+	 * @return void
+	 */
+	public function test_a_part_is_numbered_by_its_position(): void {
+		$first  = $this->part( 'The job that taught me what care looks like', 'publish', 1 );
+		$second = $this->part( 'The workaholic years', 'publish', 2 );
+		$third  = $this->part( 'What came after', 'publish', 3 );
+
+		$this->assertSame( 1, $this->parts->part_of( $first ) );
+		$this->assertSame( 2, $this->parts->part_of( $second ) );
+		$this->assertSame( 3, $this->parts->part_of( $third ) );
+	}
+
+	/**
+	 * Publishing a part inserts it at its date rather than appending it.
+	 *
+	 * The numbering has to be a property of the order, not of the order things
+	 * were created in, or a back-filled part would take a number already in use.
+	 *
+	 * @return void
+	 */
+	public function test_a_part_published_between_two_others_renumbers_them(): void {
+		$first = $this->part( 'The first one', 'publish', 1 );
+		$last  = $this->part( 'The last one', 'publish', 9 );
+
+		$this->assertSame( 2, $this->parts->part_of( $last ) );
+
+		$middle = $this->part( 'The one in between', 'publish', 5 );
+
+		$this->assertSame( 1, $this->parts->part_of( $first ) );
+		$this->assertSame( 2, $this->parts->part_of( $middle ) );
+		$this->assertSame( 3, $this->parts->part_of( $last ) );
+	}
+
+	/**
+	 * A draft has no number, and neither has a post in no series.
+	 *
+	 * @return void
+	 */
+	public function test_only_published_parts_of_a_series_are_numbered(): void {
+		$draft = $this->part( 'Still to come', 'draft', 3 );
+		$loose = self::factory()->post->create( array( 'post_title' => 'Filed under nothing' ) );
+
+		$this->assertIsInt( $loose );
+		$this->assertSame( 0, $this->parts->part_of( $draft ) );
+		$this->assertSame( 0, $this->parts->part_of( $loose ) );
+		$this->assertSame( 0, $this->parts->part_of( 0 ) );
 	}
 
 	/**
@@ -217,7 +281,7 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_draft_cannot_leak_its_body_or_its_permalink(): void {
-		$draft_id = $this->part( 'Before any of it was a job', 'draft', 3, '1995 — 2007', 'A borrowed computer.' );
+		$draft_id = $this->part( 'Before any of it was a job', 'draft', 3, 'A borrowed computer.' );
 		$slug     = get_post_field( 'post_name', $draft_id );
 
 		$this->assertIsString( $slug );
@@ -238,18 +302,18 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 		$this->assertIsArray( $decoded );
 		$this->assertIsArray( $decoded[0] );
 		$this->assertSame(
-			array( 'title', 'years', 'note', 'part' ),
+			array( 'title', 'note' ),
 			array_keys( $decoded[0] ),
-			'Serialising a planned part exposes four keys and no identifier.'
+			'Serialising a planned part exposes two keys and no identifier.'
 		);
 		$this->assertNotContains( $draft_id, $decoded[0], 'The post ID reached a caller.' );
 
 		$properties = array_keys( get_object_vars( $planned[0] ) );
 
 		$this->assertSame(
-			array( 'title', 'years', 'note', 'part' ),
+			array( 'title', 'note' ),
 			$properties,
-			'PlannedPart grew a property. Anything beyond these four is a way to reach the draft.'
+			'PlannedPart grew a property. Anything beyond these two is a way to reach the draft.'
 		);
 
 		$reflection = new ReflectionClass( PlannedPart::class );
@@ -316,7 +380,7 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	public function test_the_queries_are_scoped_to_one_term(): void {
 		$other = $this->term( 'Another series', 'another-series' );
 
-		$this->part( 'Ours', 'draft', 1, '2000', '' );
+		$this->part( 'Ours', 'draft', 1 );
 
 		$theirs = self::factory()->post->create(
 			array(
@@ -355,10 +419,90 @@ final class ContentSeriesPartsTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_planned_parts_are_public(): void {
-		$this->part( 'Before any of it was a job', 'draft', 3, '1995 — 2007', '' );
+		$this->part( 'Before any of it was a job', 'draft', 3 );
 
 		wp_set_current_user( 0 );
 
 		$this->assertCount( 1, $this->parts->planned( $this->series ) );
+	}
+
+	/**
+	 * **The compatibility guarantee.** A series nobody has ordered is unchanged.
+	 *
+	 * `menu_order` is back as the first sort key. Every post on this site carries
+	 * zero in it, so the sort falls straight through to the date and every
+	 * assertion above this one is a statement about that. This one says it out
+	 * loud, so that the guarantee fails as one named test rather than as eleven.
+	 *
+	 * @return void
+	 */
+	public function test_an_unordered_series_reads_in_date_order(): void {
+		$last  = $this->part( 'Written last', 'publish', 9 );
+		$first = $this->part( 'Written first', 'publish', 1 );
+
+		$this->assertSame( array( $first, $last ), $this->parts->published( $this->series ) );
+		$this->assertSame( 1, $this->parts->part_of( $first ) );
+		$this->assertSame( 2, $this->parts->part_of( $last ) );
+	}
+
+	/**
+	 * An order somebody set leads the date it was published on.
+	 *
+	 * The point of the whole field. A part written out of sequence, or a draft
+	 * created in the wrong week, sits where David put it.
+	 *
+	 * @return void
+	 */
+	public function test_an_order_somebody_set_leads_the_date(): void {
+		$early = $this->part( 'Published first, reads second', 'publish', 1, '', 2 );
+		$late  = $this->part( 'Published second, reads first', 'publish', 9, '', 1 );
+
+		$this->assertSame( array( $late, $early ), $this->parts->published( $this->series ) );
+		$this->assertSame( 1, $this->parts->part_of( $late ) );
+		$this->assertSame( 2, $this->parts->part_of( $early ) );
+	}
+
+	/**
+	 * Planned parts obey the same order, so a draft can sit between two posts.
+	 *
+	 * @return void
+	 */
+	public function test_planned_parts_take_the_order_too(): void {
+		$this->part( 'Reads third', 'draft', 1, '', 3 );
+		$this->part( 'Reads first', 'draft', 9, '', 1 );
+
+		$titles = array_map(
+			static fn ( PlannedPart $part ): string => $part->title,
+			$this->parts->planned( $this->series )
+		);
+
+		$this->assertSame( array( 'Reads first', 'Reads third' ), $titles );
+	}
+
+	/**
+	 * `all()` is one sequence with both statuses in it.
+	 *
+	 * The reading order spans the two lists, which is why the ordering screen
+	 * shows one list rather than two.
+	 *
+	 * @return void
+	 */
+	public function test_all_returns_both_statuses_in_one_sequence(): void {
+		$published = $this->part( 'Up', 'publish', 5, '', 1 );
+		$planned   = $this->part( 'Still to come', 'draft', 5, '', 2 );
+		$later     = $this->part( 'Up, later', 'publish', 5, '', 3 );
+
+		$this->assertSame( array( $published, $planned, $later ), $this->parts->all( $this->series ) );
+		$this->assertSame( array( $published, $later ), $this->parts->published( $this->series ) );
+	}
+
+	/**
+	 * `all()` on a term nobody named is an empty list, like its neighbours.
+	 *
+	 * @return void
+	 */
+	public function test_all_on_a_missing_term_returns_nothing(): void {
+		$this->assertSame( array(), $this->parts->all( 0 ) );
+		$this->assertSame( array(), $this->parts->all( -1 ) );
 	}
 }

@@ -13,7 +13,9 @@ use DP\Core\Content\ContentModel;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\Taxonomies;
 use WP_REST_Request;
+use WP_REST_Response;
 use WP_REST_Server;
+use WP_Term;
 use WP_UnitTestCase;
 
 /**
@@ -311,24 +313,73 @@ final class ContentMetaTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A term's deck is authorised against the term.
+	 * A series' deck is its description, written on the term's own REST route.
+	 *
+	 * There is no `dp_series_deck` any more and no term meta at all: the field
+	 * the design calls a deck was one core had already drawn. What that buys is
+	 * asserted here — the value goes in and comes back out through the route core
+	 * registers for the taxonomy, gated by the capability that governs the term,
+	 * with nothing of ours in the path.
 	 *
 	 * @return void
 	 */
-	public function test_term_meta_permission_follows_the_term(): void {
+	public function test_a_series_deck_is_its_description(): void {
 		$term = self::factory()->term->create( array( 'taxonomy' => Taxonomies::SERIES ) );
 
 		$this->assertIsInt( $term );
 
-		wp_set_current_user( $this->administrator );
-		$this->assertTrue( current_user_can( 'edit_term_meta', $term, 'dp_series_deck' ) );
-
 		wp_set_current_user( $this->subscriber );
-		$this->assertFalse( current_user_can( 'edit_term_meta', $term, 'dp_series_deck' ) );
+
+		$refused = $this->update_term( $term, 'A deck a subscriber should not be able to set.' );
+
+		$this->assertGreaterThanOrEqual( 400, $refused->get_status() );
 
 		wp_set_current_user( $this->administrator );
-		update_term_meta( $term, 'dp_series_deck', 'The long version of how I got here.' );
-		$this->assertSame( 'The long version of how I got here.', get_term_meta( $term, 'dp_series_deck', true ) );
+
+		$written = $this->update_term( $term, 'The long version of how I got here.' );
+		$data    = $written->get_data();
+
+		$this->assertSame( 200, $written->get_status() );
+		$this->assertIsArray( $data );
+		$this->assertArrayHasKey( 'description', $data );
+		$this->assertSame( 'The long version of how I got here.', $data['description'] );
+
+		$stored = get_term( $term, Taxonomies::SERIES );
+
+		$this->assertInstanceOf( WP_Term::class, $stored );
+		$this->assertSame( 'The long version of how I got here.', $stored->description );
+	}
+
+	/**
+	 * The series route advertises no fields of ours.
+	 *
+	 * The mirror of `ContentModelTest::test_a_series_carries_no_registered_meta_of_ours()`,
+	 * one layer up: a term field that is not registered cannot be advertised, so
+	 * a `meta` property carrying a `dp_` key here would mean one grew back.
+	 *
+	 * @return void
+	 */
+	public function test_the_series_route_advertises_no_fields_of_ours(): void {
+		wp_set_current_user( $this->administrator );
+
+		$response = $this->server->dispatch( new WP_REST_Request( 'OPTIONS', '/wp/v2/' . Taxonomies::SERIES ) );
+		$data     = $response->get_data();
+
+		$this->assertIsArray( $data );
+		$this->assertIsArray( $data['schema'] );
+		$this->assertIsArray( $data['schema']['properties'] );
+
+		$properties = $data['schema']['properties'];
+
+		$this->assertArrayHasKey( 'description', $properties, 'The deck is a core property of the term.' );
+
+		$meta = $properties['meta'] ?? array();
+
+		$this->assertIsArray( $meta );
+
+		foreach ( array_keys( is_array( $meta['properties'] ?? null ) ? $meta['properties'] : array() ) as $key ) {
+			$this->assertStringStartsNotWith( 'dp_', (string) $key, sprintf( '"%s" is advertised on the series route again.', $key ) );
+		}
 	}
 
 	/**
@@ -447,11 +498,25 @@ final class ContentMetaTest extends WP_UnitTestCase {
 	 * @param string                                            $post_type The post type.
 	 * @param int                                               $post_id   The post.
 	 * @param array<string, string|float|int|bool|list<string>> $meta      Fields to write.
-	 * @return \WP_REST_Response
+	 * @return WP_REST_Response
 	 */
-	private function update_meta( string $post_type, int $post_id, array $meta ): \WP_REST_Response {
+	private function update_meta( string $post_type, int $post_id, array $meta ): WP_REST_Response {
 		$request = new WP_REST_Request( 'POST', sprintf( '/wp/v2/%s/%d', $post_type, $post_id ) );
 		$request->set_body_params( array( 'meta' => $meta ) );
+
+		return $this->server->dispatch( $request );
+	}
+
+	/**
+	 * Write a term's description over REST.
+	 *
+	 * @param int    $term_id     The term.
+	 * @param string $description What the deck should say.
+	 * @return WP_REST_Response
+	 */
+	private function update_term( int $term_id, string $description ): WP_REST_Response {
+		$request = new WP_REST_Request( 'POST', sprintf( '/wp/v2/%s/%d', Taxonomies::SERIES, $term_id ) );
+		$request->set_body_params( array( 'description' => $description ) );
 
 		return $this->server->dispatch( $request );
 	}

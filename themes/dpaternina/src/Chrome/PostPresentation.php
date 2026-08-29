@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Theme\Chrome;
 
+use DP\Core\Content\SeriesParts;
 use WP_HTML_Tag_Processor;
 use WP_Post;
 use WP_Term;
@@ -21,17 +22,23 @@ use WP_Term;
  *     kicker: p.part ? 'SERIES · PART ' + p.part : p.cat
  *     tone:   p.part ? 'pink' : 'teal'
  *
- * and `dp_kicker`'s own registered description says an empty value means derive
- * it. Neither of those is expressible in a template: a block binding returns a
- * string but cannot choose between two meta fields, and a class cannot be bound
- * at all. So the kicker arrives through a **block bindings source**, which is
- * the sanctioned way for a theme to feed a core block a computed string, and the
- * tone arrives as a class added at render time to any block asking for one.
+ * Neither is expressible in a template: a block binding returns a string but
+ * cannot choose between two sources, and a class cannot be bound at all. So the
+ * kicker arrives through a **block bindings source**, which is the sanctioned way
+ * for a theme to feed a core block a computed string, and the tone arrives as a
+ * class added at render time to any block asking for one.
  *
- * Both are presentation and both are the theme's: switching themes changes what
- * a kicker looks like and takes this derivation with it, while `dp_kicker`,
- * `dp_tone` and the series membership stay in the database where `dp-core` put
- * them.
+ * **Nothing here reads a stored override any more.** `dp_kicker`, `dp_tone` and
+ * `dp_read_time` were registered meta fields with no editor control anywhere, so
+ * the only value they could ever hold on a post David wrote was the empty string,
+ * and the override branch that checked them first was dead code guarding a field
+ * that could not be set. All three are deleted (ADR-0016); the derivations they
+ * shadowed are the whole of what is left.
+ *
+ * All of it is presentation and all of it is the theme's: switching themes
+ * changes what a kicker looks like and takes this derivation with it, while the
+ * posts, the categories and the series membership stay in the database where
+ * `dp-core` put them.
  *
  * The same source also reads the handful of `dp_role` and `dp_ship` fields the
  * homepage's record strip and the work cards print, and that is not a
@@ -58,7 +65,42 @@ final class PostPresentation {
 	public const TONE_CLASS = 'dp-tone-auto';
 
 	/**
-	 * The tone a post in a series takes when nothing overrides it.
+	 * The block types that may carry `dp-tone-auto`.
+	 *
+	 * The filter used to be a bare `render_block`, which meant parsing a class
+	 * attribute for every block on every page to find the one or two that asked
+	 * — and ADR-0018's second rule is that a computation announces itself, not
+	 * that it stands in the way of everything else. Two blocks carry the class
+	 * today, both `core/paragraph`; `core/heading` and `core/group` are here
+	 * because the badge is a run of text in a box and those are the two other
+	 * shapes the design could reasonably draw it as.
+	 *
+	 * `DP\Tests\Integration\Templates\ChromeTest` holds the list against the
+	 * shipped markup, so a fourth block type carrying the class fails a test
+	 * rather than quietly losing its tone.
+	 *
+	 * @var list<string>
+	 */
+	public const TONE_BLOCKS = array( 'core/paragraph', 'core/heading', 'core/group' );
+
+	/**
+	 * The token a navigation label uses to ask for the neighbour's part number.
+	 *
+	 * The design labels the two cards in a post's series footer "← PART 1" and
+	 * "PART 3 →" — the number belongs to the post being linked *to*, which is a
+	 * thing `core/post-navigation-link`'s static `label` attribute cannot say.
+	 * Core hands the finished link through `previous_post_link` / `next_post_link`
+	 * with the adjacent post attached, so the number is substituted there, with
+	 * no query of our own.
+	 *
+	 * A token rather than a class because the label is text and this replaces
+	 * text. It is visible in the site editor's label field, which is the point:
+	 * the template says out loud that the label is computed.
+	 */
+	public const PART_TOKEN = '%dp-part%';
+
+	/**
+	 * The tone a post in a series takes.
 	 */
 	private const SERIES_TONE = 'pink';
 
@@ -66,6 +108,27 @@ final class PostPresentation {
 	 * The tone everything else takes.
 	 */
 	private const DEFAULT_TONE = 'teal';
+
+	/**
+	 * Words a minute, for the read time.
+	 *
+	 * The number every publication that prints one uses, and the one the design's
+	 * own fixture is consistent with: its longest post is captioned "9 MIN READ".
+	 * It is a constant rather than a filter because a site with one author reading
+	 * at a different speed is not a thing anybody has asked for.
+	 */
+	private const WORDS_PER_MINUTE = 200;
+
+	/**
+	 * Read times already computed this request, by post ID.
+	 *
+	 * A post view prints one for the post and one for each of the three cards
+	 * under it, and an archive row prints one per row. Counting the words of a
+	 * body is cheap; counting them four times for the same body is waste.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $read_times = array();
 
 	/**
 	 * The fields on a hidden post type this source will print, by post type.
@@ -102,7 +165,13 @@ final class PostPresentation {
 	 */
 	public function register(): void {
 		add_action( 'init', $this->register_source( ... ) );
-		add_filter( 'render_block', $this->add_tone_class( ... ), 10, 2 );
+
+		foreach ( self::TONE_BLOCKS as $block ) {
+			add_filter( 'render_block_' . $block, $this->add_tone_class( ... ), 10, 2 );
+		}
+
+		add_filter( 'previous_post_link', $this->number_the_part( ... ), 10, 5 );
+		add_filter( 'next_post_link', $this->number_the_part( ... ), 10, 5 );
 	}
 
 	/**
@@ -139,10 +208,14 @@ final class PostPresentation {
 		}
 
 		return match ( $key ) {
-			'kicker' => $this->kicker( $id ),
-			'tone'   => $this->tone( $id ),
-			'org'    => $this->org( $id ),
-			default  => $this->public_field( $id, $key ),
+			'kicker'       => $this->kicker( $id ),
+			'short-kicker' => $this->short_kicker( $id ),
+			'card-meta'    => $this->card_meta( $id ),
+			'part'         => $this->part_label( $id ),
+			'read-time'    => $this->read_time( $id ),
+			'tone'         => $this->tone( $id ),
+			'org'          => $this->org( $id ),
+			default        => $this->public_field( $id, $key ),
 		};
 	}
 
@@ -214,12 +287,6 @@ final class PostPresentation {
 	 * @return string|null
 	 */
 	public function kicker( int $post_id ): ?string {
-		$stored = get_post_meta( $post_id, 'dp_kicker', true );
-
-		if ( is_string( $stored ) && '' !== trim( $stored ) ) {
-			return $stored;
-		}
-
 		$part = $this->part( $post_id );
 
 		if ( $part > 0 ) {
@@ -233,18 +300,165 @@ final class PostPresentation {
 	}
 
 	/**
+	 * The kicker the design uses on a card rather than on a badge.
+	 *
+	 * The related-post cards under a post read `p.part ? 'PART ' + p.part : p.cat`
+	 * — the number without the word SERIES in front of it, because the card is
+	 * already inside a section about one post's neighbours. The badge above a
+	 * title says `'SERIES · PART ' + p.part`. Two strings, two places, and the
+	 * design writes both out; `kicker()` is the long one and this is the short.
+	 *
+	 * @param int $post_id The post.
+	 * @return string|null
+	 */
+	public function short_kicker( int $post_id ): ?string {
+		$part = $this->part_label( $post_id );
+
+		if ( null !== $part ) {
+			return $part;
+		}
+
+		$category = $this->first_category( $post_id );
+
+		return null === $category ? null : $category->name;
+	}
+
+	/**
+	 * "Dev · 6 MIN READ" — the one mono line under the featured panel's lede.
+	 *
+	 * The design builds it in `withOpen`: `meta: p.cat + ' · ' + p.read`. One
+	 * string, one element, and no link inside it — the whole panel is the click
+	 * target, so a linked category in the middle of it would be a second one.
+	 * The theme used to draw this as a `core/post-terms` beside a bound
+	 * paragraph, which is two elements, two link targets and a flex gap where
+	 * the design has a space.
+	 *
+	 * Either half may be missing — an uncategorised post, or one whose read time
+	 * has not been computed — and the separator goes with whichever half is not
+	 * there rather than leaving a leading or trailing "·".
+	 *
+	 * @param int $post_id The post.
+	 * @return string|null
+	 */
+	public function card_meta( int $post_id ): ?string {
+		$category  = $this->first_category( $post_id );
+		$read_time = $this->read_time( $post_id );
+
+		$parts = array();
+
+		if ( null !== $category ) {
+			$parts[] = $category->name;
+		}
+
+		if ( null !== $read_time ) {
+			$parts[] = $read_time;
+		}
+
+		return array() === $parts ? null : implode( ' · ', $parts );
+	}
+
+	/**
+	 * "6 min read", counted from the post's own body.
+	 *
+	 * `dp_read_time`'s registered description claimed it was "computed on save,
+	 * stored, and overridable by hand". Nothing ever computed it and nothing ever
+	 * offered the hand — only the seeder wrote it — so on every post David wrote
+	 * the byline drew an empty paragraph and the CSS hid it. Counting at render
+	 * costs one already-cached read of `post_content` and cannot go stale.
+	 *
+	 * Block delimiters are HTML comments and `wp_strip_all_tags()` takes them out
+	 * along with the markup, so what is counted is the words. The split is on
+	 * Unicode whitespace rather than `str_word_count()`, which is ASCII-shaped and
+	 * would undercount an accented word.
+	 *
+	 * @param int $post_id The post.
+	 * @return string|null Null for a post with no body to count.
+	 */
+	public function read_time( int $post_id ): ?string {
+		if ( isset( $this->read_times[ $post_id ] ) ) {
+			return '' === $this->read_times[ $post_id ] ? null : $this->read_times[ $post_id ];
+		}
+
+		$this->read_times[ $post_id ] = '';
+
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post ) {
+			return null;
+		}
+
+		$words = preg_split( '/[\p{Z}\s]+/u', wp_strip_all_tags( strip_shortcodes( $post->post_content ) ), -1, PREG_SPLIT_NO_EMPTY );
+		$count = is_array( $words ) ? count( $words ) : 0;
+
+		if ( 0 === $count ) {
+			return null;
+		}
+
+		$minutes = max( 1, (int) ceil( $count / self::WORDS_PER_MINUTE ) );
+
+		$this->read_times[ $post_id ] = sprintf(
+			/* translators: %s: a whole number of minutes. */
+			_n( '%s min read', '%s min read', $minutes, 'dpaternina' ),
+			number_format_i18n( $minutes )
+		);
+
+		return $this->read_times[ $post_id ];
+	}
+
+	/**
+	 * "Part 3", for a post that has a number in a series.
+	 *
+	 * The left column of the series archive's rows, and the label on each of the
+	 * two part cards in a post's series footer.
+	 *
+	 * @param int $post_id The post.
+	 * @return string|null Null when the post is in no series, or has no number yet.
+	 */
+	public function part_label( int $post_id ): ?string {
+		$part = $this->part( $post_id );
+
+		/* translators: %d: the part's number within its series. */
+		return $part > 0 ? sprintf( __( 'Part %d', 'dpaternina' ), $part ) : null;
+	}
+
+	/**
+	 * Fill in the part number a navigation label asked for.
+	 *
+	 * Runs on every adjacent-post link on the site and does nothing at all to one
+	 * whose format does not carry the token, which is every link outside a series
+	 * footer. `$post` is the neighbour core already found, so the number costs one
+	 * meta read rather than a second query.
+	 *
+	 * A neighbour with no number — a post filed under the series before it was
+	 * given a place in it — leaves the arrow and drops the words, rather than
+	 * printing "Part 0".
+	 *
+	 * @param mixed $output   The rendered link.
+	 * @param mixed $format   The format core built it from; carries the label.
+	 * @param mixed $link     The link text pattern. Unused.
+	 * @param mixed $post     The adjacent post, or an empty string when there is none.
+	 * @param mixed $adjacent Which side. Unused.
+	 * @return string
+	 */
+	public function number_the_part( mixed $output, mixed $format, mixed $link, mixed $post = null, mixed $adjacent = null ): string {
+		unset( $link, $adjacent );
+
+		if ( ! is_string( $output ) || ! is_string( $format ) || ! str_contains( $format, self::PART_TOKEN ) ) {
+			return is_string( $output ) ? $output : '';
+		}
+
+		$label = $post instanceof WP_Post ? $this->part_label( $post->ID ) : null;
+
+		return trim( str_replace( self::PART_TOKEN, null === $label ? '' : $label, $output ) );
+	}
+
+	/**
 	 * The tone for one post.
 	 *
 	 * @param int $post_id The post.
 	 * @return string
 	 */
 	public function tone( int $post_id ): string {
-		$stored = get_post_meta( $post_id, 'dp_tone', true );
-
-		if ( is_string( $stored ) && '' !== trim( $stored ) ) {
-			return $stored;
-		}
-
 		return $this->part( $post_id ) > 0 ? self::SERIES_TONE : self::DEFAULT_TONE;
 	}
 
@@ -287,13 +501,24 @@ final class PostPresentation {
 	/**
 	 * The post's part number within its series, or zero.
 	 *
+	 * The position of the post among the published posts carrying its series
+	 * term, oldest first. `dp-core` owns both the taxonomy and the ordered list,
+	 * and memoises the list for the request, so an archive of twenty rows each
+	 * asking for its own number still runs one query.
+	 *
+	 * Named through `class_exists()` rather than assumed, like every other seam
+	 * this theme has on the plugin: with `dp-core` deactivated nothing is a part
+	 * of anything, which is true.
+	 *
 	 * @param int $post_id The post.
 	 * @return int
 	 */
 	private function part( int $post_id ): int {
-		$value = get_post_meta( $post_id, 'dp_series_part', true );
+		if ( ! class_exists( SeriesParts::class ) ) {
+			return 0;
+		}
 
-		return is_numeric( $value ) ? (int) $value : 0;
+		return ( new SeriesParts() )->part_of( $post_id );
 	}
 
 	/**

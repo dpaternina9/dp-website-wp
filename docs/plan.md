@@ -163,7 +163,8 @@ offering, and taking, the update — observed, not assumed.
 
 - CPTs `dp_role`, `dp_ship`, `dp_video` — `public => false`,
   `publicly_queryable => false`, `rewrite => false`, `has_archive => false`,
-  `show_ui => true`, `show_in_rest => true`, `supports` trimmed to what is used.
+  `show_ui => true`, `show_in_rest => true`, `supports` trimmed to what is used —
+  plus `editor`, which is what §3.2 turned out to depend on.
   None of them has a single view: roles and ships expand inline on the timeline, videos
   render in the Watch grid. They are structured data David edits, not URLs.
 - Taxonomy `dp_series` on `post`, with term meta for the deck. Its rewrite slug
@@ -197,11 +198,34 @@ parts: [
 The series page renders the first group as "Start with these" and the second as "Still
 to come". The question was where the planned entries live.
 
-**Decision: a planned part is a draft `post`** carrying the `dp_series` term,
-`dp_series_part`, and two extra meta fields the design needs — `dp_series_years`
-("1995 — 2007") and `dp_series_note`. Ordering is `menu_order`. The series template runs
-two queries against the same term, one `publish` and one `draft`, and the draft query
-selects **title and meta only** — never content, never a permalink.
+**Decision: a planned part is a draft `post`** carrying the `dp_series` term, and
+nothing else. The series template runs two queries against the same term, one
+`publish` and one `draft`, and the draft query selects **title and excerpt only** —
+never content, never a permalink.
+
+**Amended 2026-08-26 — [ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md).**
+This section originally added three meta fields to that draft — `dp_series_part`,
+`dp_series_years` and `dp_series_note` — and ordered the series by `menu_order`. All
+four are gone:
+
+- **Ordering is the publish date, ascending.** `post` does not declare
+  `page-attributes`, so the Order box is not on the post editor and `menu_order` was
+  zero on every post; the date tiebreak that sat beside it was doing the whole sort
+  already. *Reversed 2026-08-27 —
+  [ADR-0019](adr/0019-a-series-is-ordered-by-hand.md).* The order is
+  `menu_order ASC, date ASC`, written by a drag-to-reorder screen at
+  **Posts → Series → Order parts**. `post` still declares no `page-attributes` and
+  there is still no Order box: the rejection above assumed the box was the price of
+  the column, and `wp_update_post()` writes `menu_order` without it. A series nobody
+  has ordered still reads by date, which is why this needed no migration.
+- **A part is numbered by its position** among the published posts in the term, so the
+  number and the order the page draws in cannot disagree.
+- **The note is the draft's excerpt**, which is a core field with a sidebar box David
+  can actually type into. It must be read as the *stored* excerpt: `get_the_excerpt()`
+  falls back to trimming `post_content`, which would publish the opening of an
+  unfinished post under a public heading.
+- **The years are dropped.** The design labels every planned row `DRAFT`, flat, and
+  says in its own deck that a part gets its number when it goes up.
 
 Why this over the alternatives:
 
@@ -209,9 +233,12 @@ Why this over the alternatives:
   list to the other, in the right position, with no second object to delete. A
   `dp_series_stub` post type would require deleting the stub when the real post lands —
   a manual step that gets forgotten and shows the same part twice.
-- **The editing UI is free.** Drafts already have a title, an order, and a place in the
-  admin. A stub type means another menu item; term meta holding a JSON array means
-  building a bespoke repeater and having nothing queryable at the end of it.
+- **The editing UI is free.** Drafts already have a title, an excerpt, a date and a
+  place in the admin. A stub type means another menu item; term meta holding a JSON
+  array means building a bespoke repeater and having nothing queryable at the end of
+  it. This was the strongest argument for the decision and it was the one the original
+  implementation then walked away from, by adding three fields with no UI on top of the
+  four core ones that had it.
 - **It is testable.** `WP_Query` with an explicit `post_status`, asserted directly.
 
 The cost is real and worth naming: **draft titles in this series become public.** That
@@ -226,6 +253,38 @@ Fallback if David dislikes public drafts: `dp_series_stub`, with a WP-CLI comman
 reconciles stubs against published posts and warns on duplicates.
 
 ---
+
+### 3.2 The editing surface — every field has a control ✅
+
+ADR-0016 audited the *screens* rather than the code and found that none of the ten
+fields on `post` had an editor control: registered with `show_in_rest`, written by the
+seeder, read at render, and unreachable by hand. It deleted all ten, because a post
+already knew what they held. The thirty-three on `dp_role`, `dp_ship` and `dp_video`
+and the two on `page` are the remainder of that audit, and they cannot be deleted —
+nothing else knows what they hold — so they get controls.
+
+**The three custom types open as a locked form.** `register_post_type()`'s `template`
+carries the form `DP\Core\Editor\FieldForm` generates from the type's registered
+fields, and `template_lock => 'all'` holds it together. That needed `editor` in
+`supports`: `use_block_editor_for_post_type()` returns false without it, and all three
+types were opening in the *classic* editor, whose only offer for a registered field is
+the raw Custom Fields table.
+
+**A field is a bound `core/paragraph` unless it cannot be.** Seventeen of the
+thirty-three are core's own `core/post-meta` bindings, which cost no JavaScript. The
+other sixteen — booleans, enums, lists, decimal years, post references, and the
+multi-line fields whose line breaks `sanitize_textarea_field()` would strip out of rich
+text — are one of six small blocks, all `inserter: false`.
+
+**`dp_role_id` and `dp_writeup_id` are pickers.** Attaching a shipped thing to a role
+was typing a post ID into a key/value table; it is now a search by name.
+
+**A page keeps its canvas.** Its two fields are a document sidebar panel, generated
+from the REST schema so the labels are the ones `Meta` registered.
+
+Two things the phase found: the three types had no block editor at all, and the seeder
+was passing unslashed data to `wp_insert_post()`, which silently ate a backslash out of
+every block attribute containing a quotation mark.
 
 ## Phase 4 ✅ — The house style: blocks and editor constraints
 
@@ -473,6 +532,244 @@ assertions, and the harness measured no closed row at all until then.
 The reasoning, what it cannot answer, and the alternatives are in
 `docs/adr/0012-design-parity-harness.md`. The next template review inherits the
 machinery and adds a map, not a mechanism.
+
+### 7.6 Phase 7e — the four writing templates, against the design ✅
+
+The same kind of pass as 7d, over `home`, `single`, `category` and
+`taxonomy-dp_series`. Twenty-eight divergences from `design-source/`, and the
+three worth remembering are the three that had been invisible from every
+direction the suite was looking:
+
+- **`p.dp-row-excerpt` matched nothing.** `core/post-excerpt` renders a `<div>`
+  wrapping a `<p>`, so every list row had been drawing its excerpt at
+  `--fs-base` with no measure and core's 24px block gap on top. It also hid the
+  design's deliberate inversion — `PostRow.logic.js` gives the **compact**
+  variant the larger `--fs-base` and the list variant `--fs-sm`, and flags it
+  "not a typo in the export" — because both were rendering at the same size.
+- **`:first-child` is a pseudo-class.** Core's flow-layout rule
+  `:root :where(.is-layout-flow) > :first-child` is *two* units of specificity,
+  not the one its `:where()` makes it look like, so it beats a one-class rule
+  outright rather than on load order. That is a corner of ADR-0008's hazard the
+  earlier notes had not reached, and it is why the pill row's 24px top margin
+  was silently zero.
+- **The series deck was never on the page.** The design's `SERIES.deck` was
+  `dp_series_deck` term meta at the time; the template rendered
+  `core/term-description`, which was a different field. The block was in the
+  template, the value was in the database, and nothing connected them. The gap
+  was closed from the other side a day later — the deck is the description now,
+  and the second amendment below says why.
+
+Four things a template cannot say are now derived rather than dropped — counts,
+page state, a dead pager step, and two links whose target is content rather than
+a route. ADR-0021 has the reasoning. `theme.json` was not opened.
+
+**Amended 2026-08-26 — [ADR-0016](adr/0016-a-post-carries-no-fields-of-ours.md).**
+Two of the mechanisms this phase built rested on meta fields that had no editor
+control, which is a thing none of its tests could see. `dp_series_featured` — the
+term David was supposed to flag to nominate a series — had no term-edit field, so
+on any site with more than one series the blog index's "read my life story in
+order" link was permanently inert and there was nothing he could do about it. It
+is derived now: the series with the most published parts, lowest term ID on a
+tie. `%dp-part%` still substitutes a part number into the navigation label, but
+the number is the post's position in its series rather than a stored field.
+
+The same pass deleted the other eight fields on `post` for the same reason, and
+gave `dp_series_deck` — which survived that round, and which ADR-0021's own
+closing note flagged as needing a panel — the twenty-line term-edit field it had
+been missing since Phase 3. `theme.json` was not opened for any of it.
+
+**Amended 2026-08-26 — a series' deck is its description.** That term-edit field
+lasted a day. A `dp_series` term already had a textarea for one or two sentences
+about itself, on both of the screens the new control drew on, with a column in the
+terms list table, a REST property and a place in a WXR export: **`description`**.
+Core has shipped it since taxonomies existed. The duplication had been visible in
+the read path the whole time and nobody read it that way —
+`DP\Theme\Query\ArchiveFacts::deck()` returned the meta if it was set and *fell
+back to `$term->description`* if it was not, written as a courtesy and in fact an
+admission that the two fields held the same thing. What it produced on the term
+screen was two adjacent textareas asking for the same sentence, where the one that
+worked was the one core drew and the one that was ours was the one the design
+named.
+
+So: `dp_series_deck` is unregistered, `SeriesDeckField` and its test are deleted,
+`ArchiveFacts::deck()` reads `$term->description` and nothing else, and the seeder
+writes each fixture series' deck into the description when it creates the term.
+`dp-core` now registers no term meta at all, and `MetaAuth::term_meta()` went with
+it. The design's word for it is still "deck"; the label on the screen is core's,
+and a filter on the taxonomy's labels is not worth the indirection to rename one
+field on one screen.
+
+What it costs is that `description` is a field other code may reach for — an SEO
+plugin seeding a meta description from it will now see the deck. That is the
+normal condition of a core field, and the trade is worth it: a private key nobody
+else can find is only an advantage until it is the reason nobody can edit it
+either. `description` also permits limited HTML where the meta field was
+`sanitize_textarea_field`; the deck is bound into a `core/paragraph`, and
+`WP_Block::replace_html()` runs a rich-text binding through `wp_kses_post()`, so
+this changes what can be stored rather than what can be rendered.
+
+Existing `termmeta` rows are left inert, exactly as ADR-0016 left the `postmeta`
+ones and for the same reason. `wp dp seed --fresh` clears them. The standing rule
+this leaves behind: **before registering a field, check whether the object already
+has one.**
+
+The seed grew from seven posts to twenty-nine, and the additions announce
+themselves as filler in every field they have: three pages of pagination, a
+middle page, an end-of-archive panel, a second series, a term with nothing in it
+and a captioned lead image are all states the design draws and a seven-post
+fixture could not reach.
+
+**What is still open.** The design-parity harness (ADR-0012) was **not** extended
+to these four templates in this pass, and it should be next. Two blockers, both
+concrete: the blog index's URL comes from Settings → Reading, which
+`chrome.spec.ts` mutates inside a serial block, so a parallel sweep over it is a
+race; and the shared fixture (ADR-0013) has no post carrying a category, a
+series, a read time or a featured image, so the post view has nothing to measure.
+Both are fixture work in `tests/e2e/global-setup.ts`, not new mechanism.
+
+**"BROWSE BY CATEGORY →" is cut. 2026-08-25.** The design's blog index carries two
+mono links above the list; only the series one ships. The second one's handler is
+`openArchive('MY LIFE STORY')` — it opens one *named category archive*, which §5.1
+forbids the theme from hardcoding, and neither the design nor the site has a
+categories index to point at instead. The row's geometry is identical with one
+link. David's call; do not re-add it, and do not build a `dp-categories` template
+to justify it.
+
+### 7.7 Phase 7f — the seed makes a site you can navigate ✅
+
+[ADR-0018](adr/0018-computation-is-visible-in-the-editor-or-it-does-not-happen.md)
+deleted the `dp-to-*` destination system, and named the bill it was leaving:
+"Fresh installs ship with blank links … `dp-core`'s seeder sets them on a seeded
+site, so `npm run env:reset` still produces a working site." Nothing did that.
+`wp dp seed --fresh` produced a site with **three** pages, no template assigned
+to any of them, `show_on_front` still `posts`, the privacy setting still pointing
+at WordPress's own draft, and every chrome button inert — four of the theme's six
+`customTemplates` assigned to nothing at all.
+
+Four things closed it, and only the last one needed a mechanism.
+
+**Nine pages, not three.** The design's `PAGES` has three; the other six views it
+draws — the front page, the writing index, Work, About, the résumé, Contact — are
+built from data and still need a page behind them or their templates cannot be
+reached. Each carries only the words the design actually prints: the `<h1>` its
+template binds to `core/post-title`, the deck it binds to `dp_lead`, and body
+copy where the template renders `core/post-content`. Where a template renders no
+body, the page carries a callout saying so rather than invented prose. The Work
+page is titled *"Where I worked, what came out of it."* because that is the
+design's `<h1>` and `dp-work.html` binds the `<h1>` to the post title; a page
+called "Work" would draw a page headed "Work".
+
+**Templates and settings are seeded as data.** `Fixture::pages()` gained
+`template` and `role` fields; the seeder writes `_wp_page_template` (the slug,
+`dp-work` — `wp_update_post()` rejects the `.html` spelling) and points
+`show_on_front`, `page_on_front`, `page_for_posts` and
+`wp_page_for_privacy_policy` at the pages it just made. `page_for_posts` does
+nothing while `show_on_front` is `posts`, so those three move together. `--fresh`
+gives all of them back, and only where they point at a page the seed created.
+None of this is a route: nothing registers a rewrite, branches on a slug, or
+looks a page up by name, and re-slugging any of them breaks nothing.
+
+**And the URL shape, which the first pass missed entirely.** A fresh install has
+an empty `permalink_structure`, and under plain permalinks *no rewrite rule
+exists at all* — so `/writing/`, `/work/`, `/series/life-story/` and
+`/category/dev/` were every one of them a 404 on a freshly reset site, including
+`dp_series`' rewrite slug, which §5.1 names as the one registered page-facing
+route in the project. The seeder now fills an **empty** structure with
+`/%postname%/` and leaves any structure David already chose, because any
+non-empty structure gives the routes their rules and replacing a dated one would
+invalidate every URL on the site to gain nothing.
+
+Two things about that are worth writing down, because both are easy to get wrong
+and one of them was:
+
+- **Setting the option is not enough.** `register_taxonomy()` adds a permastruct
+  only when `is_admin()` or a structure already exists, and under WP-CLI on a
+  fresh install neither is true — so `category`, `post_tag` and `dp_series` all
+  have *no* permastruct by the time the seeder runs. Change the option at that
+  point and `get_term_link()` still returns `?dp_series=life-story` (which the
+  chrome links would then be built from and saved with), and a flush writes a
+  rule set with no taxonomy rules in it that `wp_rewrite_rules()` serves from the
+  option forever, because it only regenerates when that option is empty. So
+  `create_initial_taxonomies()` and `ContentModel::register()` are re-run before
+  the flush. The side effect — core's two taxonomies reset to their declared
+  arguments — is why this happens only on a site that had no structure at all.
+- **The `.htaccess` is the environment's, not the plugin's**, and it is a
+  separate failure: with the option set and the rules correct, Apache still
+  answered `/writing/` with its own 404 because the request never reached PHP.
+  A plugin cannot honestly write that file — `got_mod_rewrite()` is false under
+  WP-CLI because there is no server to ask, so a hard flush silently does
+  nothing, and filtering `got_rewrite` to get past it would be writing Apache
+  config into a site root on a guess. WP-CLI's own `rewrite` command gets there
+  through the `apache_modules` key in the `wp-cli.yml` **wp-env already ships**.
+  So `.wp-env.json`'s `afterStart` runs `wp rewrite structure '/%postname%/'
+  --hard` on both environments, which writes the file and sets the structure
+  before the seed even starts; the seeder's own copy is the safety net for a site
+  wp-env did not build. The two values are asserted to agree, because they are
+  written twice.
+- **`wipe()` restores the structure only if it recorded writing it.** Matching on
+  the value is not the same claim: `.wp-env.json` sets that exact structure, so a
+  value comparison had `--fresh` clearing the environment's work and putting it
+  back a moment later. The index gained a `settings` map for the purpose — the
+  other three settings need no such record, since each holds the ID of a post the
+  index already vouches for.
+- **A sweep driven by `get_permalink()` cannot see any of this.** The first
+  pass's verification asked WordPress what URL it would generate and then checked
+  that WordPress could resolve it; under a plain structure that is `?page_id=47`,
+  which returns 200 and proves nothing. The tests now assert the *shape* — a path,
+  and the expected one — and resolve it with `go_to()`, which parses the URL back
+  through the rewrite rules rather than through the function that produced it.
+  The `.htaccess` half is outside what an integration test can see at all, and is
+  verified by requesting the paths over HTTP after a real reset.
+
+**The chrome links go in through a seam.** `dp-core` may not know the theme's
+files, block names or labels, so it hands over a map of *its* destination keys to
+URLs through `dp_seed_chrome_links` and the theme hands back finished markup,
+which the plugin saves as a `wp_template` / `wp_template_part` post and inspects
+none of. That post is byte-for-byte the kind of thing the site editor saves when
+David links a button by hand, so **nothing is computed at render time** and the
+editor and the front end draw the same links — which is what ADR-0018 asked for
+and what the deleted system could not give. The trigger is a `metadata.name` on
+the button, visible in List View ("Contact link", not "Button"), because ADR-0018
+rule 2 says a bare CSS class is not an announcement. A button that already
+carries a `url` is left alone.
+
+**Staleness is the hazard, and it is handled by regeneration.** A stored override
+beats the theme's file for as long as it exists, so one kept across releases
+freezes that template silently — this project has had exactly that bug, a `home`
+override still drawing a block the theme had replaced. So: every run deletes
+every override carrying the seeder's own meta mark *before* writing any, and the
+theme rebuilds each from `get_block_file_template()`, which reads the file and
+ignores the stored copy. Deletion is scoped by the mark, never by post type, so
+an override David saved is untouched by a normal run and by `--fresh` alike. The
+cost, accepted for a development site and not for a real one: a re-seed discards
+his edits to those five templates.
+
+Five files are covered — `header`, `footer`, `front-page`, `home`, `404` — and no
+more, because every override is a frozen template. The closing CTA band is
+inlined into the two of those that carry it, since a `core/pattern` reference is
+resolved at render time and cannot carry a link into the pattern; a pattern whose
+expansion gains no link stays a reference, so the query loop and the pager are
+never frozen into a seeded copy.
+
+**What is still open, and is David's or a later phase's.**
+
+- **The header's navigation has no menu.** `core/navigation` ships with no `ref`,
+  so core falls back to a page list: every published page, by title, including
+  WordPress's own "Sample Page" and the long design titles. Every item resolves,
+  and none of it is wrong — it is simply not the design's six-item nav. A
+  `wp_navigation` menu is the answer and ADR-0011 has the reason it was not built
+  here.
+- **Buttons outside the five covered files are still David's to link**, which is
+  ADR-0018 working as intended rather than a gap: "See the record" and "Get in
+  touch" on About, "Open the timeline" and "Get in touch" on the résumé, "Read
+  the series →" on Work, and the CTA band's "Say hi" on the seven templates that
+  are not seeded. Covering them means freezing those templates too, and the trade
+  gets worse the further it goes.
+- **The Contact page's three method rows** — email, X, the agency — are the
+  theme's `contact-method` pattern, which the plugin may not name. The page says
+  so on its face instead of pretending they are there.
+
+---
 
 ---
 

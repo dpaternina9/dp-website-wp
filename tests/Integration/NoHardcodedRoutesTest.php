@@ -56,7 +56,17 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 	/**
 	 * What may never appear in shipped code, and why.
 	 *
-	 * @var array<string, array{pattern: string, reason: string}>
+	 * `package` narrows a rule to one of `PACKAGES`, and only `page_on_front`
+	 * uses it. Its own reason has always said *the theme*, and the distinction it
+	 * was drawing is real: the theme renders whatever David chose and may never
+	 * ask which page he chose, while writing a starting value is what the Reading
+	 * screen does and what `dp-core`'s seeder does once, from the CLI, alongside
+	 * the site logo and the privacy page. Everything else in this list is
+	 * forbidden to both packages, `is_page()` and `get_page_by_path()` included,
+	 * so the shapes that would actually couple code to a slug are still caught
+	 * wherever they appear.
+	 *
+	 * @var array<string, array{pattern: string, reason: string, package?: string}>
 	 */
 	private const FORBIDDEN = array(
 		'add_rewrite_rule' => array(
@@ -75,8 +85,10 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 		),
 		'page_on_front'    => array(
 			'pattern' => '~[\'"]page_on_front[\'"]~',
+			'package' => 'themes/dpaternina',
 			'reason'  => 'Which page is the front page is a Reading setting. The theme must render '
-				. 'correctly whatever David chose, including nothing.',
+				. 'correctly whatever David chose, including nothing. Seeding a first value from '
+				. 'dp-core is the Reading screen\'s own act and is not this rule.',
 		),
 	);
 
@@ -184,6 +196,10 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 						continue;
 					}
 
+					if ( isset( $rule['package'] ) && ! str_starts_with( $relative, $rule['package'] . '/' ) ) {
+						continue;
+					}
+
 					if ( in_array( $relative . ':' . $name, $allowed, true ) ) {
 						continue;
 					}
@@ -261,7 +277,7 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 		sort( $declared );
 
 		$this->assertSame(
-			array( 'dp-about', 'dp-colophon', 'dp-contact', 'dp-resume', 'dp-uses', 'dp-work' ),
+			array( 'dp-about', 'dp-colophon', 'dp-contact', 'dp-resume', 'dp-series', 'dp-uses', 'dp-work' ),
 			$declared,
 			'theme.json customTemplates and templates/dp-*.html must agree. dp-watch arrives in Phase 12.'
 		);
@@ -272,6 +288,98 @@ final class NoHardcodedRoutesTest extends WP_UnitTestCase {
 				sprintf( '"%s" is offered in the admin dropdown but has no template file.', $name )
 			);
 		}
+	}
+
+	/**
+	 * No block markup the theme ships links a page on this site.
+	 *
+	 * The static scan above reads PHP, JS and TS. The theme's templates, parts
+	 * and patterns are none of those, and they are where a link lives — so a
+	 * `href="/contact"` typed into `parts/footer.html` would pass every other
+	 * assertion in this file.
+	 *
+	 * It is deliberately narrower than the rule it replaces. ADR-0006 §2 asserted
+	 * that no shipped markup contained an href *at all*, which is stronger than
+	 * §5.1 asks for and had a real cost: with an author-set link defined out of
+	 * existence, the destination filter could overwrite one without anybody
+	 * noticing it was overwriting anything (ADR-0018). What §5.1 actually forbids
+	 * is the theme deciding David's slugs, so a fragment, a `mailto:` and a link
+	 * off this site all pass, and a path here does not.
+	 *
+	 * @return void
+	 */
+	public function test_no_shipped_block_markup_links_a_page_on_this_site(): void {
+		$files = $this->markup_files();
+		$host  = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		$this->assertGreaterThan(
+			10,
+			count( $files ),
+			'The scan found almost no markup, so it would pass vacuously.'
+		);
+
+		$findings = array();
+
+		foreach ( $files as $relative => $markup ) {
+			preg_match_all( '~href="([^"]*)"~', $markup, $hrefs );
+
+			foreach ( $hrefs[1] as $href ) {
+				if ( '' === $href || str_starts_with( $href, '#' ) ) {
+					continue;
+				}
+
+				$scheme = wp_parse_url( $href, PHP_URL_SCHEME );
+
+				if ( is_string( $scheme ) && ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+					continue;
+				}
+
+				$found = wp_parse_url( $href, PHP_URL_HOST );
+
+				if ( null === $found || false === $found || $found === $host ) {
+					$findings[] = $relative . ' → ' . $href;
+				}
+			}
+		}
+
+		$this->assertSame(
+			array(),
+			$findings,
+			"Shipped markup links a page on this site. CLAUDE.md §5.1: David creates every page and\n"
+			. "picks its slug, so the theme ships the words and he sets the link once, in the site\n"
+			. 'editor. Found: ' . implode( ', ', $findings )
+		);
+	}
+
+	/**
+	 * Every template, part and pattern the theme ships, keyed by path.
+	 *
+	 * @return array<string, string>
+	 */
+	private function markup_files(): array {
+		$root  = $this->repository_root() . '/themes/dpaternina/';
+		$found = array();
+
+		foreach ( array( 'templates/*.html', 'parts/*.html', 'patterns/*.php' ) as $pattern ) {
+			$paths = glob( $root . $pattern );
+
+			if ( ! is_array( $paths ) ) {
+				continue;
+			}
+
+			foreach ( $paths as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a file in the repository under test.
+				$markup = file_get_contents( $path );
+
+				if ( is_string( $markup ) ) {
+					$found[ substr( $path, strlen( $this->repository_root() ) + 1 ) ] = $markup;
+				}
+			}
+		}
+
+		ksort( $found );
+
+		return $found;
 	}
 
 	/**

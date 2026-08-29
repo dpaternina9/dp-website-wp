@@ -40,13 +40,14 @@ final class PatternsTest extends TemplateTestCase {
 		'dpaternina/cta-banner-filled'    => 'dp-cta-banner-filled',
 		'dpaternina/contact-method'       => 'dp-contact-method',
 		'dpaternina/post-row-list'        => 'dp-rows',
+		'dpaternina/post-row-archive'     => 'dp-rows-ruled',
 		'dpaternina/post-row-compact'     => 'dp-row-compact',
 		'dpaternina/work-card'            => 'dp-cards',
 		'dpaternina/cta-band'             => 'dp-cta-band',
 	);
 
 	/**
-	 * All ten are registered under the theme's own category.
+	 * All eleven are registered under the theme's own category.
 	 *
 	 * @return void
 	 */
@@ -153,26 +154,110 @@ final class PatternsTest extends TemplateTestCase {
 	 * A pattern's copy is placeholder, and none of it invents a fact about David.
 	 *
 	 * The one thing worth asserting mechanically is that no pattern has quietly
-	 * acquired an href. CLAUDE.md §5.1 forbids one, and a pattern is where the
-	 * temptation is greatest because it looks like content rather than code.
+	 * acquired a link to a page on this site. A pattern is where the temptation
+	 * is greatest, because it looks like content rather than code — and it is
+	 * code: a pattern's markup ships in the release, so a path in one is the
+	 * theme deciding David's slugs, which is what CLAUDE.md §5.1 forbids.
+	 *
+	 * **This test used to say something stronger and wrong.** It asserted that no
+	 * pattern contained an href *at all*, which was ADR-0006 §2's own rule rather
+	 * than §5.1's, and it is the reason the destination filter could be written to
+	 * overwrite an href unconditionally: an author-set link had been defined out
+	 * of existence, so there was nothing to preserve. ADR-0018 removes the rule.
+	 * A fragment, a `mailto:`, and a link to somewhere that is not this site are
+	 * all fine; a path here is not.
 	 *
 	 * @return void
 	 */
-	public function test_no_pattern_carries_a_hardcoded_page_link(): void {
+	public function test_no_pattern_carries_a_link_to_a_page_on_this_site(): void {
 		$registry = WP_Block_Patterns_Registry::get_instance();
+		$host     = wp_parse_url( home_url(), PHP_URL_HOST );
 
 		foreach ( array_keys( self::PATTERNS ) as $slug ) {
 			$pattern = $registry->get_registered( $slug );
 
 			$this->assertIsArray( $pattern );
 
-			$content = (string) ( $pattern['content'] ?? '' );
+			preg_match_all( '~href="([^"]*)"~', (string) ( $pattern['content'] ?? '' ), $hrefs );
 
-			$this->assertDoesNotMatchRegularExpression(
-				'~href="(?!#|mailto:)[^"]~',
-				$content,
-				$slug . ' carries an href. Links say which destination they want and are resolved at render time.'
+			foreach ( $hrefs[1] as $href ) {
+				if ( '' === $href || str_starts_with( $href, '#' ) ) {
+					continue;
+				}
+
+				$scheme = wp_parse_url( $href, PHP_URL_SCHEME );
+
+				// `mailto:`, `tel:` and the like address something that is not a page.
+				if ( is_string( $scheme ) && ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
+					continue;
+				}
+
+				$this->assertNotContains(
+					wp_parse_url( $href, PHP_URL_HOST ),
+					array( null, false, $host ),
+					sprintf(
+						'%s links "%s", which is a path on this site. David creates every page and picks '
+						. 'its slug (CLAUDE.md §5.1); a pattern may not decide one for him.',
+						$slug,
+						$href
+					)
+				);
+			}
+		}
+	}
+
+	/**
+	 * The two list patterns draw the same row, because there is one of it.
+	 *
+	 * `PostRow`'s list variant appears twice — the blog index and the term
+	 * archive — inside different surroundings: the index takes the design's
+	 * empty *panel* and its end-of-archive note, the archive takes a one-line
+	 * empty state and a closing rule. A `core/query` cannot be split across two
+	 * patterns, so there are two patterns; `DP\Theme\Patterns::post_row()` is
+	 * what stops there being two rows.
+	 *
+	 * @return void
+	 */
+	public function test_the_two_list_patterns_share_one_row(): void {
+		$registry = WP_Block_Patterns_Registry::get_instance();
+		$row      = Patterns::post_row();
+
+		$this->assertStringContainsString( 'dp-row-title', $row );
+
+		foreach ( array( 'dpaternina/post-row-list', 'dpaternina/post-row-archive' ) as $slug ) {
+			$pattern = $registry->get_registered( $slug );
+
+			$this->assertIsArray( $pattern );
+			$this->assertStringContainsString(
+				$row,
+				(string) ( $pattern['content'] ?? '' ),
+				$slug . ' has its own copy of the row rather than the shared one.'
 			);
 		}
+	}
+
+	/**
+	 * Both of them carry the pager, and only the index carries the end panel.
+	 *
+	 * @return void
+	 */
+	public function test_both_lists_carry_the_pager_and_only_the_index_closes_the_archive(): void {
+		$registry = WP_Block_Patterns_Registry::get_instance();
+		$pager    = Patterns::pager();
+
+		foreach ( array( 'dpaternina/post-row-list', 'dpaternina/post-row-archive' ) as $slug ) {
+			$pattern = $registry->get_registered( $slug );
+
+			$this->assertIsArray( $pattern );
+			$this->assertStringContainsString( $pager, (string) ( $pattern['content'] ?? '' ), $slug );
+		}
+
+		$index   = $registry->get_registered( 'dpaternina/post-row-list' );
+		$archive = $registry->get_registered( 'dpaternina/post-row-archive' );
+
+		$this->assertIsArray( $index );
+		$this->assertIsArray( $archive );
+		$this->assertStringContainsString( 'dp-when-last-page', (string) ( $index['content'] ?? '' ) );
+		$this->assertStringNotContainsString( 'dp-when-last-page', (string) ( $archive['content'] ?? '' ) );
 	}
 }
