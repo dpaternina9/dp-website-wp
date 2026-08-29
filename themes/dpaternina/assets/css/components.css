@@ -2650,21 +2650,70 @@ p.dp-featured-meta:empty {
 	display: none;
 }
 
+/*
+ * The art column carries the post's own featured image, and the design's
+ * gradient-and-monogram only when there is none.
+ *
+ * This is a deliberate divergence from `design-source/dpaternina.dc.html`,
+ * which draws only the spectrum gradient with the white mark over it — David
+ * overruled the design on this point (2026-08-29): the panel shows the post's
+ * real Featured Image, set in the editor, and the gradient stays as the empty
+ * state. The parity harness (ADR-0012) maps the work template and the front
+ * page, not the blog view, so no baseline entry pins the old markup; if the
+ * blog view is ever mapped, this comment is the reason the panel and the
+ * design disagree.
+ *
+ * The layering needs no `:has()`: `core/post-featured-image` renders nothing
+ * at all when the post has no featured image (the same fact
+ * `.dp-about-portrait` leans on), so the figure either covers the empty state
+ * completely or does not exist. The design put its `opacity: 0.9` on the
+ * column itself, which would dim the photo too — so the gradient moves to a
+ * `::before` layer carrying the 0.9, and the mark's `::after` keeps the same
+ * rendered value it always had: the design's 0.55 inside the 0.9 container,
+ * flattened.
+ */
 .dp-featured-art {
+	position: relative;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	min-height: 300px;
+}
+
+.dp-featured-art::before {
+	position: absolute;
+	inset: 0;
 	background: var(--dp-gradient-spectrum);
+	content: "";
 	opacity: 0.9;
 }
 
 .dp-featured-art::after {
+	position: relative;
 	width: 96px;
 	height: 96px;
 	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
 	content: "";
-	opacity: 0.55;
+	opacity: calc(0.9 * 0.55);
+}
+
+.dp-featured-art .wp-block-post-featured-image {
+	position: absolute;
+	z-index: 1;
+	inset: 0;
+	margin: 0;
+}
+
+.dp-featured-art .wp-block-post-featured-image a {
+	display: block;
+	height: 100%;
+}
+
+.dp-featured-art .wp-block-post-featured-image img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 /* -------------------------------------------------------------------------

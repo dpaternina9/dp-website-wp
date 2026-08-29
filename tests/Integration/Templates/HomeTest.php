@@ -315,6 +315,63 @@ final class HomeTest extends TemplateTestCase {
 		$this->assertSame( 1, substr_count( $html, 'dp-featured-meta' ), 'One element, once.' );
 	}
 
+	/*
+	 * ------------------------------------------------- The panel's art column
+	 *
+	 * A deliberate divergence from the design, and David's decision (2026-08-29).
+	 * `design-source/dpaternina.dc.html` draws only the spectrum gradient with
+	 * the white monogram over it; the panel now renders the post's own Featured
+	 * Image there, linked like the title, with the gradient kept as the empty
+	 * state. The parity harness (ADR-0012) maps the work template and the front
+	 * page, not the blog view, so no baseline entry asserts the old markup —
+	 * these two tests and the comment above `.dp-featured-art` in
+	 * `components.css` are where the divergence is written down.
+	 */
+
+	/**
+	 * The featured post's own image fills the art column, linked to the post.
+	 *
+	 * @return void
+	 */
+	public function test_the_featured_panel_renders_the_posts_own_image(): void {
+		$this->seed_categories();
+		$this->seed_posts( 2 );
+
+		set_post_thumbnail( $this->posts[0], $this->seed_attachment() );
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$this->assertMatchesRegularExpression(
+			'~class="wp-block-group dp-featured-art[^"]*"><figure class="wp-block-post-featured-image"><a href="'
+			. preg_quote( esc_url( (string) get_permalink( $this->posts[0] ) ), '~' )
+			. '"~',
+			$html,
+			'The image sits inside the art column and links to the post, like the title does.'
+		);
+		$this->assertSame( 1, substr_count( $html, 'wp-block-post-featured-image' ), 'Only the panel draws it; the rows do not.' );
+	}
+
+	/**
+	 * A featured post with no image keeps the gradient-and-monogram ground.
+	 *
+	 * `core/post-featured-image` renders nothing at all when the post has no
+	 * featured image, so the empty art column is exactly the element the
+	 * stylesheet paints with the design's gradient and mark.
+	 *
+	 * @return void
+	 */
+	public function test_a_featured_post_without_an_image_keeps_the_empty_state(): void {
+		$this->seed_categories();
+		$this->seed_posts( 2 );
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$this->assertStringContainsString( 'dp-featured-art', $html );
+		$this->assertStringNotContainsString( 'wp-block-post-featured-image', $html );
+	}
+
 	/**
 	 * The two mono affordances under the pills, with the design's words on them.
 	 *
@@ -496,5 +553,25 @@ final class HomeTest extends TemplateTestCase {
 				sprintf( '"%s" is linked once from the index.', (string) get_the_title( $post_id ) )
 			);
 		}
+	}
+
+	/**
+	 * An attachment standing in for a featured image David set.
+	 *
+	 * A real upload, not `attachment->create()`, for the reason
+	 * `SingleTest::seed_attachment()` gives: `core/post-featured-image` renders
+	 * nothing for an attachment with no file behind it, so a fileless fixture
+	 * would assert on a figure that was never drawn.
+	 *
+	 * @return int
+	 */
+	private function seed_attachment(): int {
+		$attachment_id = self::factory()->attachment->create_upload_object(
+			dirname( __DIR__, 3 ) . '/themes/dpaternina/assets/img/dp-mark-white-128.png'
+		);
+
+		$this->assertIsInt( $attachment_id );
+
+		return $attachment_id;
 	}
 }
