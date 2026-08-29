@@ -57,6 +57,17 @@ final class QueryLoops {
 	public const RELATED = 'related';
 
 	/**
+	 * The one post the blog index opens on, in a panel of its own.
+	 *
+	 * Nothing is added to this loop's query vars — `perPage`, `orderBy` and
+	 * `order` say all of it, and they are David's to change in the site editor.
+	 * The name is here so that `DP\Theme\Query\FeaturedPanel` can find the
+	 * block and hold back whatever it selects, which is the only reason the loop
+	 * needs a name at all.
+	 */
+	public const FEATURED = 'featured';
+
+	/**
 	 * How many cards the design's related grid holds.
 	 */
 	public const RELATED_COUNT = 3;
@@ -69,7 +80,6 @@ final class QueryLoops {
 	public function register(): void {
 		add_filter( 'query_loop_block_query_vars', $this->query_vars( ... ), 10, 2 );
 		add_action( 'pre_get_posts', $this->order_the_series_archive( ... ) );
-		add_action( 'pre_get_posts', $this->hold_back_the_featured_post( ... ) );
 	}
 
 	/**
@@ -91,6 +101,7 @@ final class QueryLoops {
 			self::ROLES          => $this->newest_first( $query, 'dp_role', 'dp_end' ),
 			self::FEATURED_SHIPS => $this->featured( $query ),
 			self::RELATED        => $this->related( $query ),
+			self::FEATURED       => $query,
 			default              => $query,
 		};
 	}
@@ -250,66 +261,6 @@ final class QueryLoops {
 				'date'       => 'ASC',
 			)
 		);
-	}
-
-	/**
-	 * Keep the post the blog index features out of the list below it.
-	 *
-	 * The design's blog index opens on one post in a panel of its own and then
-	 * lists everything else: `POSTS.filter(p => p.slug !== POSTS[0].slug)`. The
-	 * panel is its own query block, so the only thing that needs saying here is
-	 * that the main query skips the same post.
-	 *
-	 * `post__not_in` rather than `offset`, deliberately. An offset on the main
-	 * query is the well-known way to break pagination — WordPress computes the
-	 * page's offset itself and the two do not compose — whereas excluding one ID
-	 * leaves `found_posts`, the page links and Settings to Reading all correct.
-	 *
-	 * Feeds are left alone: a reader subscribing to the blog should not silently
-	 * lose its most recent entry because a panel on a web page is showing it.
-	 *
-	 * @param WP_Query $query The query about to run.
-	 * @return void
-	 */
-	public function hold_back_the_featured_post( WP_Query $query ): void {
-		if ( is_admin() || ! $query->is_main_query() || ! $query->is_home() || $query->is_feed() ) {
-			return;
-		}
-
-		$featured = $this->newest_post();
-
-		if ( $featured > 0 ) {
-			$query->set( 'post__not_in', array( $featured ) );
-		}
-	}
-
-	/**
-	 * The post the featured panel will be showing.
-	 *
-	 * The same order the panel's own query block runs in, which is what keeps
-	 * the two agreeing without either of them being told about the other.
-	 *
-	 * @return int Zero when there is nothing published.
-	 */
-	private function newest_post(): int {
-		$newest = new WP_Query(
-			array(
-				'post_type'              => 'post',
-				'post_status'            => 'publish',
-				'fields'                 => 'ids',
-				'posts_per_page'         => 1,
-				'orderby'                => 'date',
-				'order'                  => 'DESC',
-				'no_found_rows'          => true,
-				'ignore_sticky_posts'    => true,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-			)
-		);
-
-		$first = $newest->posts[0] ?? 0;
-
-		return is_int( $first ) ? $first : 0;
 	}
 
 	/**

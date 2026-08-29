@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace DP\Tests\Integration\Templates;
 
 use DP\Theme\Blocks\DerivedLink;
+use DP\Theme\Query\QueryLoops;
 use WP_Post;
 use WP_Query;
 
@@ -145,6 +146,125 @@ final class HomeTest extends TemplateTestCase {
 		}
 
 		$this->assertContains( (string) get_the_title( $this->posts[0] ), $titles );
+	}
+
+	/*
+	 * ------------------------------------------- The panel and the hold-back
+	 *
+	 * These two used to be a coincidence. The panel is a query block; the
+	 * exclusion was a second query in `pre_get_posts` that re-derived "the
+	 * newest published post" and hoped the panel agreed. Nothing connected
+	 * them, so editing the panel in the site editor — a different `orderBy`,
+	 * `perPage: 2`, a category filter — removed one post from the index
+	 * entirely and drew another twice, with nothing anywhere saying why.
+	 *
+	 * The panel now names itself `dpLoop: featured` and
+	 * `DP\Theme\Query\FeaturedPanel` runs *that block's own query* to decide
+	 * what to hold back. Each assertion below edits the panel and checks the
+	 * two halves moved together.
+	 */
+
+	/**
+	 * Exactly one loop in the theme is the featured panel, and it is in a template.
+	 *
+	 * The hold-back finds the panel by walking the parsed template, so a panel
+	 * that moved into a pattern would not be found and the newest post would
+	 * quietly appear twice. Pinning it to a template file is cheaper than
+	 * teaching the walker to expand patterns, and this is what makes it true.
+	 *
+	 * @return void
+	 */
+	public function test_exactly_one_loop_names_itself_the_featured_panel(): void {
+		$declaring = array();
+
+		foreach ( $this->theme_markup_files() as $relative => $markup ) {
+			if ( str_contains( $markup, '"' . QueryLoops::KEY . '":"' . QueryLoops::FEATURED . '"' ) ) {
+				$declaring[] = $relative;
+			}
+		}
+
+		$this->assertSame(
+			array( 'templates/home.html' ),
+			$declaring,
+			'DP\Theme\Query\FeaturedPanel walks templates, not patterns. A featured loop anywhere else is not found.'
+		);
+	}
+
+	/**
+	 * Reordering the panel moves the hold-back with it.
+	 *
+	 * @return void
+	 */
+	public function test_reordering_the_featured_query_moves_the_hold_back_with_it(): void {
+		$this->seed_categories();
+		$this->seed_posts( 4 );
+
+		// What the site editor writes when David sets the panel to oldest first.
+		$this->override(
+			'wp_template',
+			'home',
+			str_replace( '"order":"desc"', '"order":"asc"', $this->theme_file( 'templates/home.html' ) )
+		);
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$this->assertSame( 3, substr_count( $html, 'dp-row-body' ), 'One in the panel, three in the list.' );
+		$this->assertEachPostAppearsOnce( $html );
+	}
+
+	/**
+	 * Widening it to two posts holds both of them back.
+	 *
+	 * @return void
+	 */
+	public function test_widening_the_featured_query_holds_both_posts_back(): void {
+		$this->seed_categories();
+		$this->seed_posts( 4 );
+
+		$this->override(
+			'wp_template',
+			'home',
+			str_replace( '"perPage":1', '"perPage":2', $this->theme_file( 'templates/home.html' ) )
+		);
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$this->assertSame( 2, substr_count( $html, 'dp-featured-panel' ), 'Two panels.' );
+		$this->assertSame( 2, substr_count( $html, 'dp-row-body' ), 'And two rows under them.' );
+		$this->assertEachPostAppearsOnce( $html );
+	}
+
+	/**
+	 * A home template with no panel in it holds nothing back.
+	 *
+	 * The old exclusion fired on `is_home()` alone, so it ran on any template
+	 * answering the posts index whether or not that template featured anything.
+	 *
+	 * @return void
+	 */
+	public function test_a_home_template_with_no_panel_holds_nothing_back(): void {
+		$this->seed_categories();
+		$this->seed_posts( 4 );
+
+		$this->override(
+			'wp_template',
+			'home',
+			'<!-- wp:template-part {"slug":"header"} /-->'
+			. '<!-- wp:group {"tagName":"main","layout":{"type":"default"}} -->'
+			. '<main class="wp-block-group">'
+			. '<!-- wp:pattern {"slug":"dpaternina/post-row-list"} /-->'
+			. '</main>'
+			. '<!-- /wp:group -->'
+		);
+
+		$page = $this->seed_posts_page();
+		$html = $this->render( $this->permalink( $page ), 'home', self::HIERARCHY );
+
+		$this->assertStringNotContainsString( 'dp-featured-panel', $html );
+		$this->assertSame( 4, substr_count( $html, 'dp-row-body' ), 'Nothing is featured, so nothing is held back.' );
+		$this->assertEachPostAppearsOnce( $html );
 	}
 
 	/*
@@ -355,6 +475,26 @@ final class HomeTest extends TemplateTestCase {
 
 		foreach ( array( 'dp-pagination-steps', 'wp-block-query-pagination-previous', 'page-numbers' ) as $class ) {
 			$this->assertStringContainsString( $class, $html );
+		}
+	}
+
+	/**
+	 * Every seeded post is linked from the page exactly once.
+	 *
+	 * Both the panel's title and a row's title are `core/post-title` with
+	 * `isLink`, so one count covers both places a post can appear. Twice means
+	 * the hold-back missed it; never means the hold-back took the wrong one.
+	 *
+	 * @param string $html The rendered index.
+	 * @return void
+	 */
+	private function assertEachPostAppearsOnce( string $html ): void {
+		foreach ( $this->posts as $post_id ) {
+			$this->assertSame(
+				1,
+				substr_count( $html, '>' . (string) get_the_title( $post_id ) . '</a>' ),
+				sprintf( '"%s" is linked once from the index.', (string) get_the_title( $post_id ) )
+			);
 		}
 	}
 }

@@ -88,6 +88,7 @@ final class Theme {
 		( new Chrome\SeededLinks() )->register();
 		( new Chrome\SiteFacts() )->register();
 		$archive->register();
+		( new Query\FeaturedPanel() )->register();
 		( new Query\Pagination() )->register();
 		( new Query\QueryLoops() )->register();
 	}
