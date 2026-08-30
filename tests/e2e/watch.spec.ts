@@ -84,6 +84,68 @@ test.describe( 'the Watch page', () => {
 		).toBeVisible();
 	} );
 
+	/*
+	 * The gear list's geometry, which two separate defects reached at once.
+	 *
+	 * The grid is a `core/group` asking for the default layout, so WordPress
+	 * renders it `is-layout-flow` and emits a 24px `margin-block-start` on every
+	 * child but the first; only the stylesheet makes the container a grid. In a
+	 * grid that margin lands on the items rather than between stacked rows, so
+	 * the first column rode 24px above the rest of its row. The same leak inside
+	 * `.dp-gear-group` added 24px to a 4px gap between gear items.
+	 *
+	 * And the design's own `minmax(min(300px, 100%), 1fr)` resolves to three
+	 * columns in the 1056px the container gives, which for four groups is a full
+	 * row and an orphan. Both are the kind of defect that returns silently, and
+	 * both are visible only as a measurement, so both are measured here.
+	 */
+	test( 'draws the four gear groups two by two, with the row aligned', async ( {
+		page,
+	} ) => {
+		await page.setViewportSize( { width: 1440, height: 1200 } );
+		await page.goto( watchPage );
+
+		const groups = page.locator( '.dp-gear > .dp-gear-group' );
+
+		await expect( groups ).toHaveCount( 4 );
+
+		const boxes = await groups.evaluateAll( ( nodes ) =>
+			nodes.map( ( node ) => ( {
+				top: Math.round( node.getBoundingClientRect().top ),
+				left: Math.round( node.getBoundingClientRect().left ),
+				margin: window.getComputedStyle( node ).marginBlockStart,
+			} ) )
+		);
+
+		// Two columns and two rows: the two-by-two block, not three and an orphan.
+		expect( new Set( boxes.map( ( box ) => box.left ) ).size ).toBe( 2 );
+		expect( new Set( boxes.map( ( box ) => box.top ) ).size ).toBe( 2 );
+
+		// The regression itself: the pair on a row starts at the same height.
+		expect( boxes[ 0 ].top ).toBe( boxes[ 1 ].top );
+		expect( boxes[ 2 ].top ).toBe( boxes[ 3 ].top );
+
+		// And it stays true because nothing leaks core's flow margin in, at
+		// either level — the grid's own `gap` is the only spacing here.
+		expect( boxes.map( ( box ) => box.margin ) ).toEqual( [
+			'0px',
+			'0px',
+			'0px',
+			'0px',
+		] );
+
+		const items = await page
+			.locator( '.dp-gear-group > .dp-gear-item' )
+			.evaluateAll( ( nodes ) =>
+				nodes.map(
+					( node ) => getComputedStyle( node ).marginBlockStart
+				)
+			);
+
+		expect( items.length ).toBeGreaterThan( 0 );
+		expect( [ ...new Set( items ) ] ).toEqual( [ '0px' ] );
+	} );
+
 	test( 'talks to no video host and holds no player until play is pressed', async ( {
 		page,
 	} ) => {

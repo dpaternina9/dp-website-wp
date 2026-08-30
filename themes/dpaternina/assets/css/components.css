@@ -3971,6 +3971,17 @@ figure.dp-about-portrait img {
 	grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
 }
 
+/*
+ * The same leak `.dp-section-head` and `.dp-gear` take back: the grid is a
+ * `core/group` asking for the default layout, so WordPress emits its
+ * `is-layout-flow` sibling margin and the form panel — the second child, and so
+ * the second *column* — started 24px below the aside it is meant to line up
+ * with. `align-items: start` is what makes it visible rather than absorbed.
+ */
+.dp-contact-grid.wp-block-group > * {
+	margin-block-start: 0;
+}
+
 h1.dp-contact-title {
 	margin: 0 0 22px;
 	color: var(--text-primary);
@@ -4262,6 +4273,20 @@ a.dp-contact-action-mail {
 	flex-wrap: wrap;
 	padding-bottom: 32px;
 	border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+/*
+ * Both résumé rows are `core/group` blocks asking for the default layout, so
+ * core's `is-layout-flow` sibling margin reaches the trailing child — the
+ * download buttons here, the "back to the top" buttons in the outro. Neither
+ * row shows it at desktop width, where `align-items` absorbs the margin into
+ * the line; both show it the moment the row wraps, when the 24px lands on top
+ * of the flex `row-gap` and the second line falls by 24px more than the gap
+ * asked for. `gap` is the row's spacing, and this leaves it as the only spacing.
+ */
+.dp-resume-head.wp-block-group > *,
+.dp-resume-outro.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 p.dp-resume-updated {
@@ -5016,16 +5041,57 @@ a.dp-vg-link::after {
 	text-wrap: pretty;
 }
 
+/*
+ * Four groups, two by two.
+ *
+ * This is a deliberate divergence from `design-source/dpaternina.dc.html`,
+ * which asks for `minmax(min(300px, 100%), 1fr)` — David overruled the design
+ * on this point (2026-08-29): at the design's own `--container-lg: 1120px` the
+ * gear list has 1056px of content to spend, 300px tracks and a 40px gutter
+ * resolve to exactly three columns, and the gear data is exactly four groups.
+ * Three plus an orphan, with two empty cells beside it. He chose the two-by-two
+ * block over a four-across row: four columns would need a ~230px track, and the
+ * item notes wrap badly at that width.
+ *
+ * 400px is the smallest round value that cannot draw three columns at any
+ * container this theme offers — three of them plus two gutters need 1280px of
+ * content, 224px more than `--container-lg` gives — while two of them need only
+ * 840px, so the pairing survives down to tablet widths. Below 400px of content
+ * the `min(…, 100%)` clamp collapses the list to one column, which is the
+ * design's own narrow behaviour, unchanged.
+ *
+ * The two `margin-block-start` rules below are the other half of what David saw.
+ * Both containers are `core/group` blocks asking for the default layout, so
+ * WordPress renders them `is-layout-flow` and emits its own
+ * `:root :where(.is-layout-flow) > * + * { margin-block-start: 24px }`; only
+ * this stylesheet makes them grid and flex. Core's rule is written for stacked
+ * flow children, and inside a grid it offsets every item except the first —
+ * which is why the Desk column sat 24px above Camera & light and Audio on the
+ * same row — and inside the flex column it added 24px to a 4px gap between gear
+ * items. Zeroed rather than absorbed into a smaller `gap`, so `gap` stays the
+ * single source of spacing here. The container's class is doubled for the same
+ * reason `.dp-section-head` doubles it (ADR-0011, ADR-0008): core's selector is
+ * one class of specificity, so a single-class rule here would tie and be
+ * settled by load order — which differs between the front end and the editor.
+ */
 .dp-gear {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr));
 	gap: 32px 40px;
+}
+
+.dp-gear.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 .dp-gear-group {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+}
+
+.dp-gear-group.wp-block-group > * {
+	margin-block-start: 0;
 }
 
 /* The group label is a heading wearing the mono caps label voice; the base

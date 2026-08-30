@@ -113,7 +113,15 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'series'        => 2,
 				'roles'         => 6,
 				'shipped'       => 4,
-				'videos'        => 6,
+
+				/*
+				 * Eight, not the design's six. One is the live entry, which is
+				 * never in the archive, and the featured panel takes the newest
+				 * archived video while the channel is off — so six entries draw
+				 * four cards in a three-column grid. Seven archived entries fill
+				 * two whole rows instead.
+				 */
+				'videos'        => 8,
 
 				/*
 				 * Seven from the design, twenty-two of filler that says so.
@@ -189,7 +197,7 @@ final class ContentSeedTest extends WP_UnitTestCase {
 			)
 		);
 		$this->assertCount(
-			6,
+			8,
 			get_posts(
 				array(
 					'post_type'   => PostTypes::VIDEO,

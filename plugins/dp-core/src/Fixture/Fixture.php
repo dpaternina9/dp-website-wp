@@ -325,6 +325,15 @@ final class Fixture {
 	 * the design has no real ids, and inventing one would make the Watch grid
 	 * point at somebody else's video.
 	 *
+	 * Eight, where the design's `VIDEOS` has six. One of the eight is the live
+	 * entry, which is never in the archive, and the featured panel takes the
+	 * newest archived video whenever the channel is off — which it always is
+	 * locally — so the design's six leave the archive grid drawing four cards in
+	 * a three-column grid: a full row and an orphan. Seven archived entries put
+	 * six in the grid, which is two whole rows at every column count the grid
+	 * resolves to. The two extra carry the same visibly-provisional voice as the
+	 * rest and no identifier, like every other entry here.
+	 *
 	 * @return list<array{key: string, source: string, tone: string, ref: string, title: string, duration: string, when: string, note: string, live: bool, live_meta: string}>
 	 */
 	public function videos(): array {
@@ -398,6 +407,30 @@ final class Fixture {
 				'duration'  => '4H 18M',
 				'when'      => 'JUN 2026',
 				'note'      => 'A normal working day, streamed. Surprisingly popular.',
+				'live'      => false,
+				'live_meta' => '',
+			),
+			array(
+				'key'       => 'v-6',
+				'source'    => 'youtube',
+				'tone'      => 'teal',
+				'ref'       => '',
+				'title'     => 'Placeholder: the shorter edited one',
+				'duration'  => '21 MIN',
+				'when'      => 'MAY 2026',
+				'note'      => 'Placeholder entry. Copy to be written; no identifier yet.',
+				'live'      => false,
+				'live_meta' => '',
+			),
+			array(
+				'key'       => 'v-7',
+				'source'    => 'twitch',
+				'tone'      => 'purple',
+				'ref'       => '',
+				'title'     => 'Placeholder: the long unedited one',
+				'duration'  => '3H 32M',
+				'when'      => 'MAY 2026',
+				'note'      => 'Placeholder entry. Copy to be written; no identifier yet.',
 				'live'      => false,
 				'live_meta' => '',
 			),
