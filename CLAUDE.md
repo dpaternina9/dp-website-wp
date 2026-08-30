@@ -6,10 +6,13 @@ posts imported via WXR.
 
 ## The two rules
 
-1. **All development goes through the `wordpress-development-expert` agent.**
-   The main session digests requirements, dispatches briefs (files owned,
-   acceptance criteria), reviews what comes back, and reports to David. It
-   writes no code beyond trivial one-file fixes.
+1. **Substantial development goes through the `wordpress-development-expert`
+   agent.** The main session digests requirements, dispatches briefs (files
+   owned, acceptance criteria), reviews what comes back, and reports to David.
+   But a small, diagnosed fix — a CSS correction, a wrong value, a typo — the
+   main session just makes. Dispatching an agent costs a fresh context, a
+   re-read of the repo and a full verification pass; spending that on a one-line
+   change is the failure mode, not the discipline.
 
 2. **Everything we build is manageable from wp-admin.** David sets every URL,
    every piece of copy, every nav item, every page and slug in the editor. Code
@@ -26,9 +29,12 @@ posts imported via WXR.
   the bar for writing one is deliberately high).
 - Local env is `wp-env`: `npm run env:start`, `npm run env:cli -- <args>`,
   `npm run env:reset` (re-seeds via `bin/seed.php` — fix the seed, never the DB).
-- Done means green gates: `composer lint`, `composer analyse`, `composer test`,
-  `npm run lint`, `npm run test:unit`, and `npm run test:e2e` once at the end.
-  Paste real output; run each once, no verification loops.
+- **Run only the gates your change can actually break.** CSS or a template →
+  `npm run lint` and the one affected spec. PHP → `composer lint`, `analyse`,
+  `test`. JS → `npm run test:unit`. Nothing else. `npm run test:e2e` is for
+  work that changes behaviour on a page, once, at the end — not for a
+  stylesheet. CI runs the full suite on the PR; that is what it is for. Paste
+  what you ran; never re-run a gate to feel sure.
 - Deploy is a git tag (`theme-vX.Y.Z` / `core-vX.Y.Z`) — CI builds, signs, and
   publishes to `wp-updates.fanxie.cloud`; the site auto-updates. No manual path.
 - PHP 8.4 strict + typed, WPCS/PHPStan level 9 enforced by the gates. WCAG 2.2 AA
