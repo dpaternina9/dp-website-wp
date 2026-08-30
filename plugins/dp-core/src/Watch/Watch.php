@@ -16,9 +16,11 @@ namespace DP\Core\Watch;
  * between the two blocks — one `Videos`, one `LiveStatus`, one `Thumbnails`,
  * one `TwitchApi` behind them — and registered together on `init`.
  *
- * The page has two automatic halves and they are kept apart on purpose. **Is he
- * live** is answered on the render path by `LiveStatus`, from a two-minute
- * transient. **What is in the archive** is answered by `VideoSync`, hourly under
+ * The page has two automatic halves and they are kept apart on purpose. **What
+ * is on air** is answered on the render path by `LiveStatus`, from a two-minute
+ * transient holding the whole stream — title, start instant and category — so
+ * the live card's copy comes out of the same call that proved the channel was
+ * live. **What is in the archive** is answered by `VideoSync`, hourly under
  * cron, from the two platforms' own listings; nothing about it happens while a
  * visitor waits. `TwitchApi` is shared between them because it is one
  * authenticated client, not because the two paths are one thing.

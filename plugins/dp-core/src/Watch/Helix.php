@@ -76,16 +76,27 @@ final class Helix {
 	}
 
 	/**
-	 * Whether a `helix/streams` response says the channel is live.
+	 * The live stream in a `helix/streams` response, if the channel has one.
 	 *
-	 * Helix answers an offline channel with `{"data": []}` — a valid response
-	 * meaning "no" — and anything else unreadable is `null`, meaning "the
-	 * question was not answered".
+	 * One call answers both questions the Watch page has — *is he live* and
+	 * *what is he streaming* — because Helix returns the stream's title,
+	 * `started_at` and category in the same object that proves it is on air.
+	 * Asking twice would be two round trips for one fact.
+	 *
+	 * The three "no" cases converge deliberately. Helix answers an offline
+	 * channel with `{"data": []}`; a refused request answers something that is
+	 * not a streams response at all; a listed entry whose `type` is not `live`
+	 * is a rerun rather than a broadcast. All three are `null` here, and the
+	 * caller treats every one of them as "the panel does not render" — which is
+	 * the failing-soft contract this class exists to keep. Nothing downstream
+	 * needs to distinguish "offline" from "did not answer", so nothing here
+	 * pretends it can.
 	 *
 	 * @param string $body The response body.
-	 * @return bool|null
+	 * @return LiveStream|null The stream, or null for offline and for anything
+	 *                         that could not be read.
 	 */
-	public static function is_live( string $body ): ?bool {
+	public static function stream( string $body ): ?LiveStream {
 		$decoded = json_decode( $body, true );
 
 		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
@@ -93,12 +104,18 @@ final class Helix {
 		}
 
 		foreach ( $decoded['data'] as $stream ) {
-			if ( is_array( $stream ) && 'live' === ( $stream['type'] ?? null ) ) {
-				return true;
+			if ( ! is_array( $stream ) || 'live' !== ( $stream['type'] ?? null ) ) {
+				continue;
 			}
+
+			return new LiveStream(
+				self::text( $stream['title'] ?? null ),
+				self::timestamp( $stream['started_at'] ?? null ),
+				self::text( $stream['game_name'] ?? null )
+			);
 		}
 
-		return false;
+		return null;
 	}
 
 	/**

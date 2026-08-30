@@ -11,14 +11,16 @@ namespace DP\Tests\Unit\Watch;
 
 use DP\Core\Content\VideoSource;
 use DP\Core\Watch\Helix;
+use DP\Core\Watch\LiveStream;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
  * What Twitch answers, read without ever calling Twitch.
  *
  * `Helix` is pure so that the failing-soft contract can be asserted body by
- * body: an offline channel is a real "no", and every malformed shape is a
- * `null` the HTTP layer treats as "the question was not answered". The
+ * body: every malformed shape is a `null` the HTTP layer treats as "the question
+ * was not answered", and for the streams endpoint an offline channel answers the
+ * same null, because nothing downstream renders the two differently. The
  * fixtures are the response shapes Helix documents — `data` arrays, an
  * `access_token`, a `thumbnail_url` template with literal `%{width}`.
  */
@@ -55,21 +57,40 @@ final class HelixTest extends TestCase {
 	}
 
 	/**
-	 * A live stream answers true; an offline channel answers false.
-	 *
-	 * Offline is `{"data": []}` — a valid answer meaning "no", which must not
-	 * be confused with "Twitch did not say".
+	 * A live stream comes back whole: the title, the start instant and the
+	 * category the live card is built out of.
 	 *
 	 * @return void
 	 */
-	public function test_the_live_check_distinguishes_no_from_unknown(): void {
-		$live    = '{"data":[{"id":"1","user_login":"patsypatz","type":"live"}]}';
-		$offline = '{"data":[]}';
+	public function test_a_streams_response_is_mapped_to_the_live_card(): void {
+		$body = '{"data":[{'
+			. '"id":"41375541868","user_login":"patsypatz","game_name":"Software and Game Development",'
+			. '"type":"live","title":"Building the Kiveo reading-stats screen, live",'
+			. '"viewer_count":41,"started_at":"2026-08-29T13:00:00Z",'
+			. '"thumbnail_url":"https://static-cdn.jtvnw.net/previews-ttv/live_user_patsypatz-{width}x{height}.jpg"'
+			. '}]}';
 
-		$this->assertTrue( Helix::is_live( $live ) );
-		$this->assertFalse( Helix::is_live( $offline ) );
-		$this->assertNull( Helix::is_live( 'not json' ) );
-		$this->assertNull( Helix::is_live( '{"error":"Unauthorized"}' ) );
+		$stream = Helix::stream( $body );
+
+		$this->assertInstanceOf( LiveStream::class, $stream );
+		$this->assertSame( 'Building the Kiveo reading-stats screen, live', $stream->title );
+		$this->assertSame( 'Software and Game Development', $stream->category );
+		$this->assertSame( strtotime( '2026-08-29T13:00:00Z' ), $stream->started );
+	}
+
+	/**
+	 * Offline and unreadable both answer null.
+	 *
+	 * They converge on purpose: nothing downstream renders differently for "the
+	 * channel is off" than for "Twitch did not say", so the parser does not
+	 * offer a distinction the callers would only have to collapse again.
+	 *
+	 * @return void
+	 */
+	public function test_offline_and_unreadable_both_answer_nothing(): void {
+		$this->assertNull( Helix::stream( '{"data":[]}' ) );
+		$this->assertNull( Helix::stream( 'not json' ) );
+		$this->assertNull( Helix::stream( '{"error":"Unauthorized"}' ) );
 	}
 
 	/**
@@ -79,7 +100,22 @@ final class HelixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_a_stream_that_is_not_type_live_is_not_live(): void {
-		$this->assertFalse( Helix::is_live( '{"data":[{"id":"1","type":""}]}' ) );
+		$this->assertNull( Helix::stream( '{"data":[{"id":"1","type":"","title":"x"}]}' ) );
+	}
+
+	/**
+	 * A live stream Twitch describes thinly still renders: the missing fields
+	 * are captions the card omits, not a reason to hide a broadcast.
+	 *
+	 * @return void
+	 */
+	public function test_a_live_stream_with_missing_fields_still_answers(): void {
+		$stream = Helix::stream( '{"data":[{"id":"1","type":"live"}]}' );
+
+		$this->assertInstanceOf( LiveStream::class, $stream );
+		$this->assertSame( '', $stream->title );
+		$this->assertSame( '', $stream->category );
+		$this->assertSame( 0, $stream->started );
 	}
 
 	/**

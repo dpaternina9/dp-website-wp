@@ -19,6 +19,11 @@ namespace DP\Core\Watch;
  * archive.slice(1)`, transcribed. `LiveStatus` caches the answer, so both
  * blocks read the same one.
  *
+ * The live entry is never in this grid whichever way that goes, because
+ * `Videos::archive()` excludes every `dp_video` carrying `dp_live` and the
+ * automatic live card is composed rather than queried — it is not a post at all.
+ * There is nothing here that could double-count it.
+ *
  * A card is static until pressed. Without JavaScript its footer is a plain
  * link to the video on Twitch or YouTube; the theme's script upgrades the
  * press to an in-place iframe. The thumbnail, when there is one, is a cached
@@ -78,9 +83,13 @@ final class VideoGrid {
 
 		$archive = $this->videos->archive();
 
-		$featured_is_live = $this->status->live() && null !== $this->videos->live_entry();
-
-		if ( ! $featured_is_live ) {
+		/*
+		 * Being live is the whole condition. The panel used to need a hand-written
+		 * `dp_live` post as well, and had to fall back to the archive without one;
+		 * now `LiveEntry` composes the card from the stream itself, so live always
+		 * means the panel is the stream and this grid is the whole archive.
+		 */
+		if ( ! $this->status->live() ) {
 			$archive = array_slice( $archive, 1 );
 		}
 

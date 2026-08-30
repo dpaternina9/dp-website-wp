@@ -36,7 +36,7 @@ final class TwitchApi {
 	public const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 
 	/**
-	 * The streams endpoint, answering "is this login live".
+	 * The streams endpoint, answering both "is this login live" and "with what".
 	 *
 	 * @var string
 	 */
@@ -114,19 +114,24 @@ final class TwitchApi {
 	private const MAX_PAGES = 5;
 
 	/**
-	 * Whether the configured login is live right now.
+	 * What the configured login is streaming right now, if anything.
+	 *
+	 * The whole of the live card comes from here: the title, the start instant
+	 * the elapsed time is derived from, and the category. One request, because
+	 * Helix reports all of it in the object that proves the channel is on air.
 	 *
 	 * @param string $login The Twitch login.
-	 * @return bool|null True or false when Helix answered, null when it did not.
+	 * @return LiveStream|null The stream, or null for offline, unconfigured, and
+	 *                         every kind of no answer at all.
 	 */
-	public function is_live( string $login ): ?bool {
+	public function live_stream( string $login ): ?LiveStream {
 		if ( '' === $login ) {
 			return null;
 		}
 
 		$body = $this->get( add_query_arg( 'user_login', rawurlencode( $login ), self::STREAMS_URL ) );
 
-		return null === $body ? null : Helix::is_live( $body );
+		return null === $body ? null : Helix::stream( $body );
 	}
 
 	/**

@@ -55,11 +55,12 @@ final class Videos {
 	}
 
 	/**
-	 * The live entry, or null when David has not written one.
+	 * The live override, or null when David has not written one.
 	 *
-	 * The first published `dp_video` with `dp_live` set. Whether it *renders*
-	 * is `LiveStatus`'s question; this only answers whether the copy for it
-	 * exists.
+	 * The first published `dp_video` with `dp_live` set. It is no longer what the
+	 * live panel is *made of* — `LiveEntry` composes that from the stream Twitch
+	 * reports — only what it is overridden by, field by field. Whether anything
+	 * renders at all is `LiveStatus`'s question.
 	 *
 	 * @return Video|null
 	 */

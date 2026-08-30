@@ -13,17 +13,23 @@ namespace DP\Core\Watch;
  * The panel at the top of the Watch page: the stream, or the latest video.
  *
  * The design's rule, kept exactly: while the channel is live the panel is the
- * live entry David wrote (`dp_live`), and the whole archive stays below it;
- * while it is not, the panel is the newest archived video wearing a LATEST
- * badge, and the grid starts from the second. `LiveStatus` is the one answer
- * both this block and `dp/video-grid` read, so the two cannot disagree about
- * which entry is up top.
+ * stream and the whole archive stays below it; while it is not, the panel is the
+ * newest archived video wearing a LATEST badge, and the grid starts from the
+ * second. `LiveStatus` is the one answer both this block and `dp/video-grid`
+ * read, so the two cannot disagree about which entry is up top.
+ *
+ * **The live panel's copy comes from Twitch**, composed by `LiveEntry` out of the
+ * same cached `helix/streams` answer that decided the channel was live. A
+ * `dp_live` post is an override rather than a requirement: any field David has
+ * written on it wins, and any field he has left blank is Twitch's. With no such
+ * post the card is entirely automatic, which is the point — nothing about being
+ * live is managed by hand.
  *
  * Everything visible is either David's content (the `dp_video` posts, the
- * Settings → General login) or a translatable label. The live check and the
- * thumbnail cache both fail soft: with no credentials this panel simply never
- * claims to be live, and with no cached image the card's own glow art is the
- * picture.
+ * Settings → General login), a fact Twitch reported, or a translatable label.
+ * The live check and the thumbnail cache both fail soft: with no credentials
+ * this panel simply never claims to be live, and with no cached image the card's
+ * own glow art is the picture.
  *
  * Like `dp/timeline`, the block is dynamic, lives in the plugin because it
  * renders content, and is styled entirely by the theme.
@@ -79,9 +85,12 @@ final class WatchFeatured {
 	public function render(): string {
 		$this->thumbnails->replenish();
 
-		$login = Settings::login();
-		$live  = $this->status->live() ? $this->videos->live_entry() : null;
-		$entry = $live ?? $this->videos->archive()[0] ?? null;
+		$login  = Settings::login();
+		$stream = $this->status->stream();
+		$live   = null === $stream
+			? null
+			: LiveEntry::compose( $this->videos->live_entry(), $stream, time() );
+		$entry  = $live->entry ?? $this->videos->archive()[0] ?? null;
 
 		if ( null === $entry ) {
 			return '';
@@ -98,7 +107,7 @@ final class WatchFeatured {
 
 		return '<div ' . $wrapper . '>'
 			. $this->media( $entry, $login, $is_live )
-			. $this->body( $entry, $login, $is_live )
+			. $this->body( $entry, $login, $live )
 			. '</div>';
 	}
 
@@ -137,13 +146,14 @@ final class WatchFeatured {
 	/**
 	 * The text half: kicker, title, note, actions, and the promise under them.
 	 *
-	 * @param Video  $entry   The featured entry.
-	 * @param string $login   The configured Twitch login.
-	 * @param bool   $is_live Whether the panel is the live stream.
+	 * @param Video          $entry The featured entry.
+	 * @param string         $login The configured Twitch login.
+	 * @param LiveEntry|null $live  The composed live entry, or null when the panel
+	 *                              is the latest archived video instead.
 	 * @return string
 	 */
-	private function body( Video $entry, string $login, bool $is_live ): string {
-		if ( $is_live ) {
+	private function body( Video $entry, string $login, ?LiveEntry $live ): string {
+		if ( null !== $live ) {
 			/* translators: %s: the platform's name, e.g. "Twitch". */
 			$badge = sprintf( __( 'Live now on %s', 'dp-core' ), $entry->source_name() );
 			$meta  = $entry->live_meta;
@@ -157,7 +167,7 @@ final class WatchFeatured {
 		}
 
 		$kicker = '<p class="dp-watch-featured-kicker"><span class="dp-vg-badge">' . esc_html( $badge ) . '</span>'
-			. ( '' === $meta ? '' : '<span class="dp-vg-meta">' . esc_html( $meta ) . '</span>' )
+			. $this->meta( $meta, $live )
 			. '</p>';
 
 		$note = '' === $entry->note
@@ -171,6 +181,41 @@ final class WatchFeatured {
 			. $this->actions( $entry, $login, $label )
 			. '<p class="dp-watch-players-note">' . esc_html__( 'Players load only when you press play', 'dp-core' ) . '</p>'
 			. '</div>';
+	}
+
+	/**
+	 * The strapline beside the badge, and the two attributes that keep it honest.
+	 *
+	 * A derived live strapline prints an elapsed time, and an elapsed time is
+	 * only true at the instant it is rendered. So the element carries the
+	 * stream's start (`data-dp-live-since`) and the sentence to re-fill
+	 * (`data-dp-live-format`, `%s` where the elapsed time goes), and the theme's
+	 * script recomputes the number in the reader's browser — server-rendered,
+	 * client-corrected, so a page held by a cache cannot go on claiming an hour
+	 * that has since become three.
+	 *
+	 * Both attributes are absent unless `LiveEntry` says the strapline is the
+	 * derived one. A strapline David wrote is his, and nothing invites the script
+	 * to rewrite it.
+	 *
+	 * @param string         $text The strapline.
+	 * @param LiveEntry|null $live The composed live entry, or null.
+	 * @return string
+	 */
+	private function meta( string $text, ?LiveEntry $live ): string {
+		if ( '' === $text ) {
+			return '';
+		}
+
+		$ticker = null !== $live && $live->since > 0
+			? sprintf(
+				' data-dp-live-since="%d" data-dp-live-format="%s"',
+				$live->since,
+				esc_attr( $live->format )
+			)
+			: '';
+
+		return '<span class="dp-vg-meta"' . $ticker . '>' . esc_html( $text ) . '</span>';
 	}
 
 	/**

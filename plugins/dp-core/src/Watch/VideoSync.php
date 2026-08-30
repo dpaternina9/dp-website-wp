@@ -21,7 +21,8 @@ use WP_Query;
  * The Watch page's requirement is that it manages itself: a VOD appears because
  * it was streamed, an upload appears because it was uploaded, and David does not
  * open the editor to make either happen. This is the half of that which writes
- * posts. The live panel is `LiveStatus`'s, and is already automatic.
+ * posts. The live panel is `LiveStatus`'s and `LiveEntry`'s, and writes nothing:
+ * it is composed on the render path from the cached Helix answer.
  *
  * ## What is synced
  *
@@ -40,8 +41,10 @@ use WP_Query;
  * **`dp_note` is not in that table, and that is a decision rather than an
  * omission.** No API text is imported into the note. The card renders without one
  * until David writes it, and once he has, the guard below protects it like any
- * other field he has touched. `dp_live` is not there either: the live entry is
- * the one `dp_video` still written by hand, because its copy is his.
+ * other field he has touched. `dp_live` is not there either, for a different
+ * reason: the live panel is not a post this sync could write. It is composed at
+ * render by `LiveEntry` from the stream Twitch is reporting, and a `dp_video`
+ * carrying `dp_live` exists only to override what that panel says.
  *
  * `post_date` is set once, at insert, from the platform's publication date, and
  * never touched again — a publication date does not change remotely, and a

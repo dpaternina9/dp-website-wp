@@ -943,7 +943,8 @@ before launch.
 - Players load only on press.
 - A Twitch Helix call for VOD thumbnails, cached in a transient, failing soft.
 - **The archive is imported, not typed** (added 2026-08-29). David creates no `dp_video`
-  by hand except the live-now entry, whose copy is his.
+  by hand at all — the live card is composed from the stream Twitch reports, and a
+  `dp_live` post exists only to override what it says.
 
 Nothing about it is a route: David creates a Watch page and assigns the `dp-watch`
 template, exactly like the others (the seeder does both on a seeded site). The Watch
@@ -967,8 +968,23 @@ nav picks the page up the way it picks up every page, through the menu David own
   old, serving the stale frame if the refetch fails.
 - **The live check** (`Watch\LiveStatus`) is Helix `/streams`, cached two minutes in a
   transient shared by both blocks, failing soft to "not live". The featured panel is
-  the design's rule exactly: live → the `dp_live` entry David wrote; not live → the
-  newest archived video, with the grid starting from the second.
+  the design's rule exactly: live → the stream; not live → the newest archived video,
+  with the grid starting from the second.
+  - **The live card writes itself** (added 2026-08-29). The transient holds the stream
+    rather than a yes/no — `/streams` reports the title, `started_at` and `game_name`
+    in the same object that proves the channel is on air — so one call answers both
+    "is he live" and "what is he streaming", and `Watch\LiveEntry` composes the card
+    from it. Heading ← `title`; note ← `game_name`; strapline ← "Streaming now ·
+    1H 12M in", derived from `started_at`; hue ← pink, the design's live tone.
+  - **A `dp_live` post is now an override, not a requirement.** Precedence is
+    `AuthorEdits::decide()` itself, applied field by field: a field David filled in is
+    his, a field he left blank is Twitch's, and with no post at all the card is
+    entirely automatic. Which closes the last hand-managed thing on the page.
+  - **The elapsed time stays honest on a cached page.** It is rendered from the start
+    instant — as fresh as the request — and the element carries `data-dp-live-since`
+    plus the sentence to re-fill, which `watch.js` recomputes against the reader's own
+    clock every thirty seconds. A strapline David typed carries neither attribute and
+    is never rewritten.
 - **Credentials** — Twitch login, client ID, client secret — are a "Watch page"
   section on Settings → General (`Watch\Settings`), never constants. The secret lives
   in `wp_options`, an accepted single-author trade the field's own description

@@ -323,20 +323,20 @@ final class Meta {
 				'dp_note',
 				'string',
 				__( 'Note', 'dp-core' ),
-				__( 'One line under the title.', 'dp-core' ),
+				__( 'One line under the title. On the live panel, leaving it empty prints the Twitch category instead.', 'dp-core' ),
 				multiline: true
 			),
 			new MetaField(
 				'dp_live',
 				'boolean',
 				__( 'Live now', 'dp-core' ),
-				__( 'Whether this is the live-now panel rather than an archived video.', 'dp-core' )
+				__( 'Whether this is the live-now panel rather than an archived video. The panel draws itself from Twitch while you are streaming; this post only overrides what it says.', 'dp-core' )
 			),
 			new MetaField(
 				'dp_live_meta',
 				'string',
 				__( 'Live strapline', 'dp-core' ),
-				__( 'The live strapline, e.g. "STREAMING NOW · 1H 12M IN".', 'dp-core' )
+				__( 'The live strapline, e.g. "STREAMING NOW · 1H 12M IN". Leave it empty and the panel counts up from the stream\'s start time by itself.', 'dp-core' )
 			),
 		);
 	}

@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace DP\Tests\Integration\Watch;
 
 use DP\Core\Watch\LiveStatus;
+use DP\Core\Watch\LiveStream;
 use DP\Core\Watch\Settings;
 use DP\Core\Watch\VideoGrid;
 use DP\Core\Watch\WatchFeatured;
@@ -38,6 +39,27 @@ final class WatchBlocksTest extends WatchTestCase {
 	 */
 	private function render_page(): string {
 		return do_blocks( '<!-- wp:dp/watch-featured /--><!-- wp:dp/video-grid /-->' );
+	}
+
+	/**
+	 * Put a live stream in the cache the two blocks agree through.
+	 *
+	 * Written into `LiveStatus`'s own transient rather than mocked at the class,
+	 * because that transient *is* the mechanism the panel and the grid agree
+	 * through — and because filling it means no test here needs a stubbed HTTP
+	 * conversation to be about something else. `LiveCardTest` covers the call
+	 * that fills it for real.
+	 *
+	 * @param string $title The stream title Twitch is reporting.
+	 * @return void
+	 */
+	private function cache_live( string $title = 'A stream Twitch is reporting' ): void {
+		update_option( Settings::LOGIN, 'patsypatz' );
+
+		set_transient(
+			LiveStatus::TRANSIENT,
+			( new LiveStream( $title, time() - 4320, 'Software and Game Development' ) )->to_cache()
+		);
 	}
 
 	/**
@@ -112,9 +134,7 @@ final class WatchBlocksTest extends WatchTestCase {
 	 */
 	public function test_live_features_the_stream_and_the_grid_keeps_the_whole_archive(): void {
 		$this->seed_fixture();
-
-		update_option( Settings::LOGIN, 'patsypatz' );
-		set_transient( LiveStatus::TRANSIENT, 'yes' );
+		$this->cache_live();
 
 		$html = $this->render_page();
 
@@ -131,27 +151,27 @@ final class WatchBlocksTest extends WatchTestCase {
 	}
 
 	/**
-	 * A cached "live" with no live entry written falls back to the archive in
-	 * both blocks at once — they may never disagree about who is up top.
+	 * Live with no `dp_live` post written: the panel is the stream anyway, and
+	 * the grid keeps the whole archive. The two agree without a post existing.
+	 *
+	 * This is the case the page used to get wrong — it fell back to featuring
+	 * the latest VOD while the channel was on air, because the card's copy had
+	 * nowhere else to come from.
 	 *
 	 * @return void
 	 */
-	public function test_live_with_no_live_entry_falls_back_consistently(): void {
+	public function test_live_with_no_post_still_features_the_stream(): void {
 		$this->seed_video( 'Provisioning a client site from one command', 'twitch', '2280918841', 'purple', 1 );
 		$this->seed_video( 'Why your analytics plugin is slowing the site down', 'youtube', 'dp-fixture-yt', 'teal', 2 );
 
-		update_option( Settings::LOGIN, 'patsypatz' );
-		set_transient( LiveStatus::TRANSIENT, 'yes' );
+		$this->cache_live( 'Rewriting the query parser, badly, twice' );
 
 		$html = $this->render_page();
 
-		$this->assertStringContainsString( 'Latest on Twitch', $html );
-		$this->assertSame( 1, substr_count( $html, 'dp-vg-card' ) );
-		$this->assertStringNotContainsString(
-			'<h3 class="dp-vg-title">Provisioning',
-			$html,
-			'The featured video must not also be a card in the grid.'
-		);
+		$this->assertStringContainsString( 'is-live', $html );
+		$this->assertStringContainsString( 'Live now on Twitch', $html );
+		$this->assertStringContainsString( 'Rewriting the query parser, badly, twice', $html );
+		$this->assertSame( 2, substr_count( $html, 'dp-vg-card' ), 'Live, the grid is the whole archive.' );
 	}
 
 	/**
@@ -164,8 +184,7 @@ final class WatchBlocksTest extends WatchTestCase {
 
 		$this->assertStringNotContainsString( '<iframe', $this->render_page() );
 
-		update_option( Settings::LOGIN, 'patsypatz' );
-		set_transient( LiveStatus::TRANSIENT, 'yes' );
+		$this->cache_live();
 
 		$this->assertStringNotContainsString( '<iframe', $this->render_page() );
 	}
