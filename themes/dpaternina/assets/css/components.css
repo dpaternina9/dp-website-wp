@@ -530,7 +530,14 @@ ul.dp-filter-pills a[aria-current="page"] {
 	grid-template-columns: 130px minmax(0, 1fr) 130px;
 	padding: 18px 8px;
 	border-bottom: var(--border-width) solid var(--border-subtle);
-	transition: background var(--dur-base) var(--ease-standard), padding var(--dur-base) var(--ease-standard);
+
+	/* `padding-left`, not `padding` — the design transitions only the axis its
+	   hover moves (PostRow.logic.js, `hoverStyle = 'padding-left: 10px'`).
+	   Transitioning the shorthand animated the 18px vertical padding in from
+	   zero whenever the stylesheet landed late, growing every row ~11px after
+	   paint: layout shift for a reader on a slow connection, and the reason the
+	   pager slid out from under Playwright's cursor. */
+	transition: background var(--dur-base) var(--ease-standard), padding-left var(--dur-base) var(--ease-standard);
 }
 
 .dp-rows > li:hover .dp-row {
@@ -4648,6 +4655,23 @@ p.dp-404-note {
  * click target needs no script and no second link; the click-to-play script
  * upgrades exactly that anchor.
  * ---------------------------------------------------------------------- */
+
+/* The two sections the design gives vertical padding and `.dp-section` does
+   not: `.dp-section` sets the gutter and the measure only, so every named
+   section states its own `padding-block` the way `.dp-work-featured` and
+   `.dp-work-record` do. These two were transcribed without theirs and
+   collapsed to zero — the featured panel sat flush against the archive band,
+   and the gear section had nothing above or below it. The values are the
+   design's own: `padding: 0 var(--gutter) 56px` on the featured section and
+   `padding: var(--section-y) var(--gutter) 120px` on the gear section. The
+   archive band between them was already right, from `.dp-band > .dp-section`. */
+.dp-watch-top {
+	padding-block: 0 56px;
+}
+
+.dp-watch-gear-section {
+	padding-block: var(--section-y) 120px;
+}
 
 .dp-vg-card,
 .dp-watch-featured {
