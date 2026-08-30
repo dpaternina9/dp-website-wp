@@ -25,6 +25,7 @@
     "test:e2e:ui": "playwright test --config=playwright.config.ts --ui"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
     "@playwright/test": "^1.49.0",

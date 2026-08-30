@@ -814,7 +814,7 @@ Cloudflare rule, never code in this repo.
 
 ---
 
-## Phase 10 — Accessibility, performance, hardening
+## Phase 10 — Accessibility, performance, hardening (done — 2026-08-29)
 
 - Automated axe pass on every template, plus a manual keyboard-only run.
 - Contrast re-verified against the token comments, not against a fresh opinion.
@@ -828,6 +828,66 @@ Cloudflare rule, never code in this repo.
   off-origin request. That holds today and there is an audit for it; the check to add
   here is that it still holds after Phases 7–9, not a header to write.
 - `php-lts-compat-audit` over both packages.
+
+**Outcome.** All thirteen front-end templates are now swept in CI rather than reasoned
+about: `tests/e2e/a11y.spec.ts` covers twelve and `chrome.spec.ts` the thirteenth (the
+blog index, which only exists behind that file's Settings → Reading flip), each held to
+the same four facts — axe at WCAG 2.2 AA, zero off-origin requests on first paint, no
+parser-blocking script, and nothing a `script-src` without `'unsafe-inline'` would drop.
+The last of those is new: Phase 10's claim that "there is an audit for it" was only half
+true, since `TimelineTest` pinned the inline-`style=` half and nothing pinned inline
+`<script>` or `on*` handlers; `tests/e2e/front-end.ts` is the rest, and it passes — the
+only inline script core emits is its own `<script type="speculationrules">` and there is
+no `on*` attribute anywhere. Keyboard operability was extended from the header and the
+timeline's disclosures to the timeline's filter pills, the Watch play control and a
+whole contact-form submission, each reached by Tab rather than `.focus()`, because the
+ring in `base.css` is `:focus-visible` and a programmatically focused link never paints
+it — the old Watch assertion could not have failed. Contrast was re-measured against the
+token comments rather than re-argued: every number in `_ds/tokens/colors.css` reproduces
+exactly (ink on teal-600 7.52, muted `#9095a0` 6.51 on `--bg-page`, purple 2.80). The
+security review found every write path gated — the contact POST behind nonce, capability,
+honeypot, signed stamp, completeness and rate limit; the series reorder behind a
+term-scoped `check_admin_referer()` and `edit_others_posts`; both Settings sections
+through core's `options.php` with sanitise callbacks; post meta behind an explicit
+`auth_callback`. No REST route of our own exists to review. PHP 8.4 is clean, though the
+signal is the 8.4 container and PHPStan rather than PHPCompatibility, which is pinned at
+9.3.5 and knows nothing after 8.0.
+
+**Two debts, both measured and neither ours to fix here** (the ledger in
+`tests/e2e/axe.ts` names them as nodes on live rules, not as disabled rules):
+
+1. **`--hue-purple` fails AA as text on dark.** `design-source/theme.css` ships the raw
+   brand hue on the dark scope, which measures **2.80:1** on `--bg-page` — the exact
+   number `_ds/tokens/colors.css` gives as its reason for the tone-mix rule in the first
+   place. Teal (11.08), gold (11.37), pink (5.42) and coral (7.21) clear AA raw; purple
+   does not, and it is used as `color:` on `.dp-label`, `.dp-badge`, the section-head
+   kicker, the Watch gear label and the featured panel's kicker badge. axe measures it
+   in the browser at 3.00 on `--band`, 2.79 on `--bg-page`, 2.73 on the purple-tinted
+   card and 2.55 on `--bg-surface`; those four are the whole of the sweep's contrast
+   ledger, and no other colour anywhere fails. The design's own rule fixes all four —
+   75% toward white is `#9075b5`, which measures 5.40 / 5.02 / 4.90 / 4.59, the last
+   being the "worst case 4.59 (purple)" the token comment already records. (It would be
+   4.21 on `--bg-raised`, where nothing puts it today; a future component that did would
+   need its own correction.) The fix is a one-line change in `design-source` and a
+   re-import, not a theme edit: `design-source/` is read-only and `TokenParityTest` pins
+   the theme to it verbatim, so changing `theme.json` alone would just break a gate.
+2. **`list` on `.wp-block-navigation__container`.** Core renders `core/page-list` inside
+   `core/navigation` as a `<ul>` directly inside a `<ul>`. That is core's markup on the
+   *fallback* path, which is what a site with no navigation post gets; the curated
+   navigation David builds in the one-time link pass (ADR-0018) is `core/navigation-link`
+   items and renders one valid list.
+
+**Flagged, not built.** The timeline bar's four geometry numbers are still an inline
+`style=` attribute (`Blocks/TimelineRows.php:153`), which is a deliberate, tested
+exception (`TimelineTest::test_geometry_is_the_only_inline_style`) and the only one on the
+whole front end. It costs nothing under a policy that already allows `style-src
+'unsafe-inline'` — which core forces anyway, emitting nineteen `<style>` elements on the
+home page — but it would break under a tightened `style-src-attr 'none'`, so it is worth
+knowing about rather than rediscovering. Separately, the Watch featured panel's thumbnail
+(`Watch/WatchFeatured.php:120`) is that template's LCP element and correctly declines
+`loading="lazy"`, but does not set `fetchpriority="high"`; the single post's lead image
+does, and home and the blog index carry no content image at all, so nothing is regressed
+— it is a one-attribute improvement available whenever David wants it.
 
 ---
 

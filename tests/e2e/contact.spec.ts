@@ -25,6 +25,7 @@
  * External dependencies
  */
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
+import { focusRing, tabTo } from './front-end';
 
 /** The slug this fixture owns. Nothing outside this list is ever deleted. */
 const SLUG = 'contact-fixture-say-hello';
@@ -306,6 +307,60 @@ test.describe( 'The contact form', () => {
 						element === element.ownerDocument.activeElement
 				)
 			).toBe( true );
+		} );
+	} );
+
+	/*
+	 * Its own sender, not `RUN_HEADERS`. This test spends a successful send,
+	 * the limiter allows three per sender per ten minutes, and two of those are
+	 * already spoken for above — sharing the counter would leave the suite with
+	 * no margin at all, which is how a green gate becomes an intermittent one.
+	 */
+	test.describe( 'from the keyboard alone', () => {
+		test.use( {
+			extraHTTPHeaders: { 'X-DP-Test-Sender': `${ SENDER }-keyboard` },
+		} );
+
+		test( 'sends, and rings every stop on the way', async ( { page } ) => {
+			await page.goto( contactUrl );
+			await page.waitForTimeout( HUMAN_PAUSE );
+
+			/*
+			 * No clicks anywhere, and every stop reached by Tab rather than by
+			 * `.focus()`. The form is the site's one write path a reader can
+			 * reach, so "operable without a pointer" (WCAG 2.1.1) and "the
+			 * focus is visible" (2.4.7) are checked on the way through rather
+			 * than asserted about the stylesheet. Each `tabTo` carries on from
+			 * where the last one stopped, so this also proves the three fields
+			 * and the button come in that order.
+			 */
+			const stops: Array< [ string, string ] > = [
+				[ '#dp-contact-form-name', 'Typed By Keyboard' ],
+				[ '#dp-contact-form-email', 'keys@example.com' ],
+				[ '#dp-contact-form-message', 'Sent without a mouse.' ],
+				[ 'button.dp-contact-submit', '' ],
+			];
+
+			for ( const [ field, value ] of stops ) {
+				await tabTo( page, field );
+
+				// `--border-width-strong solid --focus-ring`, as base.css draws
+				// it. A width of 0 or a style of none is a stop with no ring.
+				expect(
+					await focusRing( page, field ),
+					`"${ field }" is focused but paints no ring`
+				).toMatch( /^solid [1-9]/ );
+
+				if ( '' !== value ) {
+					await page.keyboard.type( value );
+				}
+			}
+
+			await page.keyboard.press( 'Enter' );
+
+			await expect(
+				page.locator( '[data-dp-contact-state="sent"]' )
+			).toBeVisible();
 		} );
 	} );
 } );

@@ -25,6 +25,7 @@ import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
+import { focusRing, tabTo } from './front-end';
 import { SHARED_VIDEOS, sharedWatchPageUrl } from './global-setup';
 
 /** The hosts a Watch page may not touch until a player is asked for. */
@@ -149,10 +150,26 @@ test.describe( 'the Watch page', () => {
 		await expect( card.locator( 'a' ) ).toHaveCount( 0 );
 	} );
 
-	test( 'the press is keyboard operable', async ( { page } ) => {
+	test( 'the press is keyboard operable, and visibly focused', async ( {
+		page,
+	} ) => {
 		await page.goto( watchPage );
 
-		await page.locator( '.dp-watch-play' ).focus();
+		/*
+		 * Tabbed to, not `.focus()`ed. The ring in `base.css` is
+		 * `:focus-visible` only, which Chromium does not match on a link that
+		 * was focused programmatically — so the old `.focus()` here proved the
+		 * press worked but could never have caught a missing ring. Tabbing
+		 * proves the control is reachable as well.
+		 */
+		await tabTo( page, '.dp-watch-play' );
+
+		// WCAG 2.4.7. A control that swaps the page's largest element for a
+		// player is the worst place to lose the ring.
+		expect( await focusRing( page, '.dp-watch-play' ) ).toMatch(
+			/^solid [1-9]/
+		);
+
 		await page.keyboard.press( 'Enter' );
 
 		await expect( page.locator( 'iframe.dp-vg-player' ) ).toHaveCount( 1 );

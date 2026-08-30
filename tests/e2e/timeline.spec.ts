@@ -33,6 +33,7 @@ import { test, expect } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
+import { focusRing } from './front-end';
 import {
 	SHARED_BARE_ROLE,
 	SHARED_ROLE,
@@ -739,6 +740,35 @@ test.describe( 'The timeline', () => {
 			await expect( page.locator( '.dp-tl-toggle-all' ) ).toHaveText(
 				'Collapse all'
 			);
+		} );
+
+		test( 'the filter is reachable and operable from the keyboard', async ( {
+			page,
+		} ) => {
+			await page.goto( workPage );
+
+			/*
+			 * The pills are the other half of the chart's controls and the
+			 * expand test above never touches them. Tabbed to rather than
+			 * focused programmatically, because "reachable" is half of what
+			 * WCAG 2.1.1 asks and `.focus()` cannot tell you.
+			 */
+			const roles = '.dp-tl-filter-link[data-dp-filter="roles"]';
+
+			await tabTo( page, roles );
+
+			// WCAG 2.4.7: focused, and visibly so — style *and* width, because
+			// `solid 0px` is how a ring disappears without the style changing.
+			expect( await focusRing( page, roles ) ).toMatch( /^solid [1-9]/ );
+
+			await page.keyboard.press( 'Enter' );
+
+			await expect(
+				page.locator( `[data-dp-lane="${ LAB.entry }"] .dp-tl-ships` )
+			).toBeHidden();
+			await expect(
+				page.locator( `[data-dp-lane="${ BARE.entry }"]` )
+			).toBeVisible();
 		} );
 	} );
 

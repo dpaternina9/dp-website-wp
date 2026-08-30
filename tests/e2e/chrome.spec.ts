@@ -24,8 +24,16 @@
  *
  * External dependencies
  */
+import { AxeBuilder } from '@axe-core/playwright';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
+import { unexplainedViolations, WCAG_22_AA } from './axe';
+import {
+	blockingScripts,
+	eventHandlerAttributes,
+	inlineScripts,
+	visitRecordingOffsite,
+} from './front-end';
 
 /** Phones, at the width the design's panel is drawn for. */
 const PHONE = { width: 390, height: 844 };
@@ -421,6 +429,35 @@ test.describe( 'Site chrome', () => {
 					)
 					.first()
 			).toBeVisible();
+		} );
+	} );
+
+	test.describe( 'the blog index, audited', () => {
+		// Logged out: the audit is of the page a reader sees, not the admin bar.
+		test.use( { storageState: { cookies: [], origins: [] } } );
+
+		/*
+		 * The one template a11y.spec.ts cannot reach: home.html only renders
+		 * once Settings → Reading points at a posts page, and this file owns
+		 * that flip. The sweep on it therefore lives here, held to all four of
+		 * that file's facts rather than only the first — a thirteenth template
+		 * measured on a shorter ruler is a thirteenth template nobody measured.
+		 */
+		test( 'WCAG 2.2 AA, one origin, nothing a CSP refuses', async ( {
+			page,
+		} ) => {
+			const offsite = await visitRecordingOffsite( page, site.posts );
+
+			expect( offsite ).toEqual( [] );
+			expect( await blockingScripts( page ) ).toEqual( [] );
+			expect( await inlineScripts( page ) ).toEqual( [] );
+			expect( await eventHandlerAttributes( page ) ).toEqual( [] );
+
+			const results = await new AxeBuilder( { page } )
+				.withTags( WCAG_22_AA )
+				.analyze();
+
+			expect( unexplainedViolations( results.violations ) ).toEqual( [] );
 		} );
 	} );
 
