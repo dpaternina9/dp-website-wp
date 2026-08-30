@@ -31,9 +31,24 @@
  * The fixture is `SHARED_PAGER` in `global-setup.ts` now, established once and
  * deleted by nothing, and this file asks it a question instead.
  *
+ * **And it flaked again anyway, for a reason that was not the fixture.** The
+ * `test.use( { reducedMotion: 'reduce' } )` below did nothing: that context
+ * option does not reach the document under this project's fixtures, which
+ * `docs/MERGE-QUEUE.md` has recorded since Phase 6 and `timeline.spec.ts` works
+ * around. Without the preference, `base.css`'s reduced-motion reset never
+ * applies, `.dp-row` keeps its 200ms `padding` transition, and on a page whose
+ * last stylesheet arrives late every row grows ~11px *after* the document
+ * reports `complete` — sliding the pager down under the cursor mid-click, which
+ * Playwright reports as `element is not stable`. It reproduces under load from
+ * any other spec, and it is nothing to do with `chrome.spec.ts`'s Settings →
+ * Reading flip. `reduceMotion()` sets the preference the way that works and
+ * throws if it ever stops working, so this can never silently be a request for
+ * a preference the browser did not get.
+ *
  * External dependencies
  */
 import { test, expect } from '@wordpress/e2e-test-utils-playwright';
+import { reduceMotion } from './front-end';
 import { SHARED_PAGER, sharedPagerArchiveUrl } from './global-setup';
 
 /** The term archive's URL, looked up once per worker. */
@@ -45,15 +60,21 @@ test.describe( 'The pager', () => {
 		// Logged out: the admin bar is chrome no reader sees.
 		storageState: { cookies: [], origins: [] },
 		viewport: { width: 1440, height: 900 },
-		// The same preference `design-parity.spec.ts` measures under (ADR-0013
-		// §6). Nothing here samples a colour mid-transition, but a control whose
-		// box is still settling is a control Playwright refuses to click, and
-		// there is no reason for this file to wait for one.
-		reducedMotion: 'reduce',
 	} );
 
 	test.beforeAll( async ( { requestUtils } ) => {
 		archive = await sharedPagerArchiveUrl( requestUtils );
+	} );
+
+	/*
+	 * The same preference `design-parity.spec.ts` measures under (ADR-0013 §6),
+	 * set through `emulateMedia()` because the context option does not arrive.
+	 * Nothing here samples a colour mid-transition; what it buys is that no
+	 * control on the page is still settling when Playwright tries to click it.
+	 * See the note at the top of this file.
+	 */
+	test.beforeEach( async ( { page } ) => {
+		await reduceMotion( page );
 	} );
 
 	test( 'names where you are, and takes you to the next page without scripts', async ( {

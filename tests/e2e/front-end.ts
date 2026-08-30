@@ -169,6 +169,48 @@ export async function focusRing(
 }
 
 /**
+ * Set `prefers-reduced-motion: reduce` on a page, and prove it took.
+ *
+ * **`test.use( { reducedMotion: 'reduce' } )` does not reach the document under
+ * this project's fixtures.** `docs/MERGE-QUEUE.md` records it from Phase 6:
+ * `viewport`, `storageState` and `javaScriptEnabled` all arrive, that one does
+ * not. `page.emulateMedia()` works. The trap is that the context option fails
+ * *silently* — `matchMedia( '(prefers-reduced-motion: reduce)' )` stays false,
+ * every transition keeps its duration, and a spec that asked for the preference
+ * runs without it while its own `test.use` block says otherwise.
+ *
+ * That is not only a reduced-motion problem. `base.css` answers the preference
+ * with `transition-duration: 0.01ms !important` on everything, so a spec that
+ * *has* the preference never meets a box that is still settling — and a spec
+ * that only thinks it has one does. `.dp-row` transitions `padding` over
+ * `--dur-base`, so on a term archive whose last stylesheet arrives late every
+ * row grows about 11px for 200ms after the document reports `complete`, the
+ * pager below them slides down with it, and Playwright refuses to click a
+ * moving element: `locator.click: element is not stable`. Under a loaded
+ * server that is reliable enough to fail one run in three.
+ *
+ * So this throws rather than returning a flag. A reduced-motion precondition
+ * that quietly does nothing is worse than not asking for it.
+ *
+ * @param page The browser page. Call before navigating.
+ * @return void
+ */
+export async function reduceMotion( page: Page ): Promise< void > {
+	await page.emulateMedia( { reducedMotion: 'reduce' } );
+
+	const matched = await page.evaluate(
+		() => window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches
+	);
+
+	if ( ! matched ) {
+		throw new Error(
+			'prefers-reduced-motion did not reach the document. See ' +
+				'reduceMotion() in tests/e2e/front-end.ts.'
+		);
+	}
+}
+
+/**
  * Every `on*` event-handler attribute in the document.
  *
  * An `onclick=` is inline script under another name, and a CSP without

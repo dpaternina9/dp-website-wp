@@ -22,8 +22,31 @@ namespace DP\Theme;
  * 3. `dns-prefetch` hints derived from whatever is enqueued, which would advertise
  *    a third-party host even before anything asked for it.
  *
- * The one deliberate external origin in this project is the Rybbit analytics
- * endpoint (Phase 8). It is not loaded here and is not exempted here.
+ * **The analytics preconnect is dropped, and that is the decision.** The one
+ * deliberate external origin in this project is the Rybbit analytics endpoint,
+ * and Rybbit is David's plugin rather than our code (`docs/plan.md` Phase 8).
+ * If that plugin adds a `preconnect` or `dns-prefetch` for its own host, rule 3
+ * above removes it, because rule 3 refuses every host but this one. The plan
+ * asked that this "should be a decision, not a discovery", so:
+ *
+ * - **The hint is dropped on purpose.** A resource hint is an advertisement:
+ *   it names a third party in the HTML of every page, to every reader, before
+ *   anything has asked for it. Refusing it by default is the same posture as
+ *   the rest of this class and the same posture CLAUDE.md §1.4 takes.
+ * - **Nothing breaks.** A hint is a hint. The analytics script still loads from
+ *   wherever the plugin enqueues it; it pays one connection setup it would
+ *   otherwise have skipped, on a request that is not on the critical path.
+ * - **It costs the CSP nothing.** The headers are David's security plugin's
+ *   (CLAUDE.md §1.4). A dropped hint neither needs nor grants an exception.
+ *
+ * The escape hatch is `dp_resource_hint_hosts`, which takes the allowlist —
+ * the site's own host, and nothing else, by default. Adding a host there is how
+ * the decision is reversed, without editing this file:
+ *
+ *     add_filter(
+ *         'dp_resource_hint_hosts',
+ *         static fn ( array $hosts ): array => array( ...$hosts, 'rybbit.example' )
+ *     );
  */
 final class ExternalRequests {
 
@@ -89,11 +112,51 @@ final class ExternalRequests {
 	}
 
 	/**
-	 * Drop every resource hint that points somewhere other than this site.
+	 * The hosts a resource hint is allowed to name.
+	 *
+	 * The site's own, and whatever `dp_resource_hint_hosts` adds. Anything the
+	 * filter hands back that is not a non-empty string is discarded rather than
+	 * trusted, so a plugin returning the wrong shape narrows the allowlist
+	 * instead of widening it.
+	 *
+	 * @return list<string>
+	 */
+	public function allowed_hosts(): array {
+		$host  = wp_parse_url( home_url(), PHP_URL_HOST );
+		$hosts = is_string( $host ) && '' !== $host ? array( $host ) : array();
+
+		/**
+		 * Filters the hosts a `wp_resource_hints` entry may point at.
+		 *
+		 * Empty but for the site's own host by default. See the class docblock
+		 * for why the analytics endpoint is not on it.
+		 *
+		 * @param list<string> $hosts Allowed hosts, without scheme or path.
+		 */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- `dp_` is the project's public filter prefix (docs/plan.md; see `dp_allowed_block_types`). WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
+		$filtered = apply_filters( 'dp_resource_hint_hosts', $hosts );
+
+		if ( ! is_array( $filtered ) ) {
+			return $hosts;
+		}
+
+		$allowed = array();
+
+		foreach ( $filtered as $candidate ) {
+			if ( is_string( $candidate ) && '' !== $candidate ) {
+				$allowed[] = $candidate;
+			}
+		}
+
+		return $allowed;
+	}
+
+	/**
+	 * Drop every resource hint that points at a host the site does not allow.
 	 *
 	 * Allowing the site's own host through keeps a same-origin `preconnect` or
-	 * `prefetch` working; everything else is refused by default, so a plugin
-	 * cannot quietly re-introduce a third-party origin.
+	 * `prefetch` working; everything else is refused unless `dp_resource_hint_hosts`
+	 * names it, so a plugin cannot quietly re-introduce a third-party origin.
 	 *
 	 * Every relation type — `dns-prefetch`, `preconnect`, `prefetch`, `prerender`
 	 * — is filtered the same way, so the callback accepts one argument and never
@@ -107,8 +170,8 @@ final class ExternalRequests {
 			return array();
 		}
 
-		$host = wp_parse_url( home_url(), PHP_URL_HOST );
-		$kept = array();
+		$hosts = $this->allowed_hosts();
+		$kept  = array();
 
 		foreach ( $urls as $url ) {
 			if ( is_string( $url ) ) {
@@ -125,7 +188,7 @@ final class ExternalRequests {
 
 			$hint_host = wp_parse_url( $href, PHP_URL_HOST );
 
-			if ( ! is_string( $hint_host ) || $hint_host === $host ) {
+			if ( ! is_string( $hint_host ) || in_array( $hint_host, $hosts, true ) ) {
 				$kept[] = $url;
 			}
 		}

@@ -93,6 +93,56 @@ final class ExternalRequestsTest extends TestCase {
 	}
 
 	/**
+	 * The analytics host is dropped by default, and allowed when David says so.
+	 *
+	 * `docs/plan.md` Phase 8: dropping the Rybbit plugin's `preconnect` "should
+	 * be a decision, not a discovery". This is the decision, both halves of it —
+	 * refused unless `dp_resource_hint_hosts` names the host, and honoured the
+	 * moment it does, with no edit to the theme.
+	 *
+	 * @return void
+	 */
+	public function test_a_named_host_is_allowed_through(): void {
+		$hint = array(
+			'href'        => 'https://analytics.example',
+			'crossorigin' => true,
+		);
+
+		$this->assertSame(
+			array(),
+			$this->requests->filter_resource_hints( array( $hint ) ),
+			'Nothing but the site itself is advertised until somebody asks for it.'
+		);
+
+		Monkey\Filters\expectApplied( 'dp_resource_hint_hosts' )
+			->andReturnUsing(
+				static fn ( array $hosts ): array => array( ...$hosts, 'analytics.example' )
+			);
+
+		$this->assertSame(
+			array( $hint ),
+			$this->requests->filter_resource_hints( array( $hint ) ),
+			'The filter is the escape hatch; naming a host is the whole of it.'
+		);
+	}
+
+	/**
+	 * A filter that answers with the wrong shape narrows rather than widens.
+	 *
+	 * @return void
+	 */
+	public function test_a_malformed_allowlist_never_widens_it(): void {
+		Monkey\Filters\expectApplied( 'dp_resource_hint_hosts' )
+			->andReturn( array( 'analytics.example', '', 42, null ) );
+
+		$this->assertSame(
+			array( 'analytics.example' ),
+			$this->requests->allowed_hosts(),
+			'Everything that is not a non-empty string is discarded, the site host included.'
+		);
+	}
+
+	/**
 	 * A filter handed something that is not a list returns an empty list.
 	 *
 	 * @return void

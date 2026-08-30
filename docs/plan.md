@@ -773,7 +773,7 @@ never frozen into a seeded copy.
 
 ---
 
-## Phase 8 — Feeds
+## Phase 8 — Feeds (done — 2026-08-29)
 
 Almost nothing. **SEO is AIOSEO's**, installed and configured by David: OG images,
 canonicals, `robots`, sitemaps and JSON-LD all come from the plugin. This repo writes
@@ -801,6 +801,38 @@ What is left:
     silently removed. Harmless — the script still loads — but it should be a decision,
     not a discovery.
 - No other third-party script. Nothing else sets a cookie.
+
+**Outcome.** No SEO, schema, sitemap or analytics code was written and none should be.
+The feed already worked and now has a test that says so: `tests/Integration/Templates/FeedTest.php`
+renders the real `feed-rss2.php` document and holds it to the things a reader depends on
+— well-formed RSS 2.0, the channel naming this site, one item per post with the post's
+own permalink, GMT `pubDate` and category, the excerpt as `<description>`, and the whole
+house style arriving *rendered* in `content:encoded` (no `<!-- wp:` delimiters, the
+`dp/callout` render callback having run). `dp_role`, `dp_ship` and `dp_video` are not
+syndicated, for the same reason they are not in a sitemap. Until now only the *query*
+behind the feed was tested (`HomeTest`) and the *link* to it (`ChromeTest`,
+`ComputedLinksTest`); nothing had ever looked at the XML.
+
+**`/rss.xml` does not resolve, and deliberately will not.** The design writes
+`<a href="/rss.xml">` and WordPress serves the feed at `/feed/` under pretty permalinks
+and `?feed=rss2` without. Serving the design's exact path needs a rewrite rule, and
+CLAUDE.md §5.1 allows this project exactly two registered rewrites. So the footer link
+follows core — `DP\Theme\Blocks\FeedLink` renders `get_feed_link()`, which is right under
+both permalink structures and moves when David changes the setting — and the design's
+path is left unserved. `FeedTest::test_the_designs_rss_xml_path_is_not_a_registered_route`
+pins that: no rewrite rule anywhere in the project mentions `rss.xml`. If David ever
+wants the literal path it is a redirect in his edge configuration, like the migration
+redirects in Phase 9, never a rule in this repo.
+
+**The Rybbit preconnect is a decision now.** `DP\Theme\ExternalRequests` still drops it,
+and its class docblock says why: a resource hint advertises a third party in the HTML of
+every page before anything has asked for it, dropping one costs a connection setup on a
+request that is not on the critical path, and it neither needs nor grants a CSP
+exception. The escape hatch is the `dp_resource_hint_hosts` filter, which takes the
+allowlist — the site's own host and nothing else by default — so David can permit a host
+from a plugin or an mu-plugin without editing the theme. A filter that answers with the
+wrong shape narrows the list rather than widening it, and the unit suite covers both
+directions.
 
 ---
 
