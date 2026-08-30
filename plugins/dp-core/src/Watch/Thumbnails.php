@@ -189,9 +189,10 @@ final class Thumbnails {
 	/**
 	 * The remote URLs worth trying for one entry, best first.
 	 *
-	 * A Twitch VOD's URL is not knowable without asking Helix, and that call
-	 * spends budget like the image fetches it feeds — it is the same kind of
-	 * remote round trip on the same render path.
+	 * A Twitch VOD's URL is not knowable without asking Helix — unless the sync
+	 * already asked. `VideoSync` records the template it was given while
+	 * importing the video, so a synced VOD costs no Helix call here at all; the
+	 * call below is the fallback for a `dp_video` that was written by hand.
 	 *
 	 * @param Video  $video The entry.
 	 * @param string $login The configured Twitch login.
@@ -206,6 +207,10 @@ final class Thumbnails {
 
 		if ( VideoSource::YouTube === $video->source ) {
 			return ThumbnailSource::youtube_candidates( $video->ref );
+		}
+
+		if ( VideoSource::Twitch === $video->source && '' !== $video->thumbnail ) {
+			return array( Helix::fill_thumbnail_template( $video->thumbnail ) );
 		}
 
 		if ( VideoSource::Twitch === $video->source && $this->budget > 0 ) {

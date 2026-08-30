@@ -36,3 +36,11 @@ const VERSION = '0.1.0';
 require_once __DIR__ . '/vendor/autoload.php';
 
 Plugin::boot( __FILE__, VERSION );
+
+/*
+ * The one thing this plugin leaves behind that must be cleared on deactivation:
+ * an hourly WP-Cron entry pointing at a hook nothing answers any more would be
+ * an hourly error in somebody's log. Content is deliberately left alone —
+ * deactivating a plugin is not deleting a site's videos.
+ */
+register_deactivation_hook( __FILE__, array( Watch\Schedule::class, 'unschedule' ) );

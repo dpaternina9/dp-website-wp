@@ -9,6 +9,8 @@ declare( strict_types=1 );
 
 namespace DP\Core\Watch;
 
+use DP\Core\Content\VideoSource;
+
 /**
  * Pure parsing of what the Twitch API answers.
  *
@@ -134,6 +136,112 @@ final class Helix {
 		}
 
 		return $templates;
+	}
+
+	/**
+	 * The numeric user id in a `helix/users` response.
+	 *
+	 * The archive endpoint is keyed by user id, and the only thing David types
+	 * is a login, so every sync starts here.
+	 *
+	 * @param string $body The response body.
+	 * @return string|null The id, or null when the body names no user — a login
+	 *                     that does not exist answers `{"data": []}`.
+	 */
+	public static function user_id( string $body ): ?string {
+		$decoded = json_decode( $body, true );
+
+		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
+			return null;
+		}
+
+		foreach ( $decoded['data'] as $user ) {
+			$id = is_array( $user ) ? ( $user['id'] ?? null ) : null;
+
+			if ( is_string( $id ) && '' !== $id ) {
+				return $id;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * One page of a `helix/videos` archive listing.
+	 *
+	 * A VOD with no id is dropped rather than returned half-built; everything
+	 * else survives with whatever fields Twitch supplied, because a missing
+	 * duration or publication date is a caption the card omits and not a reason
+	 * to lose the video.
+	 *
+	 * @param string $body The response body.
+	 * @return array{videos: list<RemoteVideo>, cursor: string}|null The page, or null
+	 *                     when the body is not a videos response at all. The cursor
+	 *                     is '' on the last page.
+	 */
+	public static function archive( string $body ): ?array {
+		$decoded = json_decode( $body, true );
+
+		if ( ! is_array( $decoded ) || ! is_array( $decoded['data'] ?? null ) ) {
+			return null;
+		}
+
+		$videos = array();
+
+		foreach ( $decoded['data'] as $video ) {
+			if ( ! is_array( $video ) ) {
+				continue;
+			}
+
+			$id = $video['id'] ?? null;
+
+			if ( ! is_string( $id ) || '' === $id ) {
+				continue;
+			}
+
+			$videos[] = new RemoteVideo(
+				VideoSource::Twitch,
+				$id,
+				self::text( $video['title'] ?? null ),
+				Duration::from_twitch( self::text( $video['duration'] ?? null ) ) ?? 0,
+				self::timestamp( $video['published_at'] ?? null ),
+				self::text( $video['thumbnail_url'] ?? null )
+			);
+		}
+
+		$pagination = $decoded['pagination'] ?? null;
+		$cursor     = is_array( $pagination ) ? ( $pagination['cursor'] ?? null ) : null;
+
+		return array(
+			'videos' => $videos,
+			'cursor' => is_string( $cursor ) ? $cursor : '',
+		);
+	}
+
+	/**
+	 * One string out of a decoded response, or ''.
+	 *
+	 * @param mixed $value Whatever was at the key.
+	 * @return string
+	 */
+	private static function text( mixed $value ): string {
+		return is_string( $value ) ? $value : '';
+	}
+
+	/**
+	 * One RFC 3339 timestamp out of a decoded response, or 0.
+	 *
+	 * @param mixed $value Whatever was at the key.
+	 * @return int
+	 */
+	private static function timestamp( mixed $value ): int {
+		if ( ! is_string( $value ) || '' === $value ) {
+			return 0;
+		}
+
+		$parsed = strtotime( $value );
+
+		return false === $parsed ? 0 : $parsed;
 	}
 
 	/**

@@ -21,6 +21,11 @@ use WP_Post;
  * and the strings are exactly what David wrote — escaping stays at the point
  * of output, in the blocks.
  *
+ * `$thumbnail` is the one field here that David never sees or writes: a Twitch
+ * VOD's thumbnail URL is not knowable without asking Helix, and `VideoSync`
+ * already asked while it was importing the video. Carrying the answer on the
+ * post is what keeps that question off the render path.
+ *
  * The URL builders are static and pure so the unit suite can hold them
  * without a WordPress bootstrap. They are the click-to-play contract's
  * no-JavaScript half: the URL a card links to is the video on its host, and
@@ -42,6 +47,7 @@ final class Video {
 	 * @param string           $note      One line under the title.
 	 * @param bool             $live      Whether this is the live-now entry rather than an archived video.
 	 * @param string           $live_meta The live strapline, e.g. "STREAMING NOW · 1H 12M IN".
+	 * @param string           $thumbnail A thumbnail URL template the sync already fetched, or '' for none.
 	 */
 	public function __construct(
 		public readonly int $id,
@@ -53,7 +59,8 @@ final class Video {
 		public readonly string $when,
 		public readonly string $note,
 		public readonly bool $live,
-		public readonly string $live_meta
+		public readonly string $live_meta,
+		public readonly string $thumbnail = ''
 	) {}
 
 	/**
@@ -73,7 +80,8 @@ final class Video {
 			self::meta( $post->ID, 'dp_when' ),
 			self::meta( $post->ID, 'dp_note' ),
 			(bool) get_post_meta( $post->ID, 'dp_live', true ),
-			self::meta( $post->ID, 'dp_live_meta' )
+			self::meta( $post->ID, 'dp_live_meta' ),
+			self::meta( $post->ID, VideoSync::THUMBNAIL )
 		);
 	}
 

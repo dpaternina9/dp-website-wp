@@ -12,12 +12,12 @@ namespace DP\Tests\Integration\Watch;
 use DP\Core\Watch\Settings;
 
 /**
- * The login and the Helix credentials David sets in wp-admin.
+ * The five values David sets in wp-admin: the Twitch three and the YouTube two.
  *
  * Phase 12's rule is that none of these may be a constant or a filter-only
- * value: the login and both credential halves are options on Settings →
- * General, sanitized on the way in, and validated again on the way out —
- * `Contact\Settings`' contract, held for three more fields.
+ * value: the login, both Twitch credential halves and both YouTube ones are
+ * options on Settings → General, sanitized on the way in, and validated again
+ * on the way out — `Contact\Settings`' contract, held for five more fields.
  */
 final class SettingsTest extends WatchTestCase {
 
@@ -41,15 +41,23 @@ final class SettingsTest extends WatchTestCase {
 	}
 
 	/**
-	 * All three options are registered where options.php can accept them.
+	 * All five options are registered where options.php can accept them.
 	 *
 	 * @return void
 	 */
-	public function test_all_three_settings_are_registered(): void {
+	public function test_all_five_settings_are_registered(): void {
 		$registered = get_registered_settings();
 		$groups     = wp_list_pluck( $registered, 'group' );
 
-		foreach ( array( Settings::LOGIN, Settings::CLIENT_ID, Settings::CLIENT_SECRET ) as $option ) {
+		$options = array(
+			Settings::LOGIN,
+			Settings::CLIENT_ID,
+			Settings::CLIENT_SECRET,
+			Settings::YOUTUBE_CHANNEL,
+			Settings::YOUTUBE_KEY,
+		);
+
+		foreach ( $options as $option ) {
 			$this->assertArrayHasKey( $option, $registered );
 			$this->assertSame( 'general', $groups[ $option ] ?? null );
 		}
@@ -124,6 +132,83 @@ final class SettingsTest extends WatchTestCase {
 		update_option( Settings::CLIENT_SECRET, 'secretXYZ' );
 
 		$this->assertTrue( Settings::has_credentials() );
+	}
+
+	/**
+	 * A YouTube channel is a `UC…` id or an `@handle`, and nothing else.
+	 *
+	 * Both are things David can read off his own channel page, and
+	 * `channels.list` takes each. A pasted URL is refused rather than picked
+	 * apart, because a parser for every URL YouTube has minted is a lot of
+	 * surface for a field that is typed once.
+	 *
+	 * @return void
+	 */
+	public function test_the_channel_sanitizer_keeps_an_id_or_a_handle(): void {
+		$this->assertSame( 'UCabcdefghijklmnopqrstuv', $this->settings->sanitize_channel( ' UCabcdefghijklmnopqrstuv ' ) );
+		$this->assertSame( '@dpaternina', $this->settings->sanitize_channel( '@dpaternina' ) );
+		$this->assertSame( '', $this->settings->sanitize_channel( 'https://youtube.com/@dpaternina' ) );
+		$this->assertSame( '', $this->settings->sanitize_channel( 'UCtooshort' ) );
+		$this->assertSame( '', $this->settings->sanitize_channel( 'dpaternina' ) );
+		$this->assertSame( '', $this->settings->sanitize_channel( array( 'UCabcdefghijklmnopqrstuv' ) ) );
+		$this->assertSame( '', $this->settings->sanitize_channel( '' ) );
+	}
+
+	/**
+	 * A Google key carries dashes and underscores, unlike a Twitch credential.
+	 *
+	 * Reusing the Twitch sanitizer here would have refused every real key.
+	 *
+	 * @return void
+	 */
+	public function test_the_api_key_sanitizer_accepts_url_safe_characters(): void {
+		$this->assertSame( 'AIzaSy_test-key', $this->settings->sanitize_api_key( ' AIzaSy_test-key ' ) );
+		$this->assertSame( '', $this->settings->sanitize_api_key( 'two keys' ) );
+		$this->assertSame( '', $this->settings->sanitize_api_key( 'key!with#punctuation' ) );
+		$this->assertSame( '', $this->settings->sanitize_api_key( '' ) );
+	}
+
+	/**
+	 * Each platform counts only when both of its halves are there.
+	 *
+	 * Twitch needs the login as well as the credentials, because the archive
+	 * endpoint is keyed by a user id and the login is the only way to one.
+	 *
+	 * @return void
+	 */
+	public function test_a_platform_is_configured_only_in_full(): void {
+		$this->assertFalse( Settings::has_twitch() );
+		$this->assertFalse( Settings::has_youtube() );
+
+		update_option( Settings::CLIENT_ID, 'abcDEF123' );
+		update_option( Settings::CLIENT_SECRET, 'secretXYZ' );
+
+		$this->assertFalse( Settings::has_twitch(), 'Twitch counted as configured with no login.' );
+
+		update_option( Settings::LOGIN, 'patsypatz' );
+
+		$this->assertTrue( Settings::has_twitch() );
+
+		update_option( Settings::YOUTUBE_CHANNEL, 'UCabcdefghijklmnopqrstuv' );
+
+		$this->assertFalse( Settings::has_youtube(), 'YouTube counted as configured with no key.' );
+
+		update_option( Settings::YOUTUBE_KEY, 'AIzaSy_test-key' );
+
+		$this->assertTrue( Settings::has_youtube() );
+	}
+
+	/**
+	 * The readers do not trust the store for the YouTube pair either.
+	 *
+	 * @return void
+	 */
+	public function test_a_malformed_stored_channel_reads_as_unset(): void {
+		remove_all_filters( 'sanitize_option_' . Settings::YOUTUBE_CHANNEL );
+
+		update_option( Settings::YOUTUBE_CHANNEL, 'https://youtube.com/@dpaternina' );
+
+		$this->assertSame( '', Settings::youtube_channel() );
 	}
 
 	/**

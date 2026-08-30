@@ -942,6 +942,8 @@ before launch.
   cached server-side so the visitor's browser never talks to those hosts before a click.
 - Players load only on press.
 - A Twitch Helix call for VOD thumbnails, cached in a transient, failing soft.
+- **The archive is imported, not typed** (added 2026-08-29). David creates no `dp_video`
+  by hand except the live-now entry, whose copy is his.
 
 Nothing about it is a route: David creates a Watch page and assigns the `dp-watch`
 template, exactly like the others (the seeder does both on a seeded site). The Watch
@@ -980,6 +982,37 @@ nav picks the page up the way it picks up every page, through the menu David own
   seeded as the Watch page's starting body through the `dp_seed_watch_body` seam —
   the plugin never learns the theme's markup, and a themeless seed leaves a callout
   saying the gear is missing.
+- **The archive imports itself** (`Watch\VideoSync`, added 2026-08-29). Twitch VODs come
+  from Helix `/users` then `/videos?type=archive`; YouTube uploads come from the Data API
+  v3 — `channels.list` → the uploads playlist → `playlistItems.list` → `videos.list` —
+  which is the API rather than the free RSS feed because the design's card prints a
+  runtime and the feed carries none. Both are parsed into one `RemoteVideo` shape and
+  upserted against `_dp_sync_key` (`twitch:<id>` / `youtube:<id>`), so syncing twice
+  changes nothing. Hourly under WP-Cron (`dp_core_watch_sync`, cleared on deactivation),
+  plus `wp dp watch sync` and a "Sync now" button in the Watch section on Settings →
+  General — beside the credentials, because every way it fails is a credential. Two new
+  settings there: a YouTube channel (`UC…` id or `@handle`) and a Data API key.
+  - **Seven fields are synced** — title, status, source, platform id, runtime, month,
+    tone — and `dp_note` is deliberately not one of them. No API text goes in the note;
+    the card renders without one until David writes it.
+  - **ADR-0018 rule 3 is enforced by a shadow copy.** Every write is recorded in
+    `_dp_sync_shadow`; the next run compares the shadow with what is stored, and a field
+    that has moved is added to `_dp_sync_locked` and never written again. No `save_post`
+    hook and no suppression flag, so it is right whatever route an edit arrived by. See
+    `Watch\AuthorEdits`.
+  - **A video the platform stops listing is drafted, not deleted** — Twitch VODs expire on
+    a timer, and deleting would destroy the note and title David wrote about one. It
+    republishes if the video comes back, unless he was the one who unpublished it.
+  - **Fail soft, and never partially.** A platform that does not answer whole is skipped
+    entirely, because a truncated listing is indistinguishable from a deleted channel and
+    reconciling against one would empty the page during an outage. A run that reached
+    nothing says so rather than reporting a success, in the notice, in WP-CLI, and in the
+    "last run" line the settings row prints — which is the only place a stalled schedule
+    is visible.
+  - **A site with no credentials syncs nothing and renders everything it already has.**
+    That is the seeded development site: the fixture's eight `dp_video` entries carry no
+    sync key, so the import can never adopt, update or unpublish one, and the Watch page
+    is complete with no API configured.
 
 ---
 

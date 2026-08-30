@@ -321,6 +321,19 @@ final class Fixture {
 	/**
 	 * The Watch grid, from `VIDEOS` and `LIVE_NOW`.
 	 *
+	 * **These are demonstration fixtures now, not a content model David maintains.**
+	 * On a real site the archive is imported: `Watch\VideoSync` upserts a
+	 * `dp_video` per Twitch VOD and per YouTube upload, hourly, and David creates
+	 * none of them by hand. What is here exists so a seeded development site with
+	 * no credentials configured still renders a full Watch page — the design's
+	 * seven archived entries and its live panel — because that is the state every
+	 * `npm run env:reset` and every e2e run is in.
+	 *
+	 * None of them carries a sync key, which is what keeps the import off them:
+	 * a `dp_video` with no `_dp_sync_key` is never adopted, updated or
+	 * unpublished by a sync. The live entry is the one entry that stays
+	 * hand-written on a real site too, because its copy is David's.
+	 *
 	 * Every `vod` and `yt` in the fixture is an empty string, and they stay empty:
 	 * the design has no real ids, and inventing one would make the Watch grid
 	 * point at somebody else's video.

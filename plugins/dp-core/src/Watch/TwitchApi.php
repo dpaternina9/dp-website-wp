@@ -50,6 +50,13 @@ final class TwitchApi {
 	public const VIDEOS_URL = 'https://api.twitch.tv/helix/videos';
 
 	/**
+	 * The users endpoint, turning a login into the id `/videos` is keyed by.
+	 *
+	 * @var string
+	 */
+	public const USERS_URL = 'https://api.twitch.tv/helix/users';
+
+	/**
 	 * The transient holding a working app token.
 	 *
 	 * @var string
@@ -76,6 +83,35 @@ final class TwitchApi {
 	 * @var int
 	 */
 	private const TIMEOUT = 3;
+
+	/**
+	 * How long one Helix request may take on the sync path, in seconds.
+	 *
+	 * Longer than the render timeout because nothing is waiting: the sync runs
+	 * under cron, under WP-CLI, or behind a button whose whole job is to take a
+	 * moment. Three seconds is the budget for a visitor, not for a background job.
+	 *
+	 * @var int
+	 */
+	private const SYNC_TIMEOUT = 10;
+
+	/**
+	 * How many VODs one archive page asks for. A hundred is Helix's maximum.
+	 *
+	 * @var int
+	 */
+	private const PAGE_SIZE = 100;
+
+	/**
+	 * How many archive pages one sync will read.
+	 *
+	 * A bound rather than a limit anybody is expected to reach: past broadcasts
+	 * expire from Twitch on their own, so five hundred is far more than a
+	 * channel keeps. It is here so a paginated endpoint cannot loop forever.
+	 *
+	 * @var int
+	 */
+	private const MAX_PAGES = 5;
 
 	/**
 	 * Whether the configured login is live right now.
@@ -117,12 +153,89 @@ final class TwitchApi {
 	}
 
 	/**
+	 * Every past broadcast on the configured channel, newest first.
+	 *
+	 * Two calls and then some paging: `/users` turns the login David typed into
+	 * the numeric id `/videos` is keyed by, and `/videos?type=archive` lists the
+	 * VODs. Highlights and uploads are deliberately not asked for — a highlight
+	 * is a clip of a broadcast that is already in this list, and importing both
+	 * would put the same stream on the Watch page twice.
+	 *
+	 * **Any failure anywhere abandons the whole list.** A partial answer is
+	 * worse than none here, because the caller reconciles what it is given
+	 * against what is stored: half a list would read as "the other half was
+	 * deleted" and unpublish videos that are still there.
+	 *
+	 * @return list<RemoteVideo>|null The archive, or null when Twitch did not
+	 *                                answer all of it.
+	 */
+	public function archive_videos(): ?array {
+		$login = Settings::login();
+
+		if ( '' === $login ) {
+			return null;
+		}
+
+		$body = $this->get( add_query_arg( 'login', $login, self::USERS_URL ), self::SYNC_TIMEOUT );
+
+		if ( null === $body ) {
+			return null;
+		}
+
+		$user_id = Helix::user_id( $body );
+
+		if ( null === $user_id ) {
+			return null;
+		}
+
+		$videos = array();
+		$cursor = '';
+
+		for ( $page = 0; $page < self::MAX_PAGES; $page++ ) {
+			$arguments = array(
+				'user_id' => $user_id,
+				'type'    => 'archive',
+				'first'   => (string) self::PAGE_SIZE,
+			);
+
+			if ( '' !== $cursor ) {
+				$arguments['after'] = $cursor;
+			}
+
+			$body = $this->get( add_query_arg( $arguments, self::VIDEOS_URL ), self::SYNC_TIMEOUT );
+
+			if ( null === $body ) {
+				return null;
+			}
+
+			$read = Helix::archive( $body );
+
+			if ( null === $read ) {
+				return null;
+			}
+
+			foreach ( $read['videos'] as $video ) {
+				$videos[] = $video;
+			}
+
+			$cursor = $read['cursor'];
+
+			if ( '' === $cursor || array() === $read['videos'] ) {
+				break;
+			}
+		}
+
+		return $videos;
+	}
+
+	/**
 	 * One authenticated Helix GET, reduced to its body.
 	 *
-	 * @param string $url The full URL, query args included.
+	 * @param string   $url     The full URL, query args included.
+	 * @param int|null $timeout How long to wait, or null for the render budget.
 	 * @return string|null The response body, or null for any failure.
 	 */
-	private function get( string $url ): ?string {
+	private function get( string $url, ?int $timeout = null ): ?string {
 		$client_id = Settings::client_id();
 		$token     = $this->token();
 
@@ -133,7 +246,7 @@ final class TwitchApi {
 		$response = wp_remote_get(
 			$url,
 			array(
-				'timeout' => self::TIMEOUT,
+				'timeout' => $timeout ?? self::TIMEOUT,
 				'headers' => array(
 					'Client-ID'     => $client_id,
 					'Authorization' => 'Bearer ' . $token,

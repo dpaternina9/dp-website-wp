@@ -18,15 +18,24 @@ namespace DP\Core\Watch;
  * nothing is hardcoded; the fixture's `patsypatz` login exists only in the
  * seeder's world, never in this class.
  *
- * The three are three because they degrade separately:
+ * The five are five because they degrade separately:
  *
  * - **Login** (`dp_watch_twitch_login`) names the channel. Without it there is
- *   no live check and no "watch the stream" URL — the Watch page still renders
- *   its archive.
+ *   no live check, no "watch the stream" URL and no Twitch VOD sync — the Watch
+ *   page still renders whatever archive it has.
  * - **Client ID + secret** (`dp_watch_twitch_client_id` / `_client_secret`)
  *   are a Twitch application's Helix credentials. Without them the live-now
- *   panel never shows live and Twitch VOD thumbnails stay on their fallback
- *   art. YouTube thumbnails need no credentials and keep working.
+ *   panel never shows live, Twitch VOD thumbnails stay on their fallback art,
+ *   and no VOD is imported. YouTube thumbnails need no credentials and keep
+ *   working.
+ * - **YouTube channel + API key** (`dp_watch_youtube_channel` /
+ *   `dp_watch_youtube_key`) are what `VideoSync` needs to import uploads.
+ *   Without them no YouTube video is imported; anything already imported goes on
+ *   rendering, because a missing key is not a statement that the videos are gone.
+ *
+ * Neither pair is required for the site to work. A site with none of the five
+ * configured renders every `dp_video` it already has and syncs nothing, which is
+ * exactly what a seeded development site is.
  *
  * **The secret lives in `wp_options`, and that is a stated trade.** The résumé
  * renderer keeps its Cloudflare token in `wp-config.php` because that key can
@@ -59,18 +68,35 @@ final class Settings {
 	public const CLIENT_SECRET = 'dp_watch_twitch_client_secret';
 
 	/**
-	 * The settings page the section lives on.
+	 * The option naming the YouTube channel whose uploads are imported.
 	 *
 	 * @var string
 	 */
-	private const PAGE = 'general';
+	public const YOUTUBE_CHANNEL = 'dp_watch_youtube_channel';
+
+	/**
+	 * The option holding the YouTube Data API key.
+	 *
+	 * @var string
+	 */
+	public const YOUTUBE_KEY = 'dp_watch_youtube_key';
+
+	/**
+	 * The settings page the section lives on.
+	 *
+	 * Public because `SyncButton` adds a field of its own to this section, and a
+	 * button that syncs belongs beside the credentials it needs.
+	 *
+	 * @var string
+	 */
+	public const PAGE = 'general';
 
 	/**
 	 * The section's id.
 	 *
 	 * @var string
 	 */
-	private const SECTION = 'dp-watch';
+	public const SECTION = 'dp-watch';
 
 	/**
 	 * A Twitch login: 25 characters of lowercase alphanumerics and underscores.
@@ -78,6 +104,25 @@ final class Settings {
 	 * @var string
 	 */
 	private const LOGIN_PATTERN = '/\A[a-z0-9_]{1,25}\z/';
+
+	/**
+	 * A YouTube channel: either a `UC…` channel id or an `@handle`.
+	 *
+	 * Both are accepted because both are things David can read off his own
+	 * channel page, and `channels.list` takes either — `id` for the first,
+	 * `forHandle` for the second. A channel id is exactly `UC` plus 22
+	 * URL-safe characters; a handle is 3 to 30 of a narrower set after the `@`.
+	 *
+	 * @var string
+	 */
+	private const CHANNEL_PATTERN = '/\A(?:UC[A-Za-z0-9_-]{22}|@[A-Za-z0-9_.-]{3,30})\z/';
+
+	/**
+	 * A Google API key: URL-safe characters, unlike Twitch's plain alphanumerics.
+	 *
+	 * @var string
+	 */
+	private const API_KEY_PATTERN = '/\A[A-Za-z0-9_-]{1,128}\z/';
 
 	/**
 	 * Attach the hook.
@@ -130,6 +175,30 @@ final class Settings {
 			)
 		);
 
+		register_setting(
+			self::PAGE,
+			self::YOUTUBE_CHANNEL,
+			array(
+				'type'              => 'string',
+				'description'       => __( 'The YouTube channel whose uploads the Watch page imports.', 'dp-core' ),
+				'sanitize_callback' => $this->sanitize_channel( ... ),
+				'show_in_rest'      => false,
+				'default'           => '',
+			)
+		);
+
+		register_setting(
+			self::PAGE,
+			self::YOUTUBE_KEY,
+			array(
+				'type'              => 'string',
+				'description'       => __( 'The YouTube Data API v3 key the import calls authenticate with.', 'dp-core' ),
+				'sanitize_callback' => $this->sanitize_api_key( ... ),
+				'show_in_rest'      => false,
+				'default'           => '',
+			)
+		);
+
 		add_settings_section(
 			self::SECTION,
 			__( 'Watch page', 'dp-core' ),
@@ -175,6 +244,32 @@ final class Settings {
 				'help'      => __( 'Stored as a plain option in this site\'s database, which is an accepted trade on a single-author site — rotate it from the Twitch console if the database ever leaks.', 'dp-core' ),
 			)
 		);
+
+		add_settings_field(
+			self::YOUTUBE_CHANNEL,
+			__( 'YouTube channel', 'dp-core' ),
+			$this->field( ... ),
+			self::PAGE,
+			self::SECTION,
+			array(
+				'label_for' => self::YOUTUBE_CHANNEL,
+				'type'      => 'text',
+				'help'      => __( 'Either the channel ID that starts "UC", or the @handle. Leave empty and no YouTube video is imported.', 'dp-core' ),
+			)
+		);
+
+		add_settings_field(
+			self::YOUTUBE_KEY,
+			__( 'YouTube API key', 'dp-core' ),
+			$this->field( ... ),
+			self::PAGE,
+			self::SECTION,
+			array(
+				'label_for' => self::YOUTUBE_KEY,
+				'type'      => 'password',
+				'help'      => __( 'A YouTube Data API v3 key, stored as a plain option like the Twitch secret. Restrict it to the YouTube Data API in the Google console — it only ever reads public listings.', 'dp-core' ),
+			)
+		);
 	}
 
 	/**
@@ -203,6 +298,35 @@ final class Settings {
 		$credential = trim( sanitize_text_field( is_scalar( $value ) ? (string) $value : '' ) );
 
 		return 1 === preg_match( '/\A[A-Za-z0-9]{1,128}\z/', $credential ) ? $credential : '';
+	}
+
+	/**
+	 * Reduce a submitted value to a YouTube channel reference or to nothing.
+	 *
+	 * A pasted channel URL is rejected rather than picked apart. The two forms
+	 * the API accepts are both short enough to read off a channel page, and a
+	 * parser for every URL YouTube has ever minted would be a second thing to
+	 * get wrong on a field that is typed once.
+	 *
+	 * @param mixed $value Whatever options.php was handed.
+	 * @return string The channel id or handle, or '' for "unset".
+	 */
+	public function sanitize_channel( mixed $value ): string {
+		$channel = trim( sanitize_text_field( is_scalar( $value ) ? (string) $value : '' ) );
+
+		return 1 === preg_match( self::CHANNEL_PATTERN, $channel ) ? $channel : '';
+	}
+
+	/**
+	 * Reduce a submitted value to a Google API key or to nothing.
+	 *
+	 * @param mixed $value Whatever options.php was handed.
+	 * @return string The key, or '' for "unset".
+	 */
+	public function sanitize_api_key( mixed $value ): string {
+		$key = trim( sanitize_text_field( is_scalar( $value ) ? (string) $value : '' ) );
+
+		return 1 === preg_match( self::API_KEY_PATTERN, $key ) ? $key : '';
 	}
 
 	/**
@@ -268,6 +392,49 @@ final class Settings {
 	 */
 	public static function has_credentials(): bool {
 		return '' !== self::client_id() && '' !== self::client_secret();
+	}
+
+	/**
+	 * The YouTube channel id or handle, or '' when none is set.
+	 *
+	 * @return string
+	 */
+	public static function youtube_channel(): string {
+		$stored = self::option( self::YOUTUBE_CHANNEL );
+
+		return 1 === preg_match( self::CHANNEL_PATTERN, $stored ) ? $stored : '';
+	}
+
+	/**
+	 * The YouTube Data API key, or '' when none is set.
+	 *
+	 * @return string
+	 */
+	public static function youtube_key(): string {
+		$stored = self::option( self::YOUTUBE_KEY );
+
+		return 1 === preg_match( self::API_KEY_PATTERN, $stored ) ? $stored : '';
+	}
+
+	/**
+	 * Whether Twitch is configured well enough to import VODs.
+	 *
+	 * The login as well as the credentials: the archive endpoint is keyed by
+	 * user id, and the only way to a user id is the login David typed.
+	 *
+	 * @return bool
+	 */
+	public static function has_twitch(): bool {
+		return '' !== self::login() && self::has_credentials();
+	}
+
+	/**
+	 * Whether YouTube is configured well enough to import uploads.
+	 *
+	 * @return bool
+	 */
+	public static function has_youtube(): bool {
+		return '' !== self::youtube_channel() && '' !== self::youtube_key();
 	}
 
 	/**

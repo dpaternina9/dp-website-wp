@@ -26,6 +26,13 @@ use WP_Query;
  * and for the same reason: the sequence is a decision David makes under Page
  * Attributes, and the seed writes the design's `VIDEOS` order into it, so a
  * seeded site reproduces the fixture exactly.
+ *
+ * **The date tiebreak is newest first**, which is what decides the order of an
+ * imported archive. `VideoSync` writes no `menu_order` at all — a position is
+ * David's to set and the platforms have no opinion about one — so every synced
+ * video shares the default of zero and the date is the whole of their order. The
+ * seeded fixture is unaffected: its entries carry distinct positions, so the
+ * tiebreak never runs for them.
  */
 final class Videos {
 
@@ -84,7 +91,7 @@ final class Videos {
 				'posts_per_page'         => self::MAX_ROWS,
 				'orderby'                => array(
 					'menu_order' => 'ASC',
-					'date'       => 'ASC',
+					'date'       => 'DESC',
 				),
 				'no_found_rows'          => true,
 				'ignore_sticky_posts'    => true,

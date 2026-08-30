@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Unit\Watch;
 
+use DP\Core\Content\VideoSource;
 use DP\Core\Watch\Helix;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
@@ -98,6 +99,105 @@ final class HelixTest extends TestCase {
 		);
 		$this->assertNull( Helix::vod_thumbnails( 'not json' ) );
 		$this->assertSame( array(), Helix::vod_thumbnails( '{"data":[]}' ) );
+	}
+
+	/**
+	 * A login resolves to the numeric id the archive endpoint is keyed by.
+	 *
+	 * @return void
+	 */
+	public function test_a_login_resolves_to_a_user_id(): void {
+		$this->assertSame(
+			'141981764',
+			Helix::user_id( '{"data":[{"id":"141981764","login":"patsypatz","display_name":"PatsyPatz"}]}' )
+		);
+	}
+
+	/**
+	 * A login nobody has answers `{"data": []}`, which is null rather than ''.
+	 *
+	 * @return void
+	 */
+	public function test_a_login_nobody_has_is_null(): void {
+		$this->assertNull( Helix::user_id( '{"data":[]}' ) );
+		$this->assertNull( Helix::user_id( '{"error":"Unauthorized"}' ) );
+		$this->assertNull( Helix::user_id( 'not json' ) );
+	}
+
+	/**
+	 * An archive page becomes videos, with Twitch's duration spelling parsed and
+	 * the thumbnail template kept unsubstituted.
+	 *
+	 * The template is stored with its `%{width}` placeholders intact, because the
+	 * size is the renderer's decision and not the sync's.
+	 *
+	 * @return void
+	 */
+	public function test_an_archive_page_is_mapped(): void {
+		$body = '{"data":[{'
+			. '"id":"335921245",'
+			. '"title":"Provisioning a client site from one command",'
+			. '"published_at":"2026-08-03T21:30:18Z",'
+			. '"duration":"2h41m0s",'
+			. '"thumbnail_url":"https://static-cdn.jtvnw.net/cf_vods/x/thumb/index-%{width}x%{height}.jpg",'
+			. '"type":"archive"'
+			. '}],"pagination":{"cursor":"eyJiIjpudWxsfQ"}}';
+
+		$read = Helix::archive( $body );
+
+		$this->assertIsArray( $read );
+		$this->assertSame( 'eyJiIjpudWxsfQ', $read['cursor'] );
+		$this->assertCount( 1, $read['videos'] );
+
+		$video = $read['videos'][0];
+
+		$this->assertSame( VideoSource::Twitch, $video->source );
+		$this->assertSame( '335921245', $video->id );
+		$this->assertSame( 'Provisioning a client site from one command', $video->title );
+		$this->assertSame( 9660, $video->duration );
+		$this->assertSame( strtotime( '2026-08-03T21:30:18Z' ), $video->published );
+		$this->assertSame(
+			'https://static-cdn.jtvnw.net/cf_vods/x/thumb/index-%{width}x%{height}.jpg',
+			$video->thumbnail
+		);
+		$this->assertSame( 'twitch:335921245', $video->key() );
+	}
+
+	/**
+	 * The last page carries no cursor, and an empty archive is an answer.
+	 *
+	 * "No VODs" and "Twitch did not say" must not read the same: the caller
+	 * unpublishes against the first and does nothing at all about the second.
+	 *
+	 * @return void
+	 */
+	public function test_an_empty_archive_and_an_unreadable_one_differ(): void {
+		$this->assertSame(
+			array(
+				'videos' => array(),
+				'cursor' => '',
+			),
+			Helix::archive( '{"data":[],"pagination":{}}' )
+		);
+
+		$this->assertNull( Helix::archive( '{"error":"Unauthorized"}' ) );
+		$this->assertNull( Helix::archive( 'not json' ) );
+	}
+
+	/**
+	 * A VOD with no id cannot be keyed, so it is dropped; a VOD missing anything
+	 * else survives with what it has.
+	 *
+	 * @return void
+	 */
+	public function test_a_vod_without_an_id_is_dropped(): void {
+		$read = Helix::archive( '{"data":[{"title":"No id"},{"id":"1","title":"Kept"}]}' );
+
+		$this->assertIsArray( $read );
+		$this->assertCount( 1, $read['videos'] );
+		$this->assertSame( 'Kept', $read['videos'][0]->title );
+		$this->assertSame( 0, $read['videos'][0]->duration );
+		$this->assertSame( '', $read['videos'][0]->thumbnail );
 	}
 
 	/**
