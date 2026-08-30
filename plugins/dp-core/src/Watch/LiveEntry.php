@@ -34,7 +34,7 @@ use DP\Core\Content\VideoSource;
  * | Card | David's field | From Twitch when his is blank |
  * |---|---|---|
  * | Heading | the post title | `title` |
- * | Note | `dp_note` | `game_name` |
+ * | Note | `dp_note` | nothing — the card renders without one |
  * | Strapline | `dp_live_meta` | "Streaming now · 1H 12M in", from `started_at` |
  * | Hue | `dp_tone` | pink, which is the design's live tone |
  *
@@ -103,6 +103,15 @@ final class LiveEntry {
 		 */
 		$title = self::prefer( $authored_title, '' !== $stream->title ? $stream->title : __( 'Live now', 'dp-core' ) );
 
+		/*
+		 * The note stays blank until David writes one — the same answer he gave
+		 * for the video cards, and the same reason: Twitch's category ("Software
+		 * and Game Development") is a dropdown he once picked, not a sentence
+		 * about this stream. A card with no note renders without one, and
+		 * `$stream->category` stays on the model for whoever wants it next.
+		 */
+		$note = $authored_note;
+
 		$entry = new Video(
 			null === $authored ? 0 : $authored->id,
 			$title,
@@ -111,7 +120,7 @@ final class LiveEntry {
 			$authored->tone ?? Tone::Pink,
 			'',
 			'',
-			self::prefer( $authored_note, $stream->category ),
+			$note,
 			true,
 			self::prefer( $authored_meta, $derived ),
 			''

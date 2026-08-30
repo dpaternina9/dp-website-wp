@@ -134,7 +134,11 @@ final class LiveCardTest extends WatchTestCase {
 			'The heading is the stream title Helix reported.'
 		);
 		$this->assertStringContainsString( 'Streaming now · 1H 12M in', $html );
-		$this->assertStringContainsString( 'Software and Game Development', $html );
+		$this->assertStringNotContainsString(
+			'Software and Game Development',
+			$html,
+			'The Twitch category is not written into the note.'
+		);
 		$this->assertStringContainsString( 'Live now on Twitch', $html );
 		$this->assertStringContainsString( 'data-dp-embed="twitch-live"', $html );
 		$this->assertStringContainsString( 'href="https://www.twitch.tv/patsypatz"', $html );

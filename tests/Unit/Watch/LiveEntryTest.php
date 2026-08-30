@@ -98,7 +98,7 @@ final class LiveEntryTest extends TestCase {
 		$live = LiveEntry::compose( null, $this->stream(), self::STARTED + ( 72 * 60 ) );
 
 		$this->assertSame( 'Building the Kiveo reading-stats screen, live', $live->entry->title );
-		$this->assertSame( 'Software and Game Development', $live->entry->note );
+		$this->assertSame( '', $live->entry->note, 'The note is David\'s to write; Twitch\'s category is not a substitute.' );
 		$this->assertSame( 'Streaming now · 1H 12M in', $live->entry->live_meta );
 		$this->assertTrue( $live->entry->live );
 		$this->assertSame( 0, $live->entry->id, 'The composed entry is not a post.' );
