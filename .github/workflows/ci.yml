@@ -37,13 +37,20 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
+      # 2G, and it has to match the --memory-limit in composer.json's `analyse`.
+      # PHPStan splits the run across one worker per core and gives each the
+      # limit, so the memory a worker needs is a function of how few cores it is
+      # sharing: a runner has 4, a developer's machine has three or four times
+      # that, and the same commit that passes locally can crash a worker here.
+      # It did, at 1G, once the plugin reached ~250 files. Measured peak on a
+      # cold cache with 4 workers is between 1G and 1.5G.
       - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: none
           tools: composer:v2
-          ini-values: memory_limit=1G
+          ini-values: memory_limit=2G
 
       - name: Install Composer dependencies
         uses: ramsey/composer-install@v3
