@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Theme version. Stamped from the git tag by the release workflow (Phase 2).
  */
-const VERSION = '0.1.0';
+const VERSION = '1.0.0';
 
 require_once __DIR__ . '/vendor/autoload.php';
 
