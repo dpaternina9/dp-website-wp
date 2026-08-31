@@ -1,0 +1,160 @@
+/**
+ * The maintenance screen.
+ *
+ * A real file rather than a `<style>` element on purpose. Headers on the live
+ * site come from David's security plugin (docs/plan.md Phase 10) and this
+ * repository emits nothing that would make him loosen them; a `style-src 'self'`
+ * policy drops an inline `<style>` exactly as `script-src` drops an inline
+ * `<script>`. Linked from this plugin's own origin, so the policy needs no
+ * exception and the file caches.
+ *
+ * Every colour below is a hardcoded copy of a `design-source/_ds/tokens/
+ * colors.css` value, named in the comment beside it. It is a copy and not a
+ * reference because this document is rendered without the theme — that is the
+ * situation the screen exists for — so no `--bg-page` and no theme.json preset
+ * is loaded when it draws. The cost of the copy is that a token change here has
+ * to be made twice; the alternative is a screen that renders unstyled exactly
+ * when it is needed.
+ *
+ * Dark is the only ground in this project, so there is no light scope and no
+ * `prefers-color-scheme` block. Nothing animates or transitions, so there is
+ * nothing for `prefers-reduced-motion` to turn off.
+ */
+
+:root {
+	--dp-maintenance-page: #0c0c0e;     /* --bg-page / --dp-ink */
+	--dp-maintenance-surface: #17171b;  /* --bg-surface / --dp-graphite */
+	--dp-maintenance-border: #2a2a31;   /* --border-subtle / --dp-slate */
+	--dp-maintenance-heading: #ffffff;  /* --text-primary — 19.53:1 on the ground */
+	--dp-maintenance-text: #b4b4bd;     /* --text-secondary — 9.50:1 */
+	--dp-maintenance-muted: #9095a0;    /* --text-muted / --dp-gray — 6.51:1 */
+	--dp-maintenance-accent: #08d9d6;   /* --accent / --dp-teal — 11.09:1 */
+	--dp-maintenance-accent-hover: #06b3b0; /* --accent-hover / --dp-teal-600 — 7.53:1 */
+
+	color-scheme: dark;
+}
+
+html {
+	box-sizing: border-box;
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: inherit;
+}
+
+body.dp-maintenance {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	margin: 0;
+	padding: 2rem 1.5rem;
+	background: var(--dp-maintenance-page);
+	color: var(--dp-maintenance-text);
+
+	/* The design's own fallback stack, minus its webfonts: those are the theme's
+	   files, and this document must not depend on the theme or fetch a font from
+	   anywhere off this origin. */
+	font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+	font-size: 1rem;
+	line-height: 1.65; /* --lh-relaxed */
+}
+
+.dp-maintenance__frame {
+	width: 100%;
+	max-width: 34rem;
+}
+
+.dp-maintenance__card {
+	position: relative;
+	overflow: hidden;
+	padding: 3rem 2rem; /* --space-7 --space-6 */
+	border: 1px solid var(--dp-maintenance-border);
+	border-radius: 16px; /* --radius-lg, which is where cards and panels sit */
+	background: var(--dp-maintenance-surface);
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); /* --shadow-lg */
+}
+
+/* --dp-gradient-spectrum, as a rule across the top. Purely decorative: it is the
+   one place the brand purple appears, and it carries no text, because purple
+   measures 2.80:1 on this ground and fails AA at every size. */
+.dp-maintenance__card::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto;
+	height: 4px;
+	background: linear-gradient(120deg, #ff2e63 0%, #6b479c 35%, #08d9d6 70%, #ffb84c 100%);
+}
+
+.dp-maintenance__site {
+	margin: 0 0 1.5rem; /* --space-5 */
+	color: var(--dp-maintenance-muted);
+	font-size: 0.75rem; /* --fs-xs */
+	font-weight: 600; /* --fw-semibold */
+	letter-spacing: 0.14em; /* --ls-caps */
+	line-height: 1.5;
+	text-transform: uppercase;
+}
+
+.dp-maintenance__heading {
+	margin: 0 0 1rem; /* --space-4 */
+	color: var(--dp-maintenance-heading);
+	font-size: clamp(1.875rem, 4vw, 2.375rem); /* --fs-section */
+	font-weight: 700; /* --fw-bold */
+	letter-spacing: -0.02em; /* --ls-tight */
+	line-height: 1.2; /* --lh-snug */
+}
+
+.dp-maintenance__message {
+	max-width: 44ch;
+}
+
+.dp-maintenance__message p {
+	margin: 0 0 1rem;
+}
+
+.dp-maintenance__message p:last-child {
+	margin-bottom: 0;
+}
+
+.dp-maintenance__contact {
+	margin: 2rem 0 0; /* --space-6 */
+}
+
+.dp-maintenance__contact a {
+	color: var(--dp-maintenance-accent);
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+.dp-maintenance__contact a:hover {
+	color: var(--dp-maintenance-accent-hover);
+}
+
+/* :focus-visible only, matching the theme's base.css: a ring that paints on a
+   mouse click is noise, and this page has exactly one focusable element. */
+.dp-maintenance__contact a:focus-visible {
+	border-radius: 2px;
+	outline: 2px solid var(--dp-maintenance-accent);
+	outline-offset: 3px;
+}
+
+.dp-maintenance__tagline {
+	margin: 2rem 0 0; /* --space-6 */
+	padding-top: 1.5rem; /* --space-5 */
+	border-top: 1px solid var(--dp-maintenance-border);
+	color: var(--dp-maintenance-muted);
+	font-size: 0.875rem; /* --fs-sm */
+	line-height: 1.5; /* --lh-normal */
+}
+
+@media (min-width: 40rem) {
+
+	.dp-maintenance__card {
+		padding: 4rem 3rem; /* --space-8 --space-7 */
+	}
+}
