@@ -25,7 +25,7 @@
 	--dp-maintenance-page: #0c0c0e;     /* --bg-page / --dp-ink */
 	--dp-maintenance-surface: #17171b;  /* --bg-surface / --dp-graphite */
 	--dp-maintenance-border: #2a2a31;   /* --border-subtle / --dp-slate */
-	--dp-maintenance-heading: #ffffff;  /* --text-primary — 19.53:1 on the ground */
+	--dp-maintenance-heading: #fff;     /* --text-primary — 19.53:1 on the ground */
 	--dp-maintenance-text: #b4b4bd;     /* --text-secondary — 9.50:1 */
 	--dp-maintenance-muted: #9095a0;    /* --text-muted / --dp-gray — 6.51:1 */
 	--dp-maintenance-accent: #08d9d6;   /* --accent / --dp-teal — 11.09:1 */
@@ -64,14 +64,12 @@ body.dp-maintenance {
 	line-height: 1.65; /* --lh-relaxed */
 }
 
-.dp-maintenance__frame {
+.dp-maintenance-frame {
 	width: 100%;
 	max-width: 34rem;
 }
 
-.dp-maintenance__card {
-	position: relative;
-	overflow: hidden;
+.dp-maintenance-card {
 	padding: 3rem 2rem; /* --space-7 --space-6 */
 	border: 1px solid var(--dp-maintenance-border);
 	border-radius: 16px; /* --radius-lg, which is where cards and panels sit */
@@ -79,18 +77,25 @@ body.dp-maintenance {
 	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); /* --shadow-lg */
 }
 
-/* --dp-gradient-spectrum, as a rule across the top. Purely decorative: it is the
-   one place the brand purple appears, and it carries no text, because purple
-   measures 2.80:1 on this ground and fails AA at every size. */
-.dp-maintenance__card::before {
+/* --dp-gradient-spectrum, as the design's own separator: a 1px hairline at 0.6,
+   the treatment in `design-source/components/PostBlocks.dc.html:92` and in the
+   theme's `hr.wp-block-separator`. It divides content here, which is the only
+   thing the design ever does with it — a thicker band pinned to the card's edge
+   was this file's invention and read as decoration bolted onto a panel.
+
+   Purely decorative, and the one place the brand purple appears: it carries no
+   text, because purple measures 2.80:1 on this ground and fails AA at every
+   size. It exists only when there is a contact line to divide off. */
+.dp-maintenance-contact::before {
 	content: "";
-	position: absolute;
-	inset: 0 0 auto;
-	height: 4px;
+	display: block;
+	height: 1px;
+	margin-bottom: 2rem; /* --space-6 */
 	background: linear-gradient(120deg, #ff2e63 0%, #6b479c 35%, #08d9d6 70%, #ffb84c 100%);
+	opacity: 0.6;
 }
 
-.dp-maintenance__site {
+.dp-maintenance-site {
 	margin: 0 0 1.5rem; /* --space-5 */
 	color: var(--dp-maintenance-muted);
 	font-size: 0.75rem; /* --fs-xs */
@@ -100,7 +105,7 @@ body.dp-maintenance {
 	text-transform: uppercase;
 }
 
-.dp-maintenance__heading {
+.dp-maintenance-heading {
 	margin: 0 0 1rem; /* --space-4 */
 	color: var(--dp-maintenance-heading);
 	font-size: clamp(1.875rem, 4vw, 2.375rem); /* --fs-section */
@@ -109,41 +114,41 @@ body.dp-maintenance {
 	line-height: 1.2; /* --lh-snug */
 }
 
-.dp-maintenance__message {
+.dp-maintenance-message {
 	max-width: 44ch;
 }
 
-.dp-maintenance__message p {
+.dp-maintenance-message p {
 	margin: 0 0 1rem;
 }
 
-.dp-maintenance__message p:last-child {
+.dp-maintenance-message p:last-child {
 	margin-bottom: 0;
 }
 
-.dp-maintenance__contact {
+.dp-maintenance-contact {
 	margin: 2rem 0 0; /* --space-6 */
 }
 
-.dp-maintenance__contact a {
+.dp-maintenance-contact a {
 	color: var(--dp-maintenance-accent);
 	text-decoration: underline;
 	text-underline-offset: 0.2em;
 }
 
-.dp-maintenance__contact a:hover {
+.dp-maintenance-contact a:hover {
 	color: var(--dp-maintenance-accent-hover);
 }
 
 /* :focus-visible only, matching the theme's base.css: a ring that paints on a
    mouse click is noise, and this page has exactly one focusable element. */
-.dp-maintenance__contact a:focus-visible {
+.dp-maintenance-contact a:focus-visible {
 	border-radius: 2px;
 	outline: 2px solid var(--dp-maintenance-accent);
 	outline-offset: 3px;
 }
 
-.dp-maintenance__tagline {
+.dp-maintenance-tagline {
 	margin: 2rem 0 0; /* --space-6 */
 	padding-top: 1.5rem; /* --space-5 */
 	border-top: 1px solid var(--dp-maintenance-border);
@@ -154,7 +159,7 @@ body.dp-maintenance {
 
 @media (min-width: 40rem) {
 
-	.dp-maintenance__card {
+	.dp-maintenance-card {
 		padding: 4rem 3rem; /* --space-8 --space-7 */
 	}
 }

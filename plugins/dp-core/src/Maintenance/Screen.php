@@ -116,10 +116,10 @@ final class Screen {
 	 */
 	private function body(): string {
 		return '<body class="dp-maintenance">' . "\n"
-			. '<main class="dp-maintenance__frame">' . "\n"
-			. '<div class="dp-maintenance__card">' . "\n"
+			. '<main class="dp-maintenance-frame">' . "\n"
+			. '<div class="dp-maintenance-card">' . "\n"
 			. $this->eyebrow()
-			. sprintf( '<h1 class="dp-maintenance__heading">%s</h1>', esc_html( Settings::heading() ) ) . "\n"
+			. sprintf( '<h1 class="dp-maintenance-heading">%s</h1>', esc_html( Settings::heading() ) ) . "\n"
 			. $this->message()
 			. $this->contact()
 			. $this->tagline()
@@ -140,7 +140,7 @@ final class Screen {
 			return '';
 		}
 
-		return sprintf( '<p class="dp-maintenance__site">%s</p>', esc_html( $name ) ) . "\n";
+		return sprintf( '<p class="dp-maintenance-site">%s</p>', esc_html( $name ) ) . "\n";
 	}
 
 	/**
@@ -160,7 +160,7 @@ final class Screen {
 		}
 
 		return sprintf(
-			'<div class="dp-maintenance__message">%s</div>',
+			'<div class="dp-maintenance-message">%s</div>',
 			wp_kses_post( wpautop( esc_html( $message ) ) )
 		) . "\n";
 	}
@@ -178,7 +178,7 @@ final class Screen {
 		}
 
 		return sprintf(
-			'<p class="dp-maintenance__contact"><a href="%s">%s</a></p>',
+			'<p class="dp-maintenance-contact"><a href="%s">%s</a></p>',
 			esc_url( 'mailto:' . $address ),
 			esc_html( $address )
 		) . "\n";
@@ -196,7 +196,7 @@ final class Screen {
 			return '';
 		}
 
-		return sprintf( '<p class="dp-maintenance__tagline">%s</p>', esc_html( $description ) ) . "\n";
+		return sprintf( '<p class="dp-maintenance-tagline">%s</p>', esc_html( $description ) ) . "\n";
 	}
 
 	/**
