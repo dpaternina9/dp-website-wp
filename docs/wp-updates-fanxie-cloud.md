@@ -180,7 +180,8 @@ clients).
 
 ## 6. Release pipeline (per client repo)
 
-Tags: `theme-v1.2.3` / `core-v1.2.3` (or `{plugin}-v1.2.3`), independent
+Tags: `theme-v1.2.3` / `plugin-v1.2.3` (or `{plugin}-v1.2.3` where a client has
+more than one), independent
 versions. On tag push, GitHub Actions:
 
 1. **Run the full CI gate suite** by *calling* the CI workflow

@@ -35,7 +35,7 @@ posts imported via WXR.
   work that changes behaviour on a page, once, at the end — not for a
   stylesheet. CI runs the full suite on the PR; that is what it is for. Paste
   what you ran; never re-run a gate to feel sure.
-- Deploy is a git tag (`theme-vX.Y.Z` / `core-vX.Y.Z`) — CI builds, signs, and
+- Deploy is a git tag (`theme-vX.Y.Z` / `plugin-vX.Y.Z`) — CI builds, signs, and
   publishes to `wp-updates.fanxie.cloud`; the site auto-updates. No manual path.
 - PHP 8.4 strict + typed, WPCS/PHPStan level 9 enforced by the gates. WCAG 2.2 AA
   on the front end. Dark is the only ground; light mode is ruled out.
