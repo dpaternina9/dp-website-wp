@@ -14,7 +14,7 @@ the link picker has something to find.
 ## 0. Before you start
 
 - Install the theme and `dp-core` from their release tags (`theme-vX.Y.Z`,
-  `core-vX.Y.Z`). The site auto-updates from `wp-updates.fanxie.cloud`
+  `plugin-vX.Y.Z`). The site auto-updates from `wp-updates.fanxie.cloud`
   thereafter; there is no manual upload path.
 - Turn **maintenance mode on** (Settings → General) so the public sees a holding
   screen while you work. You stay logged in and see the real site throughout.

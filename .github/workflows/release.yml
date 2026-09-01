@@ -1,7 +1,7 @@
 name: Release
 
 # Tagging is the whole deploy (CLAUDE.md §4). A push of `theme-v1.2.3` or
-# `core-v1.2.3` runs every gate and then hands off to the reusable release
+# `plugin-v1.2.3` runs every gate and then hands off to the reusable release
 # workflow in fanxie-lab/wordpress-updater, which stages, stamps, zips, signs
 # an Ed25519 manifest, verifies it against the key the build ships, uploads
 # the ZIP to wp-updates.fanxie.cloud, confirms the public package URL
@@ -26,14 +26,14 @@ on:
   push:
     tags:
       - 'theme-v*'
-      - 'core-v*'
+      - 'plugin-v*'
   workflow_dispatch:
     inputs:
       package:
         description: 'Which package to build (dry run — nothing publishes)'
         required: true
         type: choice
-        options: [ theme, core ]
+        options: [ theme, plugin ]
       version:
         description: 'Version to stamp (semver, no leading v)'
         required: true
@@ -89,8 +89,8 @@ jobs:
 
           if [[ "$EVENT" == "push" ]]; then
             case "$REF_NAME" in
-              theme-v*) pkg=theme; version="${REF_NAME#theme-v}" ;;
-              core-v*)  pkg=core;  version="${REF_NAME#core-v}"  ;;
+              theme-v*)  pkg=theme;  version="${REF_NAME#theme-v}"  ;;
+              plugin-v*) pkg=plugin; version="${REF_NAME#plugin-v}" ;;
               *) echo "::error::${REF_NAME} is not a release tag."; exit 1 ;;
             esac
             publish=true

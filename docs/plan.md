@@ -131,7 +131,7 @@ WordPress core has supported third-party updates natively since 5.8 (plugins) an
    `sodium_crypto_sign_verify_detached()` against the public key compiled into the
    plugin (`DP\Core\Update\UpdateKey::COMPILED`), and hands core the version +
    package URL — pinned inside our namespace on the update host.
-3. Tagging `theme-v1.2.3` or `core-v1.2.3` triggers GitHub Actions: run every gate
+3. Tagging `theme-v1.2.3` or `plugin-v1.2.3` triggers GitHub Actions: run every gate
    (`ci.yml`, called from `release.yml`) → hand off to the reusable workflow
    `fanxie-lab/wordpress-updater/.github/workflows/release.yml@main`, which stamps
    the version, zips without dev deps, signs the manifest, verifies it against the
