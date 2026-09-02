@@ -340,7 +340,10 @@ span.dp-label {
 	display: none;
 }
 
-.dp-nav.wp-block-navigation {
+/* `nav` for the same reason the panel's rule below carries it: the container
+   `<ul>` inherits this block's classes, and a sizing declaration meant for the
+   row must not be read a second time by the list inside it. */
+nav.dp-nav.wp-block-navigation {
 	flex: 0 1 auto;
 	gap: 0;
 	font-size: var(--fs-sm);
@@ -500,7 +503,23 @@ dialog.dp-panel {
 	border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-panel-nav.wp-block-navigation {
+/*
+ * `nav`, and the element selector is load-bearing.
+ *
+ * `core/navigation` stamps the block's whole class list onto the container
+ * `<ul>` as well as onto the `<nav>`, so `.dp-panel-nav.wp-block-navigation`
+ * matches both — and every declaration below is one that must not apply twice.
+ * The list would take the gutter a second time (the items sat indented past
+ * everything else in the panel), open a second scroller inside the first, and
+ * grow to fill.
+ *
+ * That last one is what tore the menu apart. A menu carrying anything that is
+ * not a navigation item renders as more than one `<ul>` — core closes the list
+ * around whatever else is in there — and `flex: 1 1 auto` on each of them
+ * splits the panel's height between them, which drew three links spread over a
+ * whole phone screen with the gaps in between.
+ */
+nav.dp-panel-nav.wp-block-navigation {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow-y: auto;
@@ -518,8 +537,13 @@ dialog.dp-panel {
 	width: 100%;
 }
 
+/* `flex: 1 1 auto` because core makes the `<li>` a flex row, which leaves the
+   anchor shrink-wrapped around its own label: the rule under each item stopped
+   at the end of the word and `space-between` had no space to work with, so the
+   HERE marker sat against the label instead of at the panel's edge. */
 .dp-panel-nav .wp-block-navigation-item__content {
 	display: flex;
+	flex: 1 1 auto;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
