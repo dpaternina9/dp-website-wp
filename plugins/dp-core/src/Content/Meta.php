@@ -165,7 +165,7 @@ final class Meta {
 				__( 'The job title. The post title holds the organisation.', 'dp-core' )
 			),
 			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When the role began, as a decimal year. The fraction is the month: 2026.4 is May 2026.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'Ended', 'dp-core' ), __( 'When the role ended, as a decimal year. An ongoing role ends at today.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Ended', 'dp-core' ), __( 'Optional. When the role ended, as a decimal year. Leave it blank for a role you are still in: the bar runs to today.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',
@@ -211,7 +211,7 @@ final class Meta {
 				minimum: 0.0
 			),
 			$this->year_field( 'dp_start', __( 'Started', 'dp-core' ), __( 'When work on it began, as a decimal year.', 'dp-core' ) ),
-			$this->year_field( 'dp_end', __( 'Shipped', 'dp-core' ), __( 'When it shipped, or today if it is still going, as a decimal year.', 'dp-core' ) ),
+			$this->year_field( 'dp_end', __( 'Shipped', 'dp-core' ), __( 'Optional. When it shipped, as a decimal year. Leave it blank for something still going: the bar runs to today.', 'dp-core' ) ),
 			new MetaField(
 				'dp_range',
 				'string',

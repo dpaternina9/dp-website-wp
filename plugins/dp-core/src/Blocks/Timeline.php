@@ -13,6 +13,8 @@ use DP\Core\Content\Timeline\Chart;
 use DP\Core\Content\Timeline\Filter;
 use DP\Core\Content\Timeline\Geometry;
 use DP\Core\Content\Timeline\Lane;
+use DP\Core\Content\Timeline\LaneGroup;
+use DP\Core\Content\Year;
 
 /**
  * The design's `TimelineChart`, rendered on the server from `dp_role` and `dp_ship`.
@@ -114,12 +116,23 @@ final class Timeline {
 	 * anything being mocked. `null` means "ask WordPress", which is what the
 	 * plugin does.
 	 *
-	 * @param string   $plugin_dir   Absolute path to the plugin directory, without a trailing slash.
-	 * @param int|null $current_year The year to treat as now, or null to read the site's clock.
+	 * `$today` is the same idea one resolution finer, and it answers a different
+	 * question: `$current_year` says where the *track* ends, `$today` says where
+	 * an **ongoing** role's bar ends. A role whose `dp_end` is blank runs to
+	 * today — which is what the field's own description in the editor has
+	 * promised since Phase 2 — and "today" has to carry the month, because
+	 * `Year` encodes months as twelfths and stopping at January of the current
+	 * year would draw a bar months short of the truth. Null means "ask
+	 * WordPress", which is what the plugin does; `Chart` is the one that asks.
+	 *
+	 * @param string    $plugin_dir   Absolute path to the plugin directory, without a trailing slash.
+	 * @param int|null  $current_year The year to treat as now, or null to read the site's clock.
+	 * @param Year|null $today        The point in time an unfinished role runs to, or null to read the clock.
 	 */
 	public function __construct(
 		private readonly string $plugin_dir,
-		private readonly ?int $current_year = null
+		private readonly ?int $current_year = null,
+		private readonly ?Year $today = null
 	) {}
 
 	/**
@@ -142,7 +155,7 @@ final class Timeline {
 	 */
 	public function render( array $attributes = array() ): string {
 		$geometry = $this->geometry( $attributes );
-		$lanes    = ( new Chart( $geometry ) )->lanes();
+		$lanes    = ( new Chart( $geometry, $this->today ) )->lanes();
 
 		if ( array() === $lanes ) {
 			return '';
@@ -154,8 +167,14 @@ final class Timeline {
 
 		$body = '';
 
-		foreach ( $lanes as $lane ) {
-			$body .= $rows->lane( $lane, $filter );
+		/*
+		 * Consecutive lanes at one company share a header, so the chart is drawn
+		 * as runs rather than as lanes. A run of one is a lane and is drawn as
+		 * one; `LaneGroup` decides which is which, and says why only adjacency
+		 * counts.
+		 */
+		foreach ( LaneGroup::consecutive( $lanes ) as $group ) {
+			$body .= $rows->group( $group, $filter );
 		}
 
 		$card = '<div class="dp-tl-card"><div class="dp-tl-scroller"><div class="dp-tl-inner">'

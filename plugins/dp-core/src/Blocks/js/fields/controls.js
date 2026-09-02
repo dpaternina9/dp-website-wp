@@ -54,20 +54,49 @@ function monthOptions() {
 }
 
 /**
+ * The meta a picker adds after a post's title, by post type.
+ *
+ * A `dp_role`'s title is the *company*, and two roles at one company are two
+ * posts with the same title — so a picker offering titles alone offers
+ * "Aplyca" twice and no way to tell which is which. The job title and the range
+ * are what distinguish them, and both are already meta on the post.
+ *
+ * Keyed by post type rather than sniffed from whatever meta a record happens to
+ * carry: a `post` referenced by `dp_writeup_id` has neither key, and a rule
+ * that guesses would start decorating labels the day some unrelated field is
+ * named the same thing.
+ *
+ * @type {Object.<string, string[]>}
+ */
+export const REFERENCE_DETAIL = {
+	dp_role: [ 'dp_role_title', 'dp_range' ],
+};
+
+/**
  * The name a referenced post is offered under.
  *
- * @param {Object} record A post record with `id` and `title.rendered`.
- * @return {string} Its title, or its ID when it has none.
+ * @param {Object} record   A post record with `id`, `title.rendered` and `meta`.
+ * @param {string} postType The type being referenced, or '' when unknown.
+ * @return {string} Its title, plus whatever distinguishes it from its namesakes.
  */
-function referenceName( record ) {
-	return (
+function referenceName( record, postType = '' ) {
+	const title =
 		decodeEntities( record?.title?.rendered ?? '' ) ||
 		sprintf(
 			/* translators: %d: a post ID, shown when the post has no title. */
 			__( 'Untitled (#%d)', 'dp-core' ),
 			record?.id ?? 0
+		);
+
+	const detail = ( REFERENCE_DETAIL[ postType ] ?? [] )
+		.map( ( key ) =>
+			decodeEntities( String( record?.meta?.[ key ] ?? '' ) )
 		)
-	);
+		.filter( ( part ) => '' !== part.trim() );
+
+	return 0 === detail.length
+		? title
+		: `${ title } — ${ detail.join( ' · ' ) }`;
 }
 
 /**
@@ -77,14 +106,16 @@ function referenceName( record ) {
  * list did not return it, so a choice made before the list grew is still shown
  * by name rather than dropping back to a number.
  *
- * @param {Array|null}  records The posts the current query returned.
- * @param {Object|null} current The post already referenced, if there is one.
+ * @param {Array|null}  records  The posts the current query returned.
+ * @param {Object|null} current  The post already referenced, if there is one.
+ * @param {string}      postType The type being referenced, which decides what
+ *                               follows the title. See `REFERENCE_DETAIL`.
  * @return {Array<{value: string, label: string}>} The options, "none" first.
  */
-export function referenceOptions( records, current ) {
+export function referenceOptions( records, current, postType = '' ) {
 	const found = ( records ?? [] ).map( ( record ) => ( {
 		value: String( record.id ),
-		label: referenceName( record ),
+		label: referenceName( record, postType ),
 	} ) );
 
 	if (
@@ -93,7 +124,7 @@ export function referenceOptions( records, current ) {
 	) {
 		found.unshift( {
 			value: String( current.id ),
-			label: referenceName( current ),
+			label: referenceName( current, postType ),
 		} );
 	}
 
@@ -379,7 +410,7 @@ export function ReferenceEdit( { attributes, context } ) {
 				per_page: 50,
 				orderby: 'title',
 				order: 'asc',
-				_fields: 'id,title',
+				_fields: 'id,title,meta',
 			};
 
 			if ( search ) {
@@ -391,7 +422,7 @@ export function ReferenceEdit( { attributes, context } ) {
 				current:
 					chosen > 0
 						? getEntityRecord( 'postType', reference, chosen, {
-								_fields: 'id,title',
+								_fields: 'id,title,meta',
 						  } )
 						: null,
 			};
@@ -400,8 +431,8 @@ export function ReferenceEdit( { attributes, context } ) {
 	);
 
 	const options = useMemo(
-		() => referenceOptions( records, current ),
-		[ records, current ]
+		() => referenceOptions( records, current, reference ),
+		[ records, current, reference ]
 	);
 
 	return (

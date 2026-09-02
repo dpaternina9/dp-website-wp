@@ -1204,10 +1204,10 @@ final class DesignBaseline {
 
 			/* The bar. The closed fill is the one the design states in prose too. */
 			array(
-				'id'       => 'row.role.bar.open',
-				'sweep'    => 'bars',
-				'selector' => '.dp-tl-row-role.is-accent-pink[open] .dp-tl-bar',
-				'logic'    => array(
+				'id'         => 'row.role.bar.open',
+				'sweep'      => 'bars',
+				'selector'   => '.dp-tl-row-role.is-accent-pink[open] .dp-tl-bar',
+				'logic'      => array(
 					'file' => $logic,
 					'name' => 'barStyle',
 					'env'  => array(
@@ -1217,12 +1217,18 @@ final class DesignBaseline {
 					),
 					'only' => $barparts,
 				),
+				'divergence' => array(
+					'minWidth' => 'ADR-0022. The design floors a role bar at 64px, which is about a year '
+						. 'on the width this page gives the track -- so every sub-year role was drawn a '
+						. 'year long and two consecutive three-month roles read as concurrent. The floor '
+						. 'clears a perceptual threshold; the whole row, not the bar, is the click target.',
+				),
 			),
 			array(
-				'id'       => 'row.role.bar.closed',
-				'sweep'    => 'bars-closed',
-				'selector' => '.dp-tl-row-role.is-accent-pink:not([open]) .dp-tl-bar',
-				'logic'    => array(
+				'id'         => 'row.role.bar.closed',
+				'sweep'      => 'bars-closed',
+				'selector'   => '.dp-tl-row-role.is-accent-pink:not([open]) .dp-tl-bar',
+				'logic'      => array(
 					'file' => $logic,
 					'name' => 'barStyle',
 					'env'  => array(
@@ -1232,15 +1238,21 @@ final class DesignBaseline {
 					),
 					'only' => $barparts,
 				),
-				'note'     => 'The first closed bar this harness has ever measured. Both of its sweeps used to '
+				'divergence' => array(
+					'minWidth' => 'ADR-0022. The design floors a role bar at 64px, which is about a year '
+						. 'on the width this page gives the track -- so every sub-year role was drawn a '
+						. 'year long and two consecutive three-month roles read as concurrent. The floor '
+						. 'clears a perceptual threshold; the whole row, not the bar, is the click target.',
+				),
+				'note'       => 'The first closed bar this harness has ever measured. Both of its sweeps used to '
 					. 'navigate with `dp-open=all`, so `color-mix(in srgb, <color> 38%, var(--bg-surface))` — '
 					. 'which the design states in the COLOURS block as well as computing — matched nothing.',
 			),
 			array(
-				'id'       => 'row.ship.bar.open',
-				'sweep'    => 'bars',
-				'selector' => '.dp-tl-row-ship[open] .dp-tl-bar',
-				'logic'    => array(
+				'id'         => 'row.ship.bar.open',
+				'sweep'      => 'bars',
+				'selector'   => '.dp-tl-row-ship[open] .dp-tl-bar',
+				'logic'      => array(
 					'file' => $logic,
 					'name' => 'barStyle',
 					'env'  => array(
@@ -1250,14 +1262,19 @@ final class DesignBaseline {
 					),
 					'only' => $barparts,
 				),
-				'note'     => 'A shipped thing\'s bar is inset 6px top and bottom against a role\'s 4 — the '
+				'divergence' => array(
+					'minWidth' => 'ADR-0022. The ship floor moves with the role floor, and for the same '
+						. 'reason. Roles keep the larger of the two so a role still outranks a ship when '
+						. 'both are floored, which is what the design\'s 64:40 ratio was saying.',
+				),
+				'note'       => 'A shipped thing\'s bar is inset 6px top and bottom against a role\'s 4 — the '
 					. '`small` branch of `barStyle`, which nothing asserted before.',
 			),
 			array(
-				'id'       => 'row.ship.bar.closed',
-				'sweep'    => 'bars-closed',
-				'selector' => '.dp-tl-row-ship:not([open]) .dp-tl-bar',
-				'logic'    => array(
+				'id'         => 'row.ship.bar.closed',
+				'sweep'      => 'bars-closed',
+				'selector'   => '.dp-tl-row-ship:not([open]) .dp-tl-bar',
+				'logic'      => array(
 					'file' => $logic,
 					'name' => 'barStyle',
 					'env'  => array(
@@ -1266,6 +1283,11 @@ final class DesignBaseline {
 						'small'  => true,
 					),
 					'only' => $barparts,
+				),
+				'divergence' => array(
+					'minWidth' => 'ADR-0022. The ship floor moves with the role floor, and for the same '
+						. 'reason. Roles keep the larger of the two so a role still outranks a ship when '
+						. 'both are floored, which is what the design\'s 64:40 ratio was saying.',
 				),
 			),
 

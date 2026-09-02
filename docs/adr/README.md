@@ -105,3 +105,4 @@ reasoning intact — the record of why we believed something is the point.
 | [0019](0019-a-series-is-ordered-by-hand.md) | A series is ordered by hand | Accepted — 2026-08-27 |
 | [0020](0020-theme-json-opens-for-a-custom-template.md) | `theme.json` opens a second time, for one custom template | Accepted — 2026-08-27 |
 | [0021](0021-the-blog-templates-derive-four-things-a-template-cannot-say.md) | The blog templates derive four things a template cannot say | Accepted — 2026-08-25 (renumbered from 0015), partly superseded by 0016 |
+| [0022](0022-the-bar-floor-is-a-visibility-floor.md) | The bar floor is a visibility floor, not the design's 64 and 40 | Accepted — 2026-09-02 |

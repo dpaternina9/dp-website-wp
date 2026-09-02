@@ -134,21 +134,83 @@ final class PatternsTest extends TemplateTestCase {
 
 		$this->go_to( home_url( '/' ) );
 
-		$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'dpaternina/work-card' );
-
-		$this->assertIsArray( $pattern );
-
-		$html = do_blocks( (string) ( $pattern['content'] ?? '' ) );
+		$html = $this->work_cards_html();
 
 		$this->assertStringContainsString( 'Natural-language queries', $html );
 		$this->assertStringContainsString( 'Kiveo', $html );
 		$this->assertStringNotContainsString( 'Something unfinished', $html );
+	}
+
+	/**
+	 * The cards run in David's order, not in the order things shipped.
+	 *
+	 * Until 2026-09-02 this loop sorted on `dp_end` descending, so the newest
+	 * thing led the work page whether or not it was the strongest. Which three
+	 * pieces of work open the page is an editorial decision — the same one
+	 * ADR-0019 settled for a series — so it is `menu_order`, set in Page
+	 * Attributes.
+	 *
+	 * The fixture is built so the two rules disagree: the card David ordered
+	 * first is the one that shipped *earliest*. A regression to the old sort
+	 * therefore fails here rather than passing by coincidence.
+	 *
+	 * @return void
+	 */
+	public function test_the_work_cards_run_in_the_order_david_set(): void {
+		$this->seed_ship( 'Ordered first, shipped earliest', true, 2020.0, '', 1 );
+		$this->seed_ship( 'Ordered second, shipped latest', true, 2026.0, '', 2 );
+
+		$this->go_to( home_url( '/' ) );
+
+		$html = $this->work_cards_html();
 
 		$this->assertLessThan(
-			strpos( $html, 'Kiveo' ),
-			strpos( $html, 'Natural-language queries' ),
-			'The most recently shipped comes first.'
+			strpos( $html, 'Ordered second, shipped latest' ),
+			strpos( $html, 'Ordered first, shipped earliest' ),
+			'menu_order decides the sequence; the shipped date does not.'
 		);
+	}
+
+	/**
+	 * A featured ship with no end date is still featured.
+	 *
+	 * The old ordering needed a second `meta_query` clause requiring `dp_end` to
+	 * EXIST, purely to have a named clause to sort on. `register_post_meta()`'s
+	 * default is not a row, so an ongoing project whose end was never saved
+	 * matched neither the clause nor the sort and dropped out of a three-card
+	 * grid entirely — the most current work, least likely to be shown.
+	 *
+	 * @return void
+	 */
+	public function test_a_featured_ship_with_no_end_date_still_appears(): void {
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'  => 'dp_ship',
+				'post_title' => 'Still going, no end date',
+				'menu_order' => 1,
+			)
+		);
+
+		$this->assertIsInt( $post_id );
+		update_post_meta( $post_id, 'dp_featured', true );
+		delete_post_meta( $post_id, 'dp_end' );
+
+		$this->go_to( home_url( '/' ) );
+
+		$this->assertStringContainsString( 'Still going, no end date', $this->work_cards_html() );
+	}
+
+	/**
+	 * The work-card pattern, rendered.
+	 *
+	 * @return string
+	 */
+	private function work_cards_html(): string {
+		$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'dpaternina/work-card' );
+
+		$this->assertIsArray( $pattern );
+
+		return do_blocks( (string) ( $pattern['content'] ?? '' ) );
 	}
 
 	/**

@@ -135,7 +135,7 @@ final class TimelineGeometryTest extends TestCase {
 		$this->assertEqualsWithDelta( ( 8.0 / 13.0 ) * 100.0, $bar->left(), self::DELTA );
 		$this->assertEqualsWithDelta( ( 4.4 / 13.0 ) * 100.0, $bar->width(), self::DELTA );
 		$this->assertEqualsWithDelta( 100.0 - ( ( 8.0 / 13.0 ) * 100.0 ), $bar->max_width(), self::DELTA );
-		$this->assertSame( 64, $bar->min_width() );
+		$this->assertSame( 10, $bar->min_width() );
 		$this->assertSame( BarKind::Role, $bar->kind() );
 	}
 
@@ -153,7 +153,7 @@ final class TimelineGeometryTest extends TestCase {
 
 		$this->assertEqualsWithDelta( ( 9.0 / 13.0 ) * 100.0, $bar->left(), self::DELTA );
 		$this->assertEqualsWithDelta( ( 3.6 / 13.0 ) * 100.0, $bar->width(), self::DELTA );
-		$this->assertSame( 40, $bar->min_width() );
+		$this->assertSame( 8, $bar->min_width() );
 	}
 
 	/**
@@ -204,8 +204,51 @@ final class TimelineGeometryTest extends TestCase {
 		$ship = Geometry::for_the_design()->bar( Year::from_float( 2020.0 ), Year::from_float( 2020.0 ), BarKind::Ship );
 
 		$this->assertSame( 0.0, $role->width() );
-		$this->assertSame( 64, $role->min_width() );
-		$this->assertSame( 40, $ship->min_width() );
+		$this->assertSame( 10, $role->min_width() );
+		$this->assertSame( 8, $ship->min_width() );
+	}
+
+	/**
+	 * Two consecutive sub-year roles abut; the floor does not make them overlap.
+	 *
+	 * The defect this closes, reported 2026-09-02 against the live chart: two
+	 * real roles -- Imaginamos, April to June 2019, and Aplyca, July to December
+	 * 2019 -- rendered as two bars overlapping by most of their length, reading
+	 * as concurrent jobs. `Geometry` was never wrong: the bars abut to the
+	 * floating-point digit, as the first half of this test says. What was wrong
+	 * was `BarKind::Role->min_width()`, then the design's 64px. The work page
+	 * gives the track roughly 832px for thirteen years, so 64px is about a year
+	 * and both three-month bars were inflated to a year apiece.
+	 *
+	 * The second half is the pin: the floor must stay under what the *gap*
+	 * between two such roles is worth in pixels, or the inflation comes back.
+	 * The track width is an approximation and deliberately generous -- a wider
+	 * track only makes the floor safer, and this is a floor, not a layout test.
+	 *
+	 * @return void
+	 */
+	public function test_consecutive_sub_year_roles_do_not_overlap(): void {
+		$geometry = Geometry::for_the_design();
+
+		$imaginamos = $geometry->bar( Year::from_float( 2019.25 ), Year::from_float( 2019.5 ), BarKind::Role );
+		$aplyca     = $geometry->bar( Year::from_float( 2019.5 ), Year::from_float( 2020.0 ), BarKind::Role );
+
+		$this->assertEqualsWithDelta(
+			$aplyca->left(),
+			$imaginamos->left() + $imaginamos->width(),
+			self::DELTA,
+			'A role ending in July and one starting in July abut; neither overlaps the other.'
+		);
+
+		$track_px = 832.0;
+		$quarter  = ( 0.25 / 13.0 ) * $track_px;
+
+		$this->assertLessThanOrEqual(
+			$quarter,
+			(float) BarKind::Role->min_width(),
+			'A role floor wider than a quarter-year swallows the gap between two consecutive short roles.'
+		);
+		$this->assertLessThanOrEqual( BarKind::Role->min_width(), BarKind::Ship->min_width() );
 	}
 
 	/**
@@ -221,7 +264,7 @@ final class TimelineGeometryTest extends TestCase {
 		);
 
 		$this->assertSame(
-			'left:61.5385%;width:33.8462%;max-width:38.4615%;min-width:64px',
+			'left:61.5385%;width:33.8462%;max-width:38.4615%;min-width:10px',
 			$bar->style()
 		);
 	}
@@ -238,7 +281,7 @@ final class TimelineGeometryTest extends TestCase {
 			BarKind::Ship
 		);
 
-		$this->assertSame( 'left:0%;width:100%;max-width:100%;min-width:40px', $bar->style() );
+		$this->assertSame( 'left:0%;width:100%;max-width:100%;min-width:8px', $bar->style() );
 	}
 
 	/**

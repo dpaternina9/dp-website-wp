@@ -12,6 +12,7 @@ namespace DP\Core\Blocks;
 use DP\Core\Content\Timeline\Bar;
 use DP\Core\Content\Timeline\Filter;
 use DP\Core\Content\Timeline\Lane;
+use DP\Core\Content\Timeline\LaneGroup;
 use DP\Core\Content\Timeline\Ship;
 
 /**
@@ -36,6 +37,17 @@ use DP\Core\Content\Timeline\Ship;
  * no stylesheet could hold; colour arrives as a class the theme maps to a token,
  * because a hex value written into markup is a value nobody can re-check
  * (CLAUDE.md section 5).
+ *
+ * **Where markup is added, it is added after the escaping.** The two detail
+ * paragraphs are `nl2br( esc_html( … ) )`, in that order: a line break David
+ * typed into the field is a break on the page, and the only tags that can reach
+ * the document are the `<br />`s `nl2br()` itself put there. Reversing the two
+ * would escape those breaks back into text and let anything in the value
+ * through, so the order is the whole of the safety. `Maintenance\Screen` writes
+ * the same sequence for the same reason. `wpautop()` is deliberately not used:
+ * these strings already sit inside a `p.dp-tl-prose`, whose element-qualified
+ * selector is what carries the design's declared line-height past `theme.json`'s
+ * root one, and nested paragraphs would mean changing that element.
  */
 final class TimelineRows {
 
@@ -56,13 +68,100 @@ final class TimelineRows {
 	public function __construct( private readonly array $open ) {}
 
 	/**
-	 * One lane: the role's row, then the rail its shipped things hang off.
+	 * One run of lanes: a bare lane, or a company header with lanes under it.
 	 *
-	 * @param Lane   $lane   The lane.
-	 * @param Filter $filter The filter in force.
+	 * A run of one is drawn exactly as a lane has always been drawn — the same
+	 * element, the same attributes, the same order — because a company with one
+	 * role is every company on the chart but two and none of them should change.
+	 * `LaneGroup` is what decides which of the two this is; see its class
+	 * docblock for why only adjacent lanes ever share a header.
+	 *
+	 * The header is a plain row and **not** a second `<details>` around the
+	 * first. Nesting disclosures would make every role row openable-but-invisible
+	 * inside a closed parent, would break the `dp-open` deep links that already
+	 * point at those rows, and would put a company name where a heading is
+	 * announced twice. So the group is a `role="group"` named by its header, the
+	 * role rows stay independently openable, and nothing about `dp-open` changes.
+	 *
+	 * @param LaneGroup $group  The run.
+	 * @param Filter    $filter The filter in force.
 	 * @return string
 	 */
-	public function lane( Lane $lane, Filter $filter ): string {
+	public function group( LaneGroup $group, Filter $filter ): string {
+		if ( ! $group->is_shared() ) {
+			return $this->lane( $group->first, $filter, false );
+		}
+
+		$lanes = '';
+		$shown = false;
+
+		foreach ( $group->lanes as $lane ) {
+			$lanes .= $this->lane( $lane, $filter, true );
+			$shown  = $shown || $filter->shows_lane( $lane->has_ships() );
+		}
+
+		/*
+		 * A header whose every role row is hidden is a company heading nothing,
+		 * so it is hidden too — `hidden` rather than absent, for the reason every
+		 * other filtered row is: the record stays in the document and the script
+		 * switches filter by changing an attribute.
+		 */
+		return sprintf(
+			'<div class="dp-tl-group" role="group" aria-labelledby="%1$s"%2$s>%3$s'
+			. '<div class="dp-tl-group-lanes">%4$s</div></div>',
+			esc_attr( $group->key ),
+			$shown ? '' : ' hidden',
+			$this->group_head( $group ),
+			$lanes
+		);
+	}
+
+	/**
+	 * The company header: the name, and the run's whole span on the track.
+	 *
+	 * The span is `LaneGroup`'s combined bar — earliest start to latest end,
+	 * taken from the lanes' own bars — drawn in the group's own track, on the
+	 * same grid as every other row. It cannot move or rescale a role bar,
+	 * because it is not on a role's row: the role bars are still exactly where
+	 * `Geometry` put them, and the axis goes on reading truthfully (ADR-0014).
+	 *
+	 * No heading element and no `<summary>`: the header names a group, it does
+	 * not open one, and a heading here would either be announced twice inside
+	 * the disclosure or invent an outline level the page never asked for.
+	 *
+	 * @param LaneGroup $group The run.
+	 * @return string
+	 */
+	private function group_head( LaneGroup $group ): string {
+		$accent = null === $group->accent ? '' : ' is-accent-' . $group->accent->value;
+
+		$label = '<span class="dp-tl-label"><span class="dp-tl-org" id="' . esc_attr( $group->key ) . '">'
+			. esc_html( $group->org ) . '</span></span>';
+
+		$track = null === $group->bar
+			? ''
+			: sprintf(
+				'<span class="dp-tl-track" aria-hidden="true"><span class="dp-tl-bar dp-tl-bar-group" style="%s"></span></span>',
+				esc_attr( $group->bar->style() )
+			);
+
+		return sprintf(
+			'<div class="dp-tl-group-head%1$s"><span class="dp-tl-grid">%2$s%3$s</span></div>',
+			esc_attr( $accent ),
+			$label,
+			$track
+		);
+	}
+
+	/**
+	 * One lane: the role's row, then the rail its shipped things hang off.
+	 *
+	 * @param Lane   $lane    The lane.
+	 * @param Filter $filter  The filter in force.
+	 * @param bool   $grouped Whether a company header above it already names the organisation.
+	 * @return string
+	 */
+	private function lane( Lane $lane, Filter $filter, bool $grouped ): string {
 		$rows = '';
 
 		foreach ( $lane->ships as $ship ) {
@@ -78,7 +177,7 @@ final class TimelineRows {
 			esc_attr( $lane->key ),
 			$lane->has_ships() ? 'yes' : 'no',
 			$filter->shows_lane( $lane->has_ships() ) ? '' : ' hidden',
-			$this->role_row( $lane ),
+			$this->role_row( $lane, $grouped ),
 			$rail
 		);
 	}
@@ -86,18 +185,28 @@ final class TimelineRows {
 	/**
 	 * The role's own disclosure.
 	 *
-	 * @param Lane $lane The lane.
+	 * `.dp-tl-org` is the row's *name*, which is why a shipped thing already
+	 * uses it for a project. Under a company header the row's name is the job
+	 * title, and the organisation is not repeated — that repetition is the whole
+	 * defect this closes. A lane with no job title keeps the organisation, so a
+	 * half-finished post is a row with a name rather than a row with none.
+	 *
+	 * @param Lane $lane    The lane.
+	 * @param bool $grouped Whether a company header above it already names the organisation.
 	 * @return string
 	 */
-	private function role_row( Lane $lane ): string {
-		$label = '<span class="dp-tl-org">' . esc_html( $lane->org ) . '</span>'
-			. ( '' === $lane->title ? '' : '<span class="dp-tl-role">' . esc_html( $lane->title ) . '</span>' )
+	private function role_row( Lane $lane, bool $grouped ): string {
+		$named = $grouped && '' !== $lane->title ? $lane->title : $lane->org;
+		$title = $grouped ? '' : $lane->title;
+
+		$label = '<span class="dp-tl-org">' . esc_html( $named ) . '</span>'
+			. ( '' === $title ? '' : '<span class="dp-tl-role">' . esc_html( $title ) . '</span>' )
 			. ( '' === $lane->range ? '' : '<span class="dp-tl-range">' . esc_html( $lane->range ) . '</span>' )
 			. '<span class="dp-tl-chevron" aria-hidden="true">' . self::CHEVRON . '</span>';
 
 		$detail = '<div class="dp-tl-detail"><div class="dp-tl-kind">' . esc_html__( 'Role', 'dp-core' ) . '</div>'
 			. '<div class="dp-tl-detail-body">'
-			. ( '' === $lane->detail ? '' : '<p class="dp-tl-prose">' . esc_html( $lane->detail ) . '</p>' )
+			. ( '' === $lane->detail ? '' : '<p class="dp-tl-prose">' . nl2br( esc_html( $lane->detail ) ) . '</p>' )
 			. ( '' === $lane->stack ? '' : '<div class="dp-tl-stack">' . esc_html( $lane->stack ) . '</div>' )
 			. '</div></div>';
 
@@ -181,7 +290,7 @@ final class TimelineRows {
 		}
 
 		if ( '' !== $ship->detail ) {
-			$main .= '<p class="dp-tl-prose">' . esc_html( $ship->detail ) . '</p>';
+			$main .= '<p class="dp-tl-prose">' . nl2br( esc_html( $ship->detail ) ) . '</p>';
 		}
 
 		$main .= $this->bullets( $ship->bullets ) . $this->facts( $ship );

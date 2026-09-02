@@ -77,6 +77,83 @@ describe( 'a post picker', () => {
 		);
 	} );
 
+	it( 'tells two roles at one company apart', () => {
+		const aplyca = [
+			{
+				id: 51,
+				title: { rendered: 'Aplyca' },
+				meta: {
+					dp_role_title: 'Full-Stack Developer',
+					dp_range: 'July — Dec 2019',
+				},
+			},
+			{
+				id: 52,
+				title: { rendered: 'Aplyca' },
+				meta: {
+					dp_role_title: 'Solutions Architect',
+					dp_range: '2019 — 2021',
+				},
+			},
+		];
+
+		expect(
+			referenceOptions( aplyca, null, 'dp_role' ).map( ( o ) => o.label )
+		).toEqual( [
+			'— none —',
+			'Aplyca — Full-Stack Developer · July — Dec 2019',
+			'Aplyca — Solutions Architect · 2019 — 2021',
+		] );
+	} );
+
+	it( 'adds nothing for a post type that has no distinguishing meta', () => {
+		const writeup = [
+			{
+				id: 61,
+				title: { rendered: 'A write-up' },
+				meta: { dp_role_title: 'ignored off dp_role' },
+			},
+		];
+
+		expect( referenceOptions( writeup, null, 'post' )[ 1 ].label ).toBe(
+			'A write-up'
+		);
+	} );
+
+	it( 'falls back to the title when the meta is empty or missing', () => {
+		const bare = [
+			{ id: 71, title: { rendered: 'Backbone Technology' }, meta: {} },
+			{
+				id: 72,
+				title: { rendered: 'Imaginamos' },
+				meta: { dp_role_title: '   ', dp_range: '' },
+			},
+		];
+
+		expect(
+			referenceOptions( bare, null, 'dp_role' ).map( ( o ) => o.label )
+		).toEqual( [ '— none —', 'Backbone Technology', 'Imaginamos' ] );
+	} );
+
+	it( 'keeps the detail on the chosen role a search has hidden', () => {
+		const options = referenceOptions(
+			[],
+			{
+				id: 52,
+				title: { rendered: 'Aplyca' },
+				meta: {
+					dp_role_title: 'Solutions Architect',
+					dp_range: '2019 — 2021',
+				},
+			},
+			'dp_role'
+		);
+
+		expect( options[ 1 ].label ).toBe(
+			'Aplyca — Solutions Architect · 2019 — 2021'
+		);
+	} );
+
 	it( 'offers nothing but "none" before the list arrives', () => {
 		expect( referenceOptions( null, null ) ).toEqual( [
 			{ value: '0', label: '— none —' },
