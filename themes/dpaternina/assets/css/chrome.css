@@ -640,6 +640,32 @@ p.dp-panel-wordmark {
 	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
+/*
+ * The one place this footer is not a transcription, and the reason is that the
+ * design has nothing to transcribe here: `SiteFooter.dc.html` states the track
+ * above and stops, so what a phone gets is whatever `auto-fit` decides. Two
+ * 180px tracks and the 32px between them want 392px; a 390px phone has 351px
+ * inside the gutter, so it misses by 41 and every group becomes a full-width
+ * row. That is four stacked rows 40px apart under 56px of padding — a footer
+ * 654px tall on an 844px screen, most of it empty.
+ *
+ * Two even columns instead, with the brand across the top of them: 451px, and
+ * the same words. Held behind a query the design's own breakpoint never
+ * reaches, so the layout it *did* draw is untouched at every width it drew.
+ */
+@media (max-width: 599px) {
+
+	.dp-footer-grid {
+		padding-block: 40px 24px;
+		gap: 32px 24px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.dp-footer-brand {
+		grid-column: 1 / -1;
+	}
+}
+
 .dp-footer-brand,
 .dp-footer-group {
 	display: flex;
