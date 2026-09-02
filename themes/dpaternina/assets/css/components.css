@@ -881,10 +881,15 @@ p.dp-cta-banner-line {
 	transition: border-color var(--dur-base) var(--ease-standard);
 }
 
+/* The base pill turns its label `--accent-contrast` on hover, which is the near
+   black that reads against a filled teal button and against nothing else. This
+   row is a surface, not a pill, so it has to say the resting colour again —
+   without this line the address goes black on `--bg-surface` and disappears. */
 .dp-contact-method .wp-block-button__link:hover {
 	border-color: var(--accent-text);
 	background: var(--bg-surface);
 	box-shadow: none;
+	color: var(--text-primary);
 }
 
 /* -------------------------------------------------------------------------
@@ -4605,10 +4610,14 @@ p.dp-404-note {
 		border-color var(--dur-base) var(--ease-standard);
 }
 
+/* Same correction as `.dp-contact-method`: these cards are surfaces rather than
+   pills, so the base button's `--accent-contrast` hover colour would take the
+   title and the note to black on `--band`. */
 .dp-lost-link .wp-block-button__link:hover {
 	border-color: var(--accent-text);
 	background: var(--band);
 	box-shadow: none;
+	color: var(--text-primary);
 	transform: translateY(-3px);
 }
 
