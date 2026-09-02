@@ -51,9 +51,29 @@ final class Chart {
 	/**
 	 * Constructor.
 	 *
-	 * @param Geometry $geometry Where every bar goes.
+	 * `$today` is where an **ongoing** entry's bar ends. `dp_end` is optional on
+	 * both post types and its registered description says so in the editor: a
+	 * role that has not finished, or a project still being worked on, is left
+	 * blank and runs to today. Nothing implemented that until 2026-09-02, so
+	 * David left it blank as instructed and his current role had no bar at all.
+	 *
+	 * It is a `Year` rather than an `int` because `Year` encodes months as
+	 * twelfths: an ongoing role that ended at January of the current year would
+	 * be drawn up to eleven months short, which is precisely the class of error
+	 * ADR-0014 was written about.
+	 *
+	 * Null means "read the site's clock", which is what the plugin does. It is
+	 * injectable for the reason `Geometry::through()`'s year is: a test that
+	 * wants a month boundary passes the boundary, and the merge queue already
+	 * records that Brain Monkey cannot stand in for `time()`.
+	 *
+	 * @param Geometry  $geometry Where every bar goes.
+	 * @param Year|null $today    The point in time an unfinished entry runs to, or null to read the clock.
 	 */
-	public function __construct( private readonly Geometry $geometry ) {}
+	public function __construct(
+		private readonly Geometry $geometry,
+		private readonly ?Year $today = null
+	) {}
 
 	/**
 	 * The track these lanes are drawn against.
@@ -196,19 +216,75 @@ final class Chart {
 	/**
 	 * The bar for one post, or null when its dates cannot be read.
 	 *
+	 * The two ends are not symmetrical, and the asymmetry is the decision. A
+	 * blank **start** is no bar: a role with no beginning has nowhere on the
+	 * track to begin, and guessing one would be inventing a date. A blank
+	 * **end** is "still going", which is what both post types' `dp_end`
+	 * description already tells the author in the editor — so this is a
+	 * derivation filling a blank, announced where the blank is left, rather than
+	 * a hidden render-time rewrite (ADR-0018 rule 3).
+	 *
 	 * @param int     $post_id The post.
 	 * @param BarKind $kind    Role lane or shipped thing.
 	 * @return Bar|null
 	 */
 	private function bar( int $post_id, BarKind $kind ): ?Bar {
 		$start = Year::try_from_float( $this->decimal( $post_id, 'dp_start' ) );
-		$end   = Year::try_from_float( $this->decimal( $post_id, 'dp_end' ) );
+		$end   = $this->ends( $post_id );
 
 		if ( null === $start || null === $end ) {
 			return null;
 		}
 
 		return $this->geometry->bar( $start, $end, $kind );
+	}
+
+	/**
+	 * When one entry ended: what it says, or today when it has not.
+	 *
+	 * `0.0` is this project's own sentinel for "no date yet" — `Meta`'s year
+	 * fields declare it as their default, sanitise a blank to it and carry an
+	 * `anyOf` schema that admits it beside the real range — so reading it as
+	 * "unfinished" here is reading the value the content model already stores
+	 * rather than inventing a second meaning for it.
+	 *
+	 * A value that is present but outside what a `Year` will hold still means no
+	 * bar. That can only arrive from an import or a direct write, and it is a
+	 * date somebody typed wrong rather than a date they left out; treating it as
+	 * "today" would draw a bar the record does not support.
+	 *
+	 * @param int $post_id The post.
+	 * @return Year|null
+	 */
+	private function ends( int $post_id ): ?Year {
+		$stored = $this->decimal( $post_id, 'dp_end' );
+
+		return 0.0 === $stored ? $this->now() : Year::try_from_float( $stored );
+	}
+
+	/**
+	 * The point in time an unfinished entry runs to.
+	 *
+	 * The site's timezone, through `wp_date()`, for the reason ADR-0014 gives
+	 * for the axis: on 31 December a site in Bogotá is five hours short of the
+	 * UTC one, and `date()` would read the container's clock, which is a third
+	 * answer nobody chose. Both halves are clamped into what `Year` accepts so
+	 * that a clock this class cannot control can never raise on a public page.
+	 *
+	 * @return Year
+	 */
+	private function now(): Year {
+		if ( null !== $this->today ) {
+			return $this->today;
+		}
+
+		$year  = wp_date( 'Y' );
+		$month = wp_date( 'n' );
+
+		return Year::from_year_month(
+			min( Year::MAX_YEAR, max( Year::MIN_YEAR, is_string( $year ) && is_numeric( $year ) ? (int) $year : (int) gmdate( 'Y' ) ) ),
+			min( 12, max( 1, is_string( $month ) && is_numeric( $month ) ? (int) $month : (int) gmdate( 'n' ) ) )
+		);
 	}
 
 	/**

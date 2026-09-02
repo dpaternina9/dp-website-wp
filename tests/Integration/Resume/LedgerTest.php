@@ -9,6 +9,10 @@ declare( strict_types=1 );
 
 namespace DP\Tests\Integration\Resume;
 
+use DP\Core\Content\PostTypes;
+use DP\Core\Content\Timeline\BarKind;
+use DP\Core\Content\Timeline\Geometry;
+use DP\Core\Content\Year;
 use DP\Core\Resume\Ledger;
 use WP_Block_Type_Registry;
 
@@ -229,12 +233,72 @@ final class LedgerTest extends ResumeTestCase {
 	}
 
 	/**
+	 * A line break in a detail survives to the page here too.
+	 *
+	 * `nl2br( esc_html( … ) )`, in that order: the breaks David typed are breaks,
+	 * and the only markup that can reach the page is the `<br />` `nl2br()` added
+	 * after everything else had already been escaped. `test_content_is_escaped_on_the_way_out()`
+	 * above is the other half of the pair.
+	 *
+	 * @return void
+	 */
+	public function test_a_line_break_in_a_detail_survives_to_the_page(): void {
+		$role = $this->seed_role( 'Fanxie Lab', 2020.0 );
+
+		remove_all_filters( 'sanitize_post_meta_dp_detail' );
+		remove_all_filters( 'sanitize_post_meta_dp_detail_for_' . PostTypes::ROLE );
+
+		update_post_meta( $role, 'dp_detail', "First line.\nSecond & last <b>line</b>." );
+
+		$html = $this->ledger()->render();
+
+		$this->assertStringContainsString( 'First line.<br />' . "\n" . 'Second &amp; last', $html );
+		$this->assertStringContainsString( '&lt;b&gt;line&lt;/b&gt;', $html );
+	}
+
+	/**
+	 * The résumé and the chart agree about a role that has not ended.
+	 *
+	 * Both read the record through one `Chart`, and both now hand it the same
+	 * answer to "what is today". If they answered it from two clocks — or if one
+	 * of them did not answer it at all — the résumé and the timeline could
+	 * disagree about whether the current job has finished, which is exactly the
+	 * disagreement reading through `Chart` exists to prevent.
+	 *
+	 * @return void
+	 */
+	public function test_the_ledger_and_the_chart_agree_about_an_ongoing_role(): void {
+		$role = $this->seed_role( 'Fanxie Lab', 2020.0 );
+
+		update_post_meta( $role, 'dp_end', 0.0 );
+
+		$today = Year::from_year_month( 2026, 9 );
+		$lanes = $this->ledger( $today )->lanes();
+
+		$this->assertCount( 1, $lanes );
+
+		$bar = $lanes[0]->bar;
+
+		$this->assertNotNull( $bar, 'A role David is still in is a role with a bar.' );
+
+		$expected = ( new Geometry( Geometry::DESIGN_FIRST_YEAR, Geometry::DESIGN_LAST_YEAR ) )
+			->bar( Year::from_float( 2020.0 ), $today, BarKind::Role );
+
+		$this->assertSame( $expected->style(), $bar->style() );
+	}
+
+	/**
 	 * The block under test.
 	 *
+	 * `$today` is where an unfinished role's bar ends, handed to the same `Chart`
+	 * the timeline hands it to. Injected rather than read from a clock, for the
+	 * reason `Geometry::through()`'s year is.
+	 *
+	 * @param Year|null $today Where an unfinished role runs to, or null to read the clock.
 	 * @return Ledger
 	 */
-	private function ledger(): Ledger {
-		return new Ledger( dirname( __DIR__, 3 ) . '/plugins/dp-core' );
+	private function ledger( ?Year $today = null ): Ledger {
+		return new Ledger( dirname( __DIR__, 3 ) . '/plugins/dp-core', $today );
 	}
 
 	/**

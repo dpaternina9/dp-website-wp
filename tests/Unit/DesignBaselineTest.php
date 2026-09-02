@@ -195,12 +195,48 @@ final class DesignBaselineTest extends TestCase {
 			);
 		}
 
+		$bars = array( 'row.role.bar.open', 'row.role.bar.closed', 'row.ship.bar.open', 'row.ship.bar.closed' );
+
 		$this->assertSame(
-			array( 'chart.years' ),
+			array_merge( array( 'chart.years' ), $bars ),
 			$diverge,
-			'A second entry diverges from the design. That needs an ADR and a line here before it '
+			'A third entry diverges from the design. That needs an ADR and a line here before it '
 				. 'needs a fixture.'
 		);
+
+		/*
+		 * The second recorded divergence, ADR-0022: the design floors a role bar
+		 * at 64px and a ship at 40, which on this page's track is about a year
+		 * and about eight months. Every sub-year role was drawn a year long, so
+		 * two consecutive three-month roles read as concurrent jobs. The floor
+		 * is now 10px and 8px -- and it is one property on each of four entries,
+		 * because everything else about a bar still matches the design exactly.
+		 */
+		foreach ( $bars as $id ) {
+			$bar = null;
+
+			foreach ( $decoded['entries'] as $entry ) {
+				if ( is_array( $entry ) && ( $entry['id'] ?? null ) === $id ) {
+					$bar = $entry;
+				}
+			}
+
+			$this->assertIsArray( $bar, sprintf( 'The "%s" entry is gone.', $id ) );
+			$this->assertIsArray( $bar['divergence'] ?? null );
+			$this->assertSame(
+				array( 'minWidth' ),
+				array_keys( $bar['divergence'] ),
+				sprintf( '"%s" diverges from the design on more than the floor.', $id )
+			);
+
+			$reason = $bar['divergence']['minWidth'];
+			$this->assertIsString( $reason );
+			$this->assertMatchesRegularExpression(
+				'/ADR-\d{4}/',
+				$reason,
+				sprintf( 'The floor divergence on "%s" names no ADR.', $id )
+			);
+		}
 	}
 
 	/**

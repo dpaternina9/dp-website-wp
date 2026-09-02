@@ -60,6 +60,22 @@
 			}
 		} );
 
+		/*
+		 * A company header whose every role row is hidden is heading nothing, so
+		 * it goes with them. Read off the lanes rather than recomputed from the
+		 * filter, because the rule for a lane is written once, just above, and
+		 * DP\Core\Blocks\TimelineRows::group() does the same on the server.
+		 */
+		chart.querySelectorAll( '.dp-tl-group' ).forEach( function ( group ) {
+			const lanes = Array.from( group.querySelectorAll( '.dp-tl-lane' ) );
+
+			group.hidden =
+				lanes.length > 0 &&
+				lanes.every( function ( lane ) {
+					return lane.hidden;
+				} );
+		} );
+
 		chart
 			.querySelectorAll( '.dp-tl-filter-link' )
 			.forEach( function ( link ) {

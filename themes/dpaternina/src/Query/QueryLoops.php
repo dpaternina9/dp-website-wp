@@ -85,6 +85,11 @@ final class QueryLoops {
 	public const RELATED_COUNT = 3;
 
 	/**
+	 * The most roles the record strip will read to decide its order.
+	 */
+	private const MAX_ROLES = 100;
+
+	/**
 	 * Attach the hooks.
 	 *
 	 * @return void
@@ -308,17 +313,29 @@ final class QueryLoops {
 	}
 
 	/**
-	 * The homepage's quiet record strip: roles, the one that started last first.
+	 * The homepage's quiet record strip: what David is doing now, then the rest.
 	 *
-	 * **`dp_start`, not `dp_end`.** This sorted on `dp_end` until now, which is
-	 * "the role that finished most recently" — a different list the moment two
-	 * roles overlap, which for a founder role running alongside a job is the
-	 * normal case rather than the edge one. Three things say `dp_start` and
-	 * agree with each other: this class's own docblock, the design
-	 * (`LANES.slice().sort((a, b) => b.start - a.start)`), and
-	 * `DP\Core\Resume\Ledger::lanes()`, which already sorts the résumé that
-	 * way and cites the same line. So the homepage and the résumé were printing
-	 * the same roles in two different orders.
+	 * Two keys, in this order.
+	 *
+	 * **A role he has not left comes first.** The strip is three cards on the
+	 * front page and it answers "what does he do", so a job still running
+	 * outranks one that ended, whenever it began. Sorting on `dp_start` alone —
+	 * which is what this did until 2026-09-02 — buried a founder role begun in
+	 * 2016 under three jobs taken since, and that role is the one sentence the
+	 * strip most needed to carry.
+	 *
+	 * **Then the one that started last.** `dp_start`, not `dp_end`: "the role
+	 * that finished most recently" is a different list the moment two roles
+	 * overlap, which for a founder role running alongside a job is the normal
+	 * case. The design sorts this way too (`LANES.slice().sort((a, b) => b.start
+	 * - a.start)`), and so does `DP\Core\Resume\Ledger::lanes()`.
+	 *
+	 * It is an explicit list rather than an `orderby`, for the same reason
+	 * `related()` above is: "still going" is not a column. A blank end is stored
+	 * as `0` by the field's own sanitiser, so a `meta_value_num` sort descending
+	 * puts an ongoing role *last* — the exact inversion of what the strip is
+	 * for — and one ascending would order the finished roles backwards. Two
+	 * cheap reads and a `usort` say the actual rule instead.
 	 *
 	 * @param array<string, mixed> $query The query vars.
 	 * @return array<string, mixed>
@@ -328,7 +345,95 @@ final class QueryLoops {
 			return $this->nothing( $query );
 		}
 
-		return $this->newest_first( $query, PostTypes::ROLE, 'dp_start' );
+		$order = $this->roles_current_first();
+
+		$query['post_type']   = PostTypes::ROLE;
+		$query['post_status'] = 'publish';
+		$query['post__in']    = array() === $order ? array( 0 ) : $order;
+		$query['orderby']     = 'post__in';
+
+		return $query;
+	}
+
+	/**
+	 * Every published role, the ones still running first.
+	 *
+	 * `MAX_ROLES` rather than `-1`: this runs on the front page, and a record
+	 * with a thousand roles in it is a query nobody meant to write. The strip
+	 * shows three.
+	 *
+	 * @return list<int>
+	 */
+	private function roles_current_first(): array {
+		$found = new WP_Query(
+			array(
+				'post_type'              => PostTypes::ROLE,
+				'post_status'            => 'publish',
+				'fields'                 => 'ids',
+				'posts_per_page'         => self::MAX_ROLES,
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$roles = array();
+
+		foreach ( $found->posts as $id ) {
+			if ( ! is_int( $id ) ) {
+				continue;
+			}
+
+			$roles[] = array(
+				'id'      => $id,
+				'ongoing' => $this->is_ongoing( $id ),
+				'start'   => $this->decimal_meta( $id, 'dp_start' ),
+			);
+		}
+
+		usort(
+			$roles,
+			static fn ( array $one, array $two ): int =>
+				array( $two['ongoing'], $two['start'] ) <=> array( $one['ongoing'], $one['start'] )
+		);
+
+		$ids = array();
+
+		foreach ( $roles as $role ) {
+			$ids[] = $role['id'];
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * Whether a role is one David has not left.
+	 *
+	 * The same reading `DP\Core\Content\Timeline\Chart` gives a blank end,
+	 * and it has to stay the same one: the field says "Leave it blank for a role
+	 * you are still in", and a homepage that disagreed with the chart about which
+	 * jobs are current would be the field's promise broken in a second place.
+	 * Missing, empty and the sanitiser's `0` all mean the same thing.
+	 *
+	 * @param int $post_id The role.
+	 * @return bool
+	 */
+	private function is_ongoing( int $post_id ): bool {
+		return $this->decimal_meta( $post_id, 'dp_end' ) <= 0.0;
+	}
+
+	/**
+	 * One decimal-year meta value, or 0.0.
+	 *
+	 * @param int    $post_id The post.
+	 * @param string $key     The meta key.
+	 * @return float
+	 */
+	private function decimal_meta( int $post_id, string $key ): float {
+		$value = get_post_meta( $post_id, $key, true );
+
+		return is_numeric( $value ) ? (float) $value : 0.0;
 	}
 
 	/**
@@ -352,37 +457,36 @@ final class QueryLoops {
 	}
 
 	/**
-	 * Order a loop by a decimal-year meta field, newest first.
+	 * Narrow a loop to the shipped work David marked featured, in his order.
 	 *
-	 * `meta_value_num` rather than `meta_value` matters: the years are decimals,
-	 * and a string sort puts 2016 after 2016.5 but before 2009.
+	 * **The sequence is `menu_order` — Page Attributes, set by hand.** Until
+	 * 2026-09-02 it was `dp_end` descending, and that was wrong twice over.
 	 *
-	 * @param array<string, mixed> $query     The query vars.
-	 * @param string               $post_type The type to query, restated because core dropped it.
-	 * @param string               $meta_key  The field to sort on.
-	 * @return array<string, mixed>
-	 */
-	private function newest_first( array $query, string $post_type, string $meta_key ): array {
-		$query['post_type']   = $post_type;
-		$query['post_status'] = 'publish';
-
-		// Ordering by a meta field is the entire point of this variation.
-		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-		$query['meta_key'] = $meta_key;
-		$query['orderby']  = 'meta_value_num';
-		$query['order']    = 'DESC';
-
-		return $query;
-	}
-
-	/**
-	 * Narrow a loop to the shipped work David marked featured, newest first.
+	 * It was wrong in principle: which three pieces of work lead the work page
+	 * is an editorial decision, not a consequence of when they happened. The
+	 * featured checkbox already says *whether* a thing appears; nothing said in
+	 * what order, so the most recent thing led whether or not it was the
+	 * strongest. ADR-0019 settled the same question for a series with the same
+	 * answer, and `Timeline\Chart` already reads its lanes this way.
 	 *
-	 * Both clauses are named, and the ordering names the one it sorts on. A bare
-	 * `meta_key` plus `meta_value_num` would not survive here: once a query has
-	 * a `meta_query`, `meta_value_num` sorts on that query's *first* clause, so
-	 * the cards would come back ordered by the featured flag every one of them
-	 * shares.
+	 * It was also wrong in fact, from the day a blank "Ended" started meaning
+	 * "still going". The old ordering needed a second `meta_query` clause
+	 * requiring `dp_end` to EXIST, purely so there was a named clause to sort
+	 * on — and `register_post_meta()`'s default is not a row, so a ship whose
+	 * end was never saved matched neither the clause nor the sort. An ongoing
+	 * featured project therefore either sorted last on a stored `0` or vanished
+	 * from the grid entirely. Both failures pointed the same way: the most
+	 * current work was the least likely to be shown.
+	 *
+	 * Dropping that clause is what lets an ongoing project be featured at all,
+	 * so the filter is now the one thing it was always meant to be — the
+	 * checkbox — and `dp_end` is left to mean what it means everywhere else.
+	 *
+	 * The tiebreak is newest first, not oldest. Every ship starts at
+	 * `menu_order` 0, so on a site where nobody has set an order yet this is the
+	 * whole ordering, and "the newest three" is the better default for a
+	 * highlight reel. `Timeline\Chart` breaks its tie the other way because a
+	 * chronology reads oldest first; the two disagree on purpose.
 	 *
 	 * @param array<string, mixed> $query The query vars.
 	 * @return array<string, mixed>
@@ -395,7 +499,7 @@ final class QueryLoops {
 		$query['post_type']   = PostTypes::SHIP;
 		$query['post_status'] = 'publish';
 
-		// The filter and the ordering are the entire variation.
+		// The filter is the entire variation; the order is David's.
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		$query['meta_query'] = array(
 			'featured' => array(
@@ -403,14 +507,12 @@ final class QueryLoops {
 				'value'   => '1',
 				'compare' => '=',
 			),
-			'shipped'  => array(
-				'key'     => 'dp_end',
-				'compare' => 'EXISTS',
-				'type'    => 'DECIMAL(10,4)',
-			),
 		);
 
-		$query['orderby'] = array( 'shipped' => 'DESC' );
+		$query['orderby'] = array(
+			'menu_order' => 'ASC',
+			'date'       => 'DESC',
+		);
 
 		return $query;
 	}

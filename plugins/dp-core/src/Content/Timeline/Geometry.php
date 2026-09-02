@@ -29,6 +29,11 @@ use InvalidArgumentException;
  * bar.minWidth = 64 (roles) / 40 (ships); maxWidth = (100 - pos(start))%
  * ```
  *
+ * The one line not transcribed is `bar.minWidth`. The design's 64/40 were sized
+ * against a fixture whose shortest role is two years; on the real record they
+ * inflate every sub-year role to about a year. `BarKind::min_width()` carries
+ * the smaller floors and the reason.
+ *
  * The `+ 1` in the denominator is why 2026 does not sit at 100%: the track
  * covers thirteen whole years (2014 through 2026 inclusive), so the last year
  * occupies the final thirteenth rather than terminating the axis. Dropping it —

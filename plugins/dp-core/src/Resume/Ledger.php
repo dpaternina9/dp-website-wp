@@ -12,6 +12,7 @@ namespace DP\Core\Resume;
 use DP\Core\Content\Timeline\Chart;
 use DP\Core\Content\Timeline\Geometry;
 use DP\Core\Content\Timeline\Lane;
+use DP\Core\Content\Year;
 
 /**
  * The résumé's ledger, read from the same `dp_role` and `dp_ship` the chart uses.
@@ -51,9 +52,20 @@ final class Ledger {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $plugin_dir Absolute path to the plugin directory.
+	 * `$today` is passed straight through to `Chart`, which is the only reason
+	 * it is here. A role whose `dp_end` is blank is still going and its bar runs
+	 * to today; if the two readers of that record answered "today" from two
+	 * different clocks, the résumé and the timeline could disagree about whether
+	 * the current job has ended. One value, handed to one `Chart`. Null means
+	 * "ask WordPress", which is what the plugin does.
+	 *
+	 * @param string    $plugin_dir Absolute path to the plugin directory.
+	 * @param Year|null $today      The point in time an unfinished role runs to, or null to read the clock.
 	 */
-	public function __construct( private readonly string $plugin_dir ) {}
+	public function __construct(
+		private readonly string $plugin_dir,
+		private readonly ?Year $today = null
+	) {}
 
 	/**
 	 * Register the block type.
@@ -100,7 +112,7 @@ final class Ledger {
 	 * @return list<Lane>
 	 */
 	public function lanes(): array {
-		$lanes = ( new Chart( new Geometry( Geometry::DESIGN_FIRST_YEAR, Geometry::DESIGN_LAST_YEAR ) ) )->lanes();
+		$lanes = ( new Chart( new Geometry( Geometry::DESIGN_FIRST_YEAR, Geometry::DESIGN_LAST_YEAR ), $this->today ) )->lanes();
 
 		usort(
 			$lanes,
@@ -134,6 +146,13 @@ final class Ledger {
 	/**
 	 * One role.
 	 *
+	 * The detail is `nl2br( esc_html( … ) )`, in that order and for the reason
+	 * `DP\Core\Blocks\TimelineRows` gives at length: the line breaks David typed
+	 * into the field survive, and the only markup that can reach the page is the
+	 * `<br />` `nl2br()` added after everything else was escaped. `wpautop()`
+	 * would emit paragraphs inside `p.dp-ledger-detail`, whose element-qualified
+	 * selector is load-bearing for the type scale.
+	 *
 	 * @param Lane $lane The role and its shipped things.
 	 * @return string
 	 */
@@ -149,7 +168,7 @@ final class Ledger {
 			esc_html( $lane->range ),
 			esc_html( '' === $lane->title ? $lane->org : $lane->title ),
 			esc_html( $lane->org ),
-			'' === $lane->detail ? '' : '<p class="dp-ledger-detail">' . esc_html( $lane->detail ) . '</p>',
+			'' === $lane->detail ? '' : '<p class="dp-ledger-detail">' . nl2br( esc_html( $lane->detail ) ) . '</p>',
 			$this->ships( $lane ),
 			'' === $lane->stack ? '' : '<p class="dp-ledger-stack">' . esc_html( $lane->stack ) . '</p>'
 		);

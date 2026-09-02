@@ -328,17 +328,19 @@ abstract class TemplateTestCase extends WP_UnitTestCase {
 	 * stack where the org goes is then a failed assertion rather than a thing to
 	 * notice.
 	 *
-	 * @param string $name     The thing's name, which is the post title.
-	 * @param bool   $featured Whether it appears as a WorkCard.
-	 * @param float  $end      The decimal year it shipped.
-	 * @param string $line     The card's own sentence, or '' to leave it unset.
+	 * @param string $name       The thing's name, which is the post title.
+	 * @param bool   $featured   Whether it appears as a WorkCard.
+	 * @param float  $end        The decimal year it shipped.
+	 * @param string $line       The card's own sentence, or '' to leave it unset.
+	 * @param int    $menu_order Page Attributes order, which is what sequences the featured cards.
 	 * @return int
 	 */
-	protected function seed_ship( string $name, bool $featured, float $end, string $line = '' ): int {
+	protected function seed_ship( string $name, bool $featured, float $end, string $line = '', int $menu_order = 0 ): int {
 		$post_id = self::factory()->post->create(
 			array(
 				'post_type'  => 'dp_ship',
 				'post_title' => $name,
+				'menu_order' => $menu_order,
 			)
 		);
 

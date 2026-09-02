@@ -33,6 +33,39 @@
 
 
 /* -------------------------------------------------------------------------
+ * Document
+ * ---------------------------------------------------------------------- */
+
+/*
+ * Selected text.
+ *
+ * The design declares this and the theme never carried it over:
+ * `::selection { background: color-mix(in srgb, var(--dp-teal) 35%, transparent) }`
+ * (dpaternina.dc.html L29). Selection therefore fell back to the user agent's
+ * blue on every surface of a site that has no blue in it.
+ *
+ * Solid rather than the design's 35% wash, which is David's call and the more
+ * robust of the two: a translucent highlight takes its contrast from whatever
+ * it happens to sit on, and on this site that ranges from --bg-page through
+ * --band to a card. The solid pair is legible on all of them.
+ *
+ * Here rather than in base.css, which is a verbatim copy of the design system's
+ * base layer and is held to that byte for byte by
+ * DP\Tests\Integration\TokenParityTest. A theme-owned global rule cannot live
+ * in a file the theme is not allowed to edit.
+ *
+ * Not measured by the parity harness -- `::selection` has no baseline entry --
+ * so there is nothing here for a re-import to disagree with. If it ever gains
+ * one, this becomes a recorded divergence the way ADR-0022 records the bar
+ * floor.
+ */
+::selection {
+	background: var(--dp-teal);
+	color: var(--dp-black);
+}
+
+
+/* -------------------------------------------------------------------------
  * Shared shells
  * ---------------------------------------------------------------------- */
 
@@ -3053,24 +3086,28 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	background: color-mix(in srgb, var(--dp-white) var(--dp-tl-tint), transparent);
 }
 
-.dp-tl-row.is-accent-teal {
+.dp-tl-row.is-accent-teal,
+.dp-tl-group-head.is-accent-teal {
 	--dp-tl-color: var(--dp-teal);
 	--dp-tl-hue: var(--hue-teal);
 }
 
 .dp-tl-row.is-accent-pink,
+.dp-tl-group-head.is-accent-pink,
 .dp-tl-swatch.is-accent-pink {
 	--dp-tl-color: var(--dp-pink);
 	--dp-tl-hue: var(--hue-pink);
 }
 
 .dp-tl-row.is-accent-gold,
+.dp-tl-group-head.is-accent-gold,
 .dp-tl-swatch.is-accent-gold {
 	--dp-tl-color: var(--dp-gold);
 	--dp-tl-hue: var(--hue-gold);
 }
 
 .dp-tl-row.is-accent-purple,
+.dp-tl-group-head.is-accent-purple,
 .dp-tl-swatch.is-accent-purple {
 	--dp-tl-color: var(--dp-purple);
 	--dp-tl-hue: var(--hue-purple);
@@ -3078,6 +3115,7 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 
 /* `muted` is already a text token, so the fill and the text are one value. */
 .dp-tl-row.is-accent-muted,
+.dp-tl-group-head.is-accent-muted,
 .dp-tl-swatch.is-accent-muted {
 	--dp-tl-color: var(--text-muted);
 	--dp-tl-hue: var(--text-muted);
@@ -3283,6 +3321,86 @@ ul.dp-filter-pills .dp-tl-pill-extra a {
 	margin-block: 4px;
 	padding-left: var(--dp-tl-rail);
 	border-left: var(--border-width) solid var(--border-subtle);
+}
+
+/*
+ * A company that ran two consecutive roles.
+ *
+ * `DP\Core\Content\Timeline\LaneGroup` gathers adjacent lanes naming the same
+ * organisation; the header carries the company name and the run's whole span,
+ * and the lanes hang off a rail beneath it — the same rail a shipped thing
+ * already hangs off, drawn by the same two declarations, because it is the same
+ * relationship one level up.
+ *
+ * **The rail is given back in the label column, exactly as it is for ships.**
+ * That is the one thing in this block that is load-bearing: `padding-left`
+ * moves the whole row right, so the column beside it has to shrink by the same
+ * amount or the track — and every bar on it — slides off the year axis. The
+ * design states the rule for ships in its LAYOUT NOTES ("the ship label column
+ * subtracts that same padding back out so ship bars stay true to the year
+ * axis") and this is that rule applied twice: a grouped role gives back one
+ * rail, and a ship inside a grouped role, which is now two rails in, gives back
+ * two. The three-class selector below is what makes the deeper one win.
+ *
+ * The header is `.dp-tl-group-head` and not a `<details>`. Nesting disclosures
+ * would let a role row be open inside a closed parent and would break the
+ * `dp-open` links that point straight at those rows, so the header opens
+ * nothing: it is a row-shaped label with the run's combined bar in the track.
+ * Its bar is `.dp-tl-bar-group` — thinner and quieter than a role's, because it
+ * is a summary of the bars below it rather than a fourth thing on the chart.
+ */
+.dp-tl-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	border-top: var(--border-width) solid var(--border-subtle);
+}
+
+.dp-tl-group-head {
+	--dp-tl-label: var(--dp-tl-label-base);
+
+	margin-inline: calc(var(--dp-tl-bleed) * -1);
+	padding: 16px var(--dp-tl-bleed);
+}
+
+/* No chevron on a header, so no tap-target floor and no gutter to hold one. */
+.dp-tl-group-head .dp-tl-label {
+	min-height: auto;
+	padding-right: 0;
+}
+
+/* `orgStyle`'s role branch: a company reads as a role title, because that is
+   what it was before the two rows were gathered under it. */
+.dp-tl-group-head .dp-tl-org {
+	font-family: var(--font-display);
+	font-size: var(--fs-base);
+	letter-spacing: var(--ls-tight);
+}
+
+.dp-tl-group-head .dp-tl-track {
+	height: 24px;
+	background: transparent;
+}
+
+.dp-tl-bar-group {
+	top: 10px;
+	bottom: 10px;
+	background: color-mix(in srgb, var(--dp-tl-color) 24%, var(--bg-surface));
+}
+
+.dp-tl-group-lanes {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	padding-left: var(--dp-tl-rail);
+	border-left: var(--border-width) solid var(--border-subtle);
+}
+
+/* The header is the separator above the first role in the run; a second
+   hairline immediately under it would read as a divider between the company and
+   its own first job. */
+.dp-tl-group-lanes > .dp-tl-lane:first-child {
+	border-top: 0;
 }
 
 .dp-tl-detail {
@@ -3639,6 +3757,34 @@ pre.dp-tl-artifact-body {
 		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
 	}
 
+	.dp-tl-group {
+		gap: 6px;
+		border-top: 0;
+	}
+
+	.dp-tl-group-head {
+		padding-block: 6px;
+	}
+
+	.dp-tl-group-lanes {
+		gap: 6px;
+		margin-block: 6px 0;
+	}
+
+	/* One rail in, so one rail back — the role bars stay on the axis the
+	   header's own bar and the year labels are on. */
+	.dp-tl-group-lanes .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
+	}
+
+	/* Two rails in: the group's, then the ships'. Three classes, so it outranks
+	   both of the two-class rules above it whichever order they are written in.
+	   Without this a ship inside a grouped role would give back one rail and
+	   hang a rail's width to the right of every other bar on the chart. */
+	.dp-tl-group-lanes .dp-tl-ships .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail) * 2);
+	}
+
 	.dp-tl-grid {
 		gap: var(--dp-tl-gap);
 		grid-template-columns: var(--dp-tl-label) minmax(0, 1fr);
@@ -3673,7 +3819,8 @@ pre.dp-tl-artifact-body {
 		padding-right: 0;
 	}
 
-	.dp-tl-row-role > .dp-tl-summary .dp-tl-org {
+	.dp-tl-row-role > .dp-tl-summary .dp-tl-org,
+	.dp-tl-group-head .dp-tl-org {
 		padding-right: 0;
 		font-size: var(--fs-sm);
 	}
@@ -3767,6 +3914,27 @@ pre.dp-tl-artifact-body {
 
 	.is-mobile-scroll .dp-tl-ships .dp-tl-row {
 		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
+	}
+
+	.is-mobile-scroll .dp-tl-group {
+		gap: 6px;
+		border-top: 0;
+	}
+
+	.is-mobile-scroll .dp-tl-group-lanes {
+		gap: 6px;
+		margin-block: 6px 0;
+	}
+
+	/* The same give-back as bars mode, for the same reason: this is the other
+	   mode that draws a track, so it is the other mode where a rail that is not
+	   paid back walks the bars off the axis. */
+	.is-mobile-scroll .dp-tl-group-lanes .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail));
+	}
+
+	.is-mobile-scroll .dp-tl-group-lanes .dp-tl-ships .dp-tl-row {
+		--dp-tl-label: calc(var(--dp-tl-label-base) - var(--dp-tl-rail) * 2);
 	}
 
 	.is-mobile-scroll .dp-tl-grid {

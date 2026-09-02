@@ -406,14 +406,44 @@ test.describe( 'the work template against design-source/', () => {
 			).toMatch( /ADR-\d{4}/ );
 		}
 
-		// And nothing else in the fixture has quietly grown one.
+		// And nothing else in the fixture has quietly grown one. The four bar
+		// entries are the second recorded divergence: ADR-0022 shrinks the
+		// design's 64px/40px floor, which is worth about a year on this page's
+		// track and drew every sub-year role a year long.
 		expect(
 			BASELINE.entries
 				.filter( ( entry ) => entry.divergence )
 				.map( ( entry ) => entry.id ),
-			'A second entry diverges from the design. That is a decision, and it ' +
+			'A third entry diverges from the design. That is a decision, and it ' +
 				'needs an ADR and a line in this test before it needs a fixture.'
-		).toEqual( [ 'chart.years' ] );
+		).toEqual( [
+			'chart.years',
+			'row.role.bar.open',
+			'row.role.bar.closed',
+			'row.ship.bar.open',
+			'row.ship.bar.closed',
+		] );
+
+		// The bar divergence is one property on each of the four, and no more:
+		// everything else about a bar still has to match the design exactly.
+		for ( const id of [
+			'row.role.bar.open',
+			'row.role.bar.closed',
+			'row.ship.bar.open',
+			'row.ship.bar.closed',
+		] ) {
+			const bar = BASELINE.entries.find( ( entry ) => entry.id === id );
+
+			expect(
+				Object.keys( bar?.divergence ?? {} ),
+				`${ id } diverges on more than the floor.`
+			).toEqual( [ 'minWidth' ] );
+
+			expect(
+				bar?.divergence?.minWidth,
+				`The divergence on ${ id } names no ADR.`
+			).toMatch( /ADR-\d{4}/ );
+		}
 	} );
 
 	/*
@@ -421,7 +451,7 @@ test.describe( 'the work template against design-source/', () => {
 	 *
 	 * `.dp-card` and its family are measured with `querySelector`, so what they
 	 * resolve to is whatever the featured loop put first — and that loop is
-	 * global, ordered by `dp_end`, and holds three. If a spec ever publishes a
+	 * global, ordered by `menu_order`, and holds three. If a spec ever publishes a
 	 * featured `dp_ship` of its own again, this page silently starts measuring
 	 * that spec's card instead of the fixture's, and the sweep either passes on
 	 * the wrong element or fails somewhere that says nothing about why.

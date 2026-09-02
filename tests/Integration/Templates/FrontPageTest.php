@@ -155,6 +155,125 @@ final class FrontPageTest extends TemplateTestCase {
 	}
 
 	/**
+	 * A role David has not left leads the strip, whenever it began.
+	 *
+	 * The defect this closes, reported 2026-09-02: the strip sorted on
+	 * `dp_start` alone, so a founder role begun in 2016 and still running sat
+	 * below three jobs taken since and fell off a strip that holds three. The
+	 * front page's three cards answer "what does he do", and a job he still has
+	 * outranks one that ended.
+	 *
+	 * The fixture makes the two rules disagree on purpose: the ongoing role is
+	 * the *oldest* thing here, so a regression to `dp_start` descending fails
+	 * rather than passing by coincidence.
+	 *
+	 * @return void
+	 */
+	public function test_an_ongoing_role_leads_the_record_strip(): void {
+		$this->seed_role_between( 'MonsterInsights', 'Developer team lead', 2022.0, 2026.0 );
+		$this->seed_role_between( 'Globant', 'Developer', 2020.0, 2022.0 );
+		$this->seed_ongoing_role( 'Fanxie Lab', 'CTO and founder', 2016.0 );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertSame(
+			array( 'Fanxie Lab', 'MonsterInsights', 'Globant' ),
+			$this->strip_order( $html, array( 'Fanxie Lab', 'MonsterInsights', 'Globant' ) ),
+			'A role with no end date leads, then the one that started last.'
+		);
+	}
+
+	/**
+	 * Two ongoing roles order among themselves by when they began.
+	 *
+	 * "Still going" is the first key, not the only one.
+	 *
+	 * @return void
+	 */
+	public function test_ongoing_roles_sort_by_when_they_began(): void {
+		$this->seed_ongoing_role( 'Fanxie Lab', 'CTO and founder', 2016.0 );
+		$this->seed_ongoing_role( 'Awesome Motive', 'Developer team lead', 2024.0 );
+		$this->seed_role_between( 'Globant', 'Developer', 2020.0, 2022.0 );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertSame(
+			array( 'Awesome Motive', 'Fanxie Lab', 'Globant' ),
+			$this->strip_order( $html, array( 'Awesome Motive', 'Fanxie Lab', 'Globant' ) ),
+			'Both ongoing roles lead, the later start first; the finished one follows.'
+		);
+	}
+
+	/**
+	 * A role whose end was never saved at all, not merely blanked.
+	 *
+	 * `register_post_meta()`'s default is not a row, so "missing" and "0" are
+	 * two different states in the database and only one of them is what the
+	 * editor produces. Both have to mean "still going".
+	 *
+	 * @return void
+	 */
+	public function test_a_role_with_no_end_meta_row_counts_as_ongoing(): void {
+		$post_id = $this->seed_ongoing_role( 'Fanxie Lab', 'CTO and founder', 2016.0 );
+		delete_post_meta( $post_id, 'dp_end' );
+
+		$this->seed_role_between( 'MonsterInsights', 'Developer team lead', 2022.0, 2026.0 );
+
+		$html = $this->render( home_url( '/' ), 'front-page', self::HIERARCHY );
+
+		$this->assertSame(
+			array( 'Fanxie Lab', 'MonsterInsights' ),
+			$this->strip_order( $html, array( 'Fanxie Lab', 'MonsterInsights' ) ),
+			'A missing dp_end row is a role still running, exactly as a blank one is.'
+		);
+	}
+
+	/**
+	 * A role with a start, no end, and the range David typed.
+	 *
+	 * @param string $org   The organisation, which is the post title.
+	 * @param string $title The job title.
+	 * @param float  $start The decimal year it began.
+	 * @return int
+	 */
+	private function seed_ongoing_role( string $org, string $title, float $start ): int {
+		$post_id = $this->seed_role( $org, $title, 0.0 );
+
+		update_post_meta( $post_id, 'dp_start', $start );
+		update_post_meta( $post_id, 'dp_end', 0.0 );
+		update_post_meta( $post_id, 'dp_range', sprintf( '%d — now', (int) $start ) );
+
+		return $post_id;
+	}
+
+	/**
+	 * The organisations the strip printed, in the order it printed them.
+	 *
+	 * Matched on the strip's own class: several of these titles are also `h3`s
+	 * in the RIGHT NOW bento higher up the page, so a bare title match reads the
+	 * wrong element.
+	 *
+	 * @param string        $html      The rendered page.
+	 * @param array<string> $expected  The organisations to look for.
+	 * @return array<string> Those that appeared, in document order.
+	 */
+	private function strip_order( string $html, array $expected ): array {
+		$found = array();
+
+		foreach ( $expected as $org ) {
+			$hit = array();
+
+			if ( 1 === preg_match( '~dp-record-org[^"]*">' . preg_quote( $org, '~' ) . '</h3>~', $html, $hit, PREG_OFFSET_CAPTURE ) ) {
+				$found[ $org ] = $hit[0][1];
+			}
+		}
+
+		asort( $found );
+
+		return array_keys( $found );
+	}
+
+	/**
 	 * The record strip prints the fields core's own meta binding refuses.
 	 *
 	 * `core/post-meta` returns null for anything on a post type that is not
