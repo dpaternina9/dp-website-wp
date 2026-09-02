@@ -62,9 +62,29 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Work out what we are releasing. A tag is authoritative; a manual run says
-  # so explicitly and never publishes. `asset_build` stamps the PHP VERSION
-  # constant beside the header — the library's build script stamps the header,
-  # composer.json and readme.txt, but knows nothing about our constants.
+  # so explicitly and never publishes.
+  #
+  # `asset_build` is the reusable workflow's one hook for compiling anything
+  # before the source directory is staged, and it does two jobs here.
+  #
+  # **It compiles the plugin's editor bundle.** `plugins/dp-core/build/` is
+  # generated and git-ignored, so it does not exist in this job's checkout —
+  # `npm run build` is what puts it there, and it has to run here because the
+  # gates job that also runs it is a different runner with a different
+  # workspace. Without it the ZIP ships with no `build/` at all, and the
+  # symptom on the installed site is not a missing feature but a broken
+  # editor: `DP\Core\Blocks\Callout` registers `dp/callout` from that
+  # directory, and that block's `editorScript` is the only thing that enqueues
+  # the bundle every other `dp/*` block's editor half lives in. One absent
+  # directory therefore takes out the five server-rendered blocks, the seven
+  # field blocks and the Page fields panel, each reported as "your site
+  # doesn't include support for this block". It shipped that way in 1.0.0.
+  # The theme compiles nothing — its editor script is a hand-written file —
+  # so it skips the npm install rather than paying for it.
+  #
+  # **It stamps the PHP VERSION constant** beside the header. The library's
+  # build script stamps the header, composer.json and readme.txt, but knows
+  # nothing about our constants.
   # ---------------------------------------------------------------------------
   resolve:
     name: Resolve the release
@@ -107,6 +127,7 @@ jobs:
 
           if [[ "$pkg" == "theme" ]]; then
             constant_file=themes/dpaternina/functions.php
+            compile=""
             {
               echo "type=theme"
               echo "slug=dpaternina"
@@ -115,6 +136,7 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           else
             constant_file=plugins/dp-core/dp-core.php
+            compile="npm ci --no-audit --no-fund && npm run build && "
             {
               echo "type=plugin"
               echo "slug=dp-core"
@@ -126,7 +148,7 @@ jobs:
           {
             echo "version=${version}"
             echo "publish=${publish}"
-            echo "asset_build=sed -i \"s/^const VERSION = '.*';\$/const VERSION = '${version}';/\" ${constant_file}"
+            echo "asset_build=${compile}sed -i \"s/^const VERSION = '.*';\$/const VERSION = '${version}';/\" ${constant_file}"
           } >> "$GITHUB_OUTPUT"
 
           echo "Releasing ${pkg} ${version} (publish=${publish})"
