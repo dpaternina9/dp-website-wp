@@ -8,7 +8,7 @@
  * Plugin Name:       dP Core
  * Plugin URI:        https://dpaternina.com
  * Description:       Content model, dynamic blocks, REST routes and WP-CLI commands for dpaternina.com. Switching themes must never delete data, so it lives here.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.6
  * Requires PHP:      8.4
  * Author:            David Paternina
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Plugin version. Stamped from the git tag by the release workflow (Phase 2).
  */
-const VERSION = '1.0.0';
+const VERSION = '1.0.1';
 
 require_once __DIR__ . '/vendor/autoload.php';
 
