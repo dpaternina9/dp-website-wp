@@ -340,7 +340,10 @@ span.dp-label {
 	display: none;
 }
 
-.dp-nav.wp-block-navigation {
+/* `nav` for the same reason the panel's rule below carries it: the container
+   `<ul>` inherits this block's classes, and a sizing declaration meant for the
+   row must not be read a second time by the list inside it. */
+nav.dp-nav.wp-block-navigation {
 	flex: 0 1 auto;
 	gap: 0;
 	font-size: var(--fs-sm);
@@ -500,7 +503,23 @@ dialog.dp-panel {
 	border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
-.dp-panel-nav.wp-block-navigation {
+/*
+ * `nav`, and the element selector is load-bearing.
+ *
+ * `core/navigation` stamps the block's whole class list onto the container
+ * `<ul>` as well as onto the `<nav>`, so `.dp-panel-nav.wp-block-navigation`
+ * matches both — and every declaration below is one that must not apply twice.
+ * The list would take the gutter a second time (the items sat indented past
+ * everything else in the panel), open a second scroller inside the first, and
+ * grow to fill.
+ *
+ * That last one is what tore the menu apart. A menu carrying anything that is
+ * not a navigation item renders as more than one `<ul>` — core closes the list
+ * around whatever else is in there — and `flex: 1 1 auto` on each of them
+ * splits the panel's height between them, which drew three links spread over a
+ * whole phone screen with the gaps in between.
+ */
+nav.dp-panel-nav.wp-block-navigation {
 	flex: 1 1 auto;
 	min-height: 0;
 	overflow-y: auto;
@@ -518,8 +537,13 @@ dialog.dp-panel {
 	width: 100%;
 }
 
+/* `flex: 1 1 auto` because core makes the `<li>` a flex row, which leaves the
+   anchor shrink-wrapped around its own label: the rule under each item stopped
+   at the end of the word and `space-between` had no space to work with, so the
+   HERE marker sat against the label instead of at the panel's edge. */
 .dp-panel-nav .wp-block-navigation-item__content {
 	display: flex;
+	flex: 1 1 auto;
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
@@ -614,6 +638,32 @@ p.dp-panel-wordmark {
 	padding-inline: var(--gutter);
 	gap: 40px 32px;
 	grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+
+/*
+ * The one place this footer is not a transcription, and the reason is that the
+ * design has nothing to transcribe here: `SiteFooter.dc.html` states the track
+ * above and stops, so what a phone gets is whatever `auto-fit` decides. Two
+ * 180px tracks and the 32px between them want 392px; a 390px phone has 351px
+ * inside the gutter, so it misses by 41 and every group becomes a full-width
+ * row. That is four stacked rows 40px apart under 56px of padding — a footer
+ * 654px tall on an 844px screen, most of it empty.
+ *
+ * Two even columns instead, with the brand across the top of them: 451px, and
+ * the same words. Held behind a query the design's own breakpoint never
+ * reaches, so the layout it *did* draw is untouched at every width it drew.
+ */
+@media (max-width: 599px) {
+
+	.dp-footer-grid {
+		padding-block: 40px 24px;
+		gap: 32px 24px;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.dp-footer-brand {
+		grid-column: 1 / -1;
+	}
 }
 
 .dp-footer-brand,

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7979885f7f0fd79e0265066dd0eca656",
+    "content-hash": "48b9b85120098ac224c46b13555e7218",
     "packages": [
         {
             "name": "fanxielab/wp-update-client",

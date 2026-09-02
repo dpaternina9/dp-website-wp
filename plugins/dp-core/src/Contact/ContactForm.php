@@ -59,7 +59,9 @@ final class ContactForm {
 	public const BLOCK_NAME = 'dp/contact-form';
 
 	/**
-	 * The id of the panel, and what a re-try link points at.
+	 * The id of the panel, and the stem every field's id is built from.
+	 *
+	 * Deliberately not what "Send another" points at — see `again_link()`.
 	 *
 	 * @var string
 	 */
@@ -403,6 +405,22 @@ final class ContactForm {
 	/**
 	 * A link back to the empty form.
 	 *
+	 * **The address carries no fragment, and that is the whole of what makes it
+	 * work.** This used to point at `…/contact/#dp-contact-form`, which is the
+	 * page the reader is already on — the form posts to itself and nothing
+	 * redirects, so after a send the document's URL is still the contact page.
+	 * A link that differs from the current URL only by its fragment is not a
+	 * navigation at all: the browser scrolls and makes no request, so the panel
+	 * stayed on "It landed" and the control did nothing. That was true on both
+	 * paths, because `fetch` does not change the URL either.
+	 *
+	 * Without the fragment the address is the current URL exactly, which *is* a
+	 * navigation: a GET, answered by a form with a fresh nonce and a fresh
+	 * stamp. Restoring the panel from a copy held in the browser would have
+	 * been cheaper and would have handed back the credentials that were issued
+	 * for the message just sent — the same reason the failure panel re-issues
+	 * both rather than reusing them.
+	 *
 	 * @param string $variant The class the design gives this control.
 	 * @param string $label   The label.
 	 * @return string
@@ -411,7 +429,7 @@ final class ContactForm {
 		return sprintf(
 			'<a class="dp-contact-action %1$s" href="%2$s">%3$s</a>',
 			esc_attr( $variant ),
-			esc_url( $this->here() . '#' . self::ROOT_ID ),
+			esc_url( $this->here() ),
 			esc_html( $label )
 		);
 	}
