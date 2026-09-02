@@ -1429,15 +1429,22 @@ h1.dp-post-title {
 	text-transform: uppercase;
 }
 
-/* The 26px monogram the design puts in front of the name. Decoration —
-   `alt=""` in the design — so it is the row's own `::before`, which in a flex
-   container is a flex item and lands exactly where the design's `<img>` does. */
-.dp-post-byline::before {
+/* The 26px picture the design puts in front of the name. The design drew the
+   monogram there and this used to hardcode it, which made the byline of every
+   post say the same thing whoever wrote it. It is `core/avatar` now: the
+   author's own picture, out of their profile, changed in wp-admin rather than
+   here. */
+.dp-post-byline .wp-block-avatar {
+	flex: none;
+	line-height: 0;
+}
+
+.dp-post-byline .wp-block-avatar img {
+	display: block;
 	width: 26px;
 	height: 26px;
-	flex: none;
-	background: url(../img/dp-mark-white-128.png) no-repeat center / contain;
-	content: "";
+	border-radius: var(--radius-circle);
+	object-fit: cover;
 }
 
 .dp-post-byline p,
@@ -1461,6 +1468,13 @@ h1.dp-post-title {
 .dp-post-byline > *:not(:first-child)::before {
 	padding-inline-end: 16px;
 	content: "·";
+}
+
+/* The picture is a flex item like the rest, so the rule above would put a dot
+   between it and the name. It is not one of the things the dots separate. */
+.dp-post-byline .wp-block-avatar + *::before {
+	padding-inline-end: 0;
+	content: none;
 }
 
 /* A read time nobody computed leaves an empty paragraph, and an empty paragraph
