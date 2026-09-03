@@ -14,6 +14,7 @@ use DP\Core\Contact\Handler;
 use DP\Core\Contact\Rejection;
 use DP\Core\Contact\Stamp;
 use DP\Core\Contact\Submission;
+use DP\Core\Contact\Turnstile;
 use WP_UnitTestCase;
 
 /**
@@ -37,6 +38,15 @@ use WP_UnitTestCase;
  * the thing under test in one case each; standing either of them down for the
  * other tests would mean the "valid submission" case never exercised the code
  * that issues them.
+ *
+ * **Turnstile is off unless a test turns it on.** The keys are `wp-config.php`
+ * constants and the container has neither, so the default here is the default
+ * a fresh install has: no challenge, no seventh gate, nothing leaving the site.
+ * A test that wants the gate builds a configured `Turnstile` and answers
+ * siteverify through `siteverify()` below — no test in this suite is ever
+ * allowed to reach the real Cloudflare, both because a suite that needs the
+ * network is a suite that fails on a train and because the answers that matter
+ * here are the ones a live endpoint will not produce on demand.
  */
 abstract class ContactTestCase extends WP_UnitTestCase {
 
@@ -69,6 +79,13 @@ abstract class ContactTestCase extends WP_UnitTestCase {
 	protected array $refusals = array();
 
 	/**
+	 * Every siteverify request this test made, so a test can assert on none.
+	 *
+	 * @var list<string>
+	 */
+	protected array $siteverify_calls = array();
+
+	/**
 	 * The request method as the harness found it.
 	 *
 	 * `WP_UnitTestCase` empties `$_GET` and `$_POST` between tests but leaves
@@ -91,10 +108,19 @@ abstract class ContactTestCase extends WP_UnitTestCase {
 			? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) )
 			: null;
 
-		$this->mail_calls    = 0;
-		$this->mail          = array();
-		$this->mail_succeeds = true;
-		$this->refusals      = array();
+		$this->mail_calls       = 0;
+		$this->mail             = array();
+		$this->mail_succeeds    = true;
+		$this->refusals         = array();
+		$this->siteverify_calls = array();
+
+		/*
+		 * A test that forgets to stand siteverify up must fail loudly rather
+		 * than quietly reaching Cloudflare from CI. `WP_HTTP_BLOCK_EXTERNAL` is
+		 * core's own switch for this, but it is a constant and cannot be set
+		 * per test, so this refuses the one host this project ever calls.
+		 */
+		add_filter( 'pre_http_request', $this->refuse_the_network( ... ), 999, 3 );
 
 		( new Capability() )->register();
 
@@ -115,6 +141,29 @@ abstract class ContactTestCase extends WP_UnitTestCase {
 		}
 
 		parent::tear_down();
+	}
+
+	/**
+	 * Refuse an unmocked call to Cloudflare, loudly.
+	 *
+	 * Attached at priority 999 so `siteverify()`, at 10, answers first when a
+	 * test has set one up — an answer already given arrives here as `$preempt`
+	 * and is passed straight through, so only a request nobody claimed is a
+	 * failure. Nothing else in this suite makes an outbound request.
+	 *
+	 * @param mixed $preempt   Whatever an earlier filter decided.
+	 * @param mixed $arguments The request arguments.
+	 * @param mixed $url       Where the request was going.
+	 * @return mixed
+	 */
+	public function refuse_the_network( mixed $preempt, mixed $arguments, mixed $url ): mixed {
+		unset( $arguments );
+
+		if ( false === $preempt && is_string( $url ) && Turnstile::VERIFY_URL === $url ) {
+			$this->fail( 'A test reached Cloudflare. Call siteverify() to say what it should answer.' );
+		}
+
+		return $preempt;
 	}
 
 	/**
@@ -198,12 +247,13 @@ abstract class ContactTestCase extends WP_UnitTestCase {
 	protected function submission( array $overrides = array() ): Submission {
 		$fields = array_merge(
 			array(
-				'name'     => 'Someone Reading',
-				'email'    => 'someone@example.com',
-				'message'  => 'A short note about espresso.',
-				'honeypot' => '',
-				'stamp'    => $this->stamp( 10 ),
-				'nonce'    => wp_create_nonce( Handler::ACTION ),
+				'name'      => 'Someone Reading',
+				'email'     => 'someone@example.com',
+				'message'   => 'A short note about espresso.',
+				'honeypot'  => '',
+				'stamp'     => $this->stamp( 10 ),
+				'nonce'     => wp_create_nonce( Handler::ACTION ),
+				'turnstile' => 'a-token-from-the-widget',
 			),
 			$overrides
 		);
@@ -214,7 +264,70 @@ abstract class ContactTestCase extends WP_UnitTestCase {
 			$fields['message'],
 			$fields['honeypot'],
 			$fields['stamp'],
-			$fields['nonce']
+			$fields['nonce'],
+			$fields['turnstile']
+		);
+	}
+
+	/**
+	 * A Turnstile configured for this site, with keys that are not secrets.
+	 *
+	 * The hostname is the container's own, so the allowlist under test is the
+	 * derived one rather than a value the test wrote and then asserted.
+	 *
+	 * @return Turnstile
+	 */
+	protected function turnstile(): Turnstile {
+		return new Turnstile( 'test-sitekey', 'test-secret' );
+	}
+
+	/**
+	 * Answer every siteverify request for the rest of this test.
+	 *
+	 * `pre_http_request` is core's own seam for exactly this, and using it means
+	 * the code under test still goes through `wp_remote_post()`, its arguments
+	 * and its response handling. A double in place of `Turnstile` would prove
+	 * only that the double was called.
+	 *
+	 * @param array<string, mixed> $answer What Cloudflare should be pretending to say.
+	 * @param int                  $status The HTTP status to answer with.
+	 * @return void
+	 */
+	protected function siteverify( array $answer, int $status = 200 ): void {
+		$body = (string) wp_json_encode(
+			array_merge(
+				array(
+					'action'   => Turnstile::ACTION,
+					'hostname' => (string) wp_parse_url( home_url(), PHP_URL_HOST ),
+				),
+				$answer
+			)
+		);
+
+		add_filter(
+			'pre_http_request',
+			function ( mixed $preempt, mixed $arguments, mixed $url ) use ( $body, $status ): mixed {
+				unset( $arguments );
+
+				if ( ! is_string( $url ) || Turnstile::VERIFY_URL !== $url ) {
+					return $preempt;
+				}
+
+				$this->siteverify_calls[] = $url;
+
+				return array(
+					'headers'  => array(),
+					'body'     => $body,
+					'response' => array(
+						'code'    => $status,
+						'message' => 'OK',
+					),
+					'cookies'  => array(),
+					'filename' => null,
+				);
+			},
+			10,
+			3
 		);
 	}
 

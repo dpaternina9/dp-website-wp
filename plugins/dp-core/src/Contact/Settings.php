@@ -10,7 +10,7 @@ declare( strict_types=1 );
 namespace DP\Core\Contact;
 
 /**
- * A "Contact form" section on Settings → General, holding two addresses.
+ * A "Contact form" section on Settings → General: two addresses and one fact.
  *
  * Both used to exist only as filters, which made one of them dead UI: nothing
  * in this project ever answered `dp_contact_public_address`, so the design's
@@ -32,6 +32,18 @@ namespace DP\Core\Contact;
  * The filters both survive, layered **on top of** the options, so a test
  * double or a site-specific mu-plugin can still override either without
  * touching the database. The option is the default the filter receives.
+ *
+ * A third row joined the two in this section and is not a setting at all: it
+ * reports whether Cloudflare Turnstile is configured, and which hostname a
+ * token has to have been minted on. The keys are constants in `wp-config.php`
+ * by David's explicit choice — a secret does not belong in `wp_options` — so
+ * there is nothing here to type into. But ADR-0018 is about the state of the
+ * site being visible on the screen that governs it, and "the contact form is
+ * behind a challenge, or it is not" is exactly that kind of state: invisible
+ * from wp-admin, it is a thing that can be quietly true or quietly false for
+ * months. So the row shows what the constants amount to and never what they
+ * are: the secret is not printed, not hinted at, and not confirmed to exist by
+ * anything more specific than "configured".
  *
  * `options-general.php` is capability-gated by core (`manage_options`), and
  * `register_setting()` is what lets `options.php` accept these two names from
@@ -67,6 +79,20 @@ final class Settings {
 	 * @var string
 	 */
 	private const SECTION = 'dp-contact';
+
+	/**
+	 * The status row's id. Not an option: nothing is stored under this name.
+	 *
+	 * @var string
+	 */
+	private const CHALLENGE = 'dp-contact-challenge';
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Turnstile $turnstile What the status row reports on.
+	 */
+	public function __construct( private readonly Turnstile $turnstile = new Turnstile() ) {}
 
 	/**
 	 * Attach the hook.
@@ -135,6 +161,63 @@ final class Settings {
 			array(
 				'label_for' => self::PUBLIC_ADDRESS,
 				'help'      => __( 'Shown as an "email instead" fallback when the form fails. Leave empty to publish no address.', 'dp-core' ),
+			)
+		);
+
+		/*
+		 * No `label_for`: there is no control for a label to point at, and a
+		 * `<label>` addressing nothing is a WCAG failure dressed as markup
+		 * tidiness. The row's title is a plain heading for a read-only value.
+		 */
+		add_settings_field(
+			self::CHALLENGE,
+			__( 'Spam challenge', 'dp-core' ),
+			$this->challenge_status( ... ),
+			self::PAGE,
+			self::SECTION
+		);
+	}
+
+	/**
+	 * Say whether Turnstile is on, and which hostname it will accept.
+	 *
+	 * Reports; never invents. With no constants set it says so and names them,
+	 * which is the whole of the instruction — anything more would be this
+	 * plugin telling David what his `wp-config.php` should contain.
+	 *
+	 * @return void
+	 */
+	public function challenge_status(): void {
+		if ( ! $this->turnstile->is_configured() ) {
+			printf(
+				'<p>%1$s</p><p class="description">%2$s</p>',
+				esc_html__( 'Cloudflare Turnstile is not configured. The contact form is protected by its other six gates.', 'dp-core' ),
+				esc_html(
+					sprintf(
+						/* translators: 1: the sitekey constant's name, 2: the secret constant's name. */
+						__( 'Set %1$s and %2$s in wp-config.php to turn it on.', 'dp-core' ),
+						Turnstile::SITEKEY,
+						Turnstile::SECRET
+					)
+				)
+			);
+
+			return;
+		}
+
+		$hostnames = $this->turnstile->hostnames();
+
+		printf(
+			'<p>%1$s</p><p class="description">%2$s</p>',
+			esc_html__( 'Cloudflare Turnstile is configured. Every message must carry a challenge this site can verify.', 'dp-core' ),
+			esc_html(
+				array() === $hostnames
+					? __( 'No expected hostname could be worked out, so every challenge will be refused.', 'dp-core' )
+					: sprintf(
+						/* translators: %s: a comma-separated list of hostnames. */
+						__( 'Challenges are accepted only for: %s', 'dp-core' ),
+						implode( ', ', $hostnames )
+					)
 			)
 		);
 	}

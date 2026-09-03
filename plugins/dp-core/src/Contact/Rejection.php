@@ -17,14 +17,24 @@ namespace DP\Core\Contact;
  * The gates are `CLAUDE.md` section 1.4 read literally — capability **and**
  * nonce **and** sanitisation — plus the three the plan adds because a public
  * form has no logged-in visitor to lean on: a rate limit, a honeypot, and a
- * timing check. There is deliberately **no third-party captcha**: every one of
- * them is a script served by somebody else that sees every visitor who reaches
- * the page, which is a tracker with a job title (`docs/plan.md` Phase 7).
+ * timing check.
+ *
+ * **There is now a third-party captcha, and there deliberately was not.** This
+ * docblock used to say the opposite, and the sentence it said it in is worth
+ * keeping in view: every captcha is a script served by somebody else that sees
+ * every visitor who reaches the page, which is a tracker with a job title
+ * (`docs/plan.md` Phase 7). That is still true of Cloudflare Turnstile. The
+ * decision was reversed anyway, in ADR-0023, which is where the reasons and the
+ * price are written down — a third-party script on the contact page, a CSP
+ * exception, and a Privacy page that has to stop claiming no third-party script
+ * loads on any page. The gate is `Turnstile`, and it is inert on any site whose
+ * `wp-config.php` does not carry both keys, so "no captcha" remains the
+ * behaviour a fresh install has.
  *
  * Every case renders the design's *failed* panel. The reason never reaches the
  * page — it is returned to the caller so a test can assert which gate closed,
- * and it goes in the log, and that is all. Telling a sender which of six checks
- * refused them is telling a spammer which one to fix.
+ * and it goes in the log, and that is all. Telling a sender which of seven
+ * checks refused them is telling a spammer which one to fix.
  */
 enum Rejection: string {
 
@@ -60,6 +70,17 @@ enum Rejection: string {
 	case Incomplete = 'incomplete';
 
 	/**
+	 * Cloudflare would not vouch for the challenge this submission carried.
+	 *
+	 * One case for every way that can happen — no token, a spent token, a token
+	 * for another action or another host, and Cloudflare not answering at all —
+	 * because none of them is a distinction a visitor can act on and all of them
+	 * mean the same thing: the message does not go. `Turnstile::failure()` is
+	 * where the difference is kept, and it goes to the log, not to the page.
+	 */
+	case Turnstile = 'turnstile';
+
+	/**
 	 * Everything passed and `wp_mail()` still could not send it.
 	 */
 	case MailFailed = 'mail-failed';
@@ -77,6 +98,7 @@ enum Rejection: string {
 			self::TooFast     => 'the form was submitted too quickly, or its timestamp was not ours',
 			self::RateLimited => 'the sender has reached the rate limit',
 			self::Incomplete  => 'a required field was empty or the address was invalid',
+			self::Turnstile   => 'the Turnstile challenge did not verify',
 			self::MailFailed  => 'wp_mail() refused the message',
 		};
 	}

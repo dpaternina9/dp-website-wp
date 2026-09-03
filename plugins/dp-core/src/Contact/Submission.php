@@ -28,15 +28,21 @@ final class Submission {
 	/**
 	 * The field names, which are also the `name` attributes on the form.
 	 *
+	 * Every one of them is prefixed `dp_contact_` except the last, and the
+	 * exception is not ours to fix: `cf-turnstile-response` is the name
+	 * Cloudflare's widget writes its token into, so renaming it here would
+	 * rename a field nothing fills in.
+	 *
 	 * @var array<string, string>
 	 */
 	public const FIELDS = array(
-		'name'     => 'dp_contact_name',
-		'email'    => 'dp_contact_email',
-		'message'  => 'dp_contact_message',
-		'honeypot' => 'dp_contact_reference',
-		'stamp'    => 'dp_contact_stamp',
-		'nonce'    => 'dp_contact_nonce',
+		'name'      => 'dp_contact_name',
+		'email'     => 'dp_contact_email',
+		'message'   => 'dp_contact_message',
+		'honeypot'  => 'dp_contact_reference',
+		'stamp'     => 'dp_contact_stamp',
+		'nonce'     => 'dp_contact_nonce',
+		'turnstile' => 'cf-turnstile-response',
 	);
 
 	/**
@@ -49,12 +55,13 @@ final class Submission {
 	/**
 	 * Constructor.
 	 *
-	 * @param string $name     The sender's name, sanitised.
-	 * @param string $email    The sender's address, sanitised.
-	 * @param string $message  The message, sanitised as plain text.
-	 * @param string $honeypot The field no person ever fills in.
-	 * @param string $stamp    The signed timestamp the form was drawn with.
-	 * @param string $nonce    The nonce the form was drawn with.
+	 * @param string $name      The sender's name, sanitised.
+	 * @param string $email     The sender's address, sanitised.
+	 * @param string $message   The message, sanitised as plain text.
+	 * @param string $honeypot  The field no person ever fills in.
+	 * @param string $stamp     The signed timestamp the form was drawn with.
+	 * @param string $nonce     The nonce the form was drawn with.
+	 * @param string $turnstile The Turnstile token, when the site has a widget.
 	 */
 	public function __construct(
 		public readonly string $name,
@@ -62,7 +69,8 @@ final class Submission {
 		public readonly string $message,
 		public readonly string $honeypot = '',
 		public readonly string $stamp = '',
-		public readonly string $nonce = ''
+		public readonly string $nonce = '',
+		public readonly string $turnstile = ''
 	) {}
 
 	/**
@@ -87,7 +95,8 @@ final class Submission {
 			self::textarea( self::FIELDS['message'] ),
 			self::text( self::FIELDS['honeypot'] ),
 			self::text( self::FIELDS['stamp'] ),
-			self::text( self::FIELDS['nonce'] )
+			self::text( self::FIELDS['nonce'] ),
+			self::text( self::FIELDS['turnstile'] )
 		);
 	}
 
@@ -108,9 +117,13 @@ final class Submission {
 	 *
 	 * The design's failed panel says "your message is still in the form", so the
 	 * failure state carries the three typed fields back as hidden inputs behind
-	 * a fresh nonce and a fresh stamp. The old nonce and the old stamp are
-	 * deliberately dropped: re-posting a refused stamp would fail the timing
-	 * check on its second life just as it did on its first.
+	 * a fresh nonce, a fresh stamp and a fresh Turnstile widget. All three of
+	 * the old credentials are deliberately dropped, for one reason wearing three
+	 * hats: a refused stamp would fail the timing check on its second life just
+	 * as it did on its first, an expired nonce is still expired, and a Turnstile
+	 * token is redeemable exactly once — Cloudflare refuses the second
+	 * presentation of a token it has already spent, so carrying one back would
+	 * guarantee the retry fails the gate the visitor is retrying past.
 	 *
 	 * @return self
 	 */

@@ -1,6 +1,6 @@
 <?php
 /**
- * The contact form's write path: six gates, then the mailer.
+ * The contact form's write path: seven gates, then the mailer.
  *
  * @package DP\Core
  */
@@ -20,7 +20,7 @@ namespace DP\Core\Contact;
  *
  * **The `fetch` upgrade is the same request.** Progressive enhancement usually
  * means a second code path — an `admin-ajax` action or a REST route — and two
- * code paths that must agree about six security gates is one code path too
+ * code paths that must agree about seven security gates is one code path too
  * many. So the script posts the same body to the same URL with one extra
  * header, and the only difference is that the answer comes back as JSON
  * carrying the rendered panel instead of as a whole page carrying it. One
@@ -34,10 +34,20 @@ namespace DP\Core\Contact;
  * and the rate limiter, and the `fetch` path never gets there at all.
  *
  * The gate order is deliberate. Nonce and capability first, because they are
- * the cheapest and the least forgiving. The rate limiter is second to last, so
- * a mistyped address does not spend one of a real person's three attempts and
- * a flood of forged nonces cannot exhaust the counter for the address it is
+ * the cheapest and the least forgiving. The rate limiter is **last**, so a
+ * mistyped address does not spend one of a real person's three attempts and a
+ * flood of forged nonces cannot exhaust the counter for the address it is
  * spoofing.
+ *
+ * Turnstile went in between the field check and the rate limiter, and it went
+ * there for the reason the rate limiter is where it is. An expired or already
+ * redeemed token is the same category of mistake as a mistyped address: it is
+ * something that happens to real people — a form left open over lunch, a retry
+ * a moment too late — and spending one of their three attempts on it would
+ * lock out the person the gate is not aimed at. Putting it *before* the rate
+ * limiter also means the outbound request to Cloudflare is only made for a
+ * submission that is otherwise complete, so a bot posting an empty body cannot
+ * make this site issue an HTTP request per attempt.
  */
 final class Handler {
 
@@ -65,14 +75,21 @@ final class Handler {
 	/**
 	 * Constructor.
 	 *
-	 * @param Mailer      $mailer  Hands the message to WordPress.
-	 * @param RateLimiter $limiter Counts attempts per sender.
-	 * @param Log         $log     Where a refusal is recorded.
+	 * The Turnstile defaults to one built from `wp-config.php`, so the gate is
+	 * on wherever the keys are and off wherever they are not — including here,
+	 * where somebody constructing a bare `new Handler()` gets the site's real
+	 * configuration rather than a quietly disabled challenge.
+	 *
+	 * @param Mailer      $mailer    Hands the message to WordPress.
+	 * @param RateLimiter $limiter   Counts attempts per sender.
+	 * @param Log         $log       Where a refusal is recorded.
+	 * @param Turnstile   $turnstile Redeems the challenge token with Cloudflare.
 	 */
 	public function __construct(
 		private readonly Mailer $mailer = new Mailer(),
 		private readonly RateLimiter $limiter = new RateLimiter(),
-		private readonly Log $log = new Log()
+		private readonly Log $log = new Log(),
+		private readonly Turnstile $turnstile = new Turnstile()
 	) {}
 
 	/**
@@ -123,7 +140,7 @@ final class Handler {
 		$rejection = $this->refuse( $submission );
 
 		if ( null !== $rejection ) {
-			$this->log->refused( $rejection );
+			$this->log->refused( $rejection, $this->context_for( $rejection ) );
 
 			return Outcome::failed( $rejection, $submission->without_credentials() );
 		}
@@ -167,11 +184,50 @@ final class Handler {
 			return Rejection::Incomplete;
 		}
 
+		/*
+		 * Asking whether Turnstile is configured before asking it anything is
+		 * what makes an unconfigured site behave exactly as it did before this
+		 * gate existed: no request leaves, no filter is applied, and there is no
+		 * refusal here to be reached. `verify()` fails closed on its own, so
+		 * this is not the check that keeps the gate honest — it is the check
+		 * that keeps the feature opt-in.
+		 */
+		if ( $this->turnstile->is_configured()
+			&& ! $this->turnstile->verify( $submission->turnstile, RateLimiter::sender_address() ) ) {
+			return Rejection::Turnstile;
+		}
+
 		if ( ! $this->limiter->allow( RateLimiter::fingerprint() ) ) {
 			return Rejection::RateLimited;
 		}
 
 		return null;
+	}
+
+	/**
+	 * What the log should carry beside one refusal, if anything.
+	 *
+	 * Only Turnstile has anything to add, and what it adds is Cloudflare's own
+	 * account of the refusal — which is the difference between "the challenge
+	 * failed" and a fact somebody can act on: `timeout-or-duplicate` is an
+	 * expired token, `invalid-input-secret` is a key pasted wrong.
+	 *
+	 * Neither the token nor the secret is ever in here. The token is a
+	 * credential and the secret is *the* credential, and `Log` writes to
+	 * `debug.log`.
+	 *
+	 * @param Rejection $rejection The gate that closed.
+	 * @return array<string, mixed>
+	 */
+	private function context_for( Rejection $rejection ): array {
+		if ( Rejection::Turnstile !== $rejection ) {
+			return array();
+		}
+
+		return array(
+			'turnstile'   => $this->turnstile->failure(),
+			'error-codes' => $this->turnstile->error_codes(),
+		);
 	}
 
 	/**

@@ -37,10 +37,12 @@ use WP_Post;
  *
  * **The failure panel is a form.** The design's copy promises "your message is
  * still in the form", and a panel that replaced the form would make that a lie.
- * So the three typed fields come back as hidden inputs behind a **fresh** nonce
- * and a **fresh** stamp, and "Try again" re-posts them. The old credentials are
- * deliberately not reused: a stamp that failed the timing check would fail it
- * again, and a nonce that expired is still expired.
+ * So the three typed fields come back as hidden inputs behind a **fresh** nonce,
+ * a **fresh** stamp and, where the site has one, a **fresh** Turnstile widget,
+ * and "Try again" re-posts them. The old credentials are deliberately not
+ * reused: a stamp that failed the timing check would fail it again, a nonce
+ * that expired is still expired, and a Turnstile token is spent the moment it
+ * is redeemed.
  *
  * **The public email address is not assumed.** The design prints
  * `hello@dpaternina.com` in two places. That is placeholder copy (CLAUDE.md),
@@ -77,12 +79,14 @@ final class ContactForm {
 	/**
 	 * Constructor.
 	 *
-	 * @param string  $plugin_dir Absolute path to the plugin directory.
-	 * @param Handler $handler    The request's decision, already made.
+	 * @param string    $plugin_dir Absolute path to the plugin directory.
+	 * @param Handler   $handler    The request's decision, already made.
+	 * @param Turnstile $turnstile  Whether there is a challenge to draw, and its sitekey.
 	 */
 	public function __construct(
 		private readonly string $plugin_dir,
-		private readonly Handler $handler
+		private readonly Handler $handler,
+		private readonly Turnstile $turnstile = new Turnstile()
 	) {}
 
 	/**
@@ -174,9 +178,10 @@ final class ContactForm {
 			. '%5$s'
 			. '%6$s'
 			. '%7$s'
-			. '<button type="submit" class="dp-contact-submit">%8$s</button>'
+			. '%8$s'
+			. '<button type="submit" class="dp-contact-submit">%9$s</button>'
 			. '</form>'
-			. '%9$s'
+			. '%10$s'
 			. '</div>',
 			esc_attr( self::ROOT_ID ),
 			esc_html( $copy->heading ),
@@ -185,6 +190,7 @@ final class ContactForm {
 			$this->textarea_field( $copy->message_label, $copy->message_placeholder, $message ),
 			$this->honeypot(),
 			$this->credentials(),
+			$this->challenge(),
 			esc_html( $copy->submit_label ),
 			$note
 		);
@@ -235,14 +241,15 @@ final class ContactForm {
 			: sprintf( '<p class="dp-contact-result-line">%s</p>', esc_html( $line ) );
 
 		$retry = sprintf(
-			'<form class="dp-contact-retry" method="post">%1$s%2$s%3$s%4$s%5$s'
-			. '<button type="submit" class="dp-contact-action dp-contact-action-primary">%6$s</button>'
+			'<form class="dp-contact-retry" method="post">%1$s%2$s%3$s%4$s%5$s%6$s'
+			. '<button type="submit" class="dp-contact-action dp-contact-action-primary">%7$s</button>'
 			. '</form>',
 			$this->hidden( Submission::FIELDS['name'], $values->name ),
 			$this->hidden( Submission::FIELDS['email'], $values->email ),
 			$this->hidden( Submission::FIELDS['message'], $values->message ),
 			$this->honeypot(),
 			$this->credentials(),
+			$this->challenge(),
 			esc_html( $copy->try_again_label )
 		);
 
@@ -347,6 +354,38 @@ final class ContactForm {
 		return $this->hidden( Submission::MARKER, '1' )
 			. $this->hidden( Submission::FIELDS['nonce'], wp_create_nonce( Handler::ACTION ) )
 			. $this->hidden( Submission::FIELDS['stamp'], ( new Stamp( time() ) )->issue() );
+	}
+
+	/**
+	 * The Turnstile widget, on a site that has one.
+	 *
+	 * Rendered into **both** forms — the empty one and the failure panel's retry
+	 * — for the same reason both get a fresh nonce and a fresh stamp: a token is
+	 * spent the moment it is redeemed, so a retry carrying the token that was
+	 * just refused would be refused again, by the gate it is retrying past. Each
+	 * form therefore gets its own widget and its own token.
+	 *
+	 * `data-action` is what `Turnstile::verify()` checks the answer against, so
+	 * a token minted by some other widget cannot open this form. `data-theme` is
+	 * `dark` because dark is the only ground this site has (CLAUDE.md); a
+	 * default-themed widget would be a white card in the middle of the design's
+	 * contact panel.
+	 *
+	 * An unconfigured site renders nothing here at all — not an empty div, not a
+	 * placeholder — so the form's markup is what it was before this existed.
+	 *
+	 * @return string
+	 */
+	private function challenge(): string {
+		if ( ! $this->turnstile->is_configured() ) {
+			return '';
+		}
+
+		return sprintf(
+			'<div class="cf-turnstile" data-sitekey="%1$s" data-action="%2$s" data-theme="dark"></div>',
+			esc_attr( $this->turnstile->sitekey() ),
+			esc_attr( Turnstile::ACTION )
+		);
 	}
 
 	/**

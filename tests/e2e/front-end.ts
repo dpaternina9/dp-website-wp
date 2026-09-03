@@ -30,11 +30,30 @@ import type { Page } from '@playwright/test';
 const DATA_SCRIPT_TYPES = [ 'speculationrules', 'application/ld+json' ];
 
 /**
+ * Hosts the one-origin sweep tolerates, and why each one is on the list.
+ *
+ * The list is deliberately short and deliberately explicit. A host here is a
+ * promise this project has decided not to keep, so adding one is a decision
+ * somebody should have to write a line about.
+ *
+ * `secure.gravatar.com` — the single post's byline carries the author's
+ * picture, which is core's `wp:avatar` block, which is Gravatar. It arrived in
+ * `fix(theme): the byline carries the author's picture, not the monogram` and
+ * has failed this sweep ever since, taking the 1.0.2 release down with it. The
+ * picture is what David wants on the byline and Gravatar is how core draws it,
+ * so the sweep yields rather than the byline. What is given up is real: the
+ * request tells Automattic the reader's address. It is one image, on posts
+ * alone, and no script.
+ */
+const ALLOWED_OFFSITE_HOSTS = [ 'secure.gravatar.com' ];
+
+/**
  * Visit one URL while recording every request that leaves the origin.
  *
  * @param page The browser page.
  * @param url  Where to go.
- * @return The requests that went somewhere other than the site itself.
+ * @return The requests that went somewhere other than the site itself, minus
+ *         the hosts `ALLOWED_OFFSITE_HOSTS` accounts for.
  */
 export async function visitRecordingOffsite(
 	page: Page,
@@ -45,7 +64,9 @@ export async function visitRecordingOffsite(
 	const offsite: string[] = [];
 
 	page.on( 'request', ( request ) => {
-		if ( new URL( request.url() ).host !== origin ) {
+		const { host } = new URL( request.url() );
+
+		if ( host !== origin && ! ALLOWED_OFFSITE_HOSTS.includes( host ) ) {
 			offsite.push( request.url() );
 		}
 	} );

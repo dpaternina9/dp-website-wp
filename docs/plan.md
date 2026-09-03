@@ -364,8 +364,15 @@ expand-all, deep link, and reduced-motion.
 ## Phase 7 ✅ — Contact and the remaining pages
 
 - **Contact.** Normal POST first; `fetch` upgrade second. Nonce + capability +
-  sanitize + rate limit + honeypot + timing check. No third-party captcha (it would be
-  a tracker). `wp_mail` through the SMTP plugin. Renders the design's three states.
+  sanitize + rate limit + honeypot + timing check. ~~No third-party captcha (it would be
+  a tracker).~~ **Reversed 2026-09-03 (ADR-0023):** Cloudflare Turnstile is a seventh
+  gate, off unless `DP_TURNSTILE_SITEKEY` and `DP_TURNSTILE_SECRET` are both set in
+  `wp-config.php`. The objection was not withdrawn — a captcha is still a third-party
+  script that sees every visitor to the page it is on — it was overruled, and the ADR
+  names what it costs: an off-origin script on the contact page, a `script-src` /
+  `frame-src` exception in David's security plugin, and a Privacy page claim that is no
+  longer true where it is turned on. `wp_mail` through the SMTP plugin. Renders the
+  design's three states.
 - **About**, **Uses / Colophon / Privacy** through the shared block kit, **404**.
   Uses, Colophon and Privacy are plain `page` posts: `templates/page.html` binds
   their `dp_updated` eyebrow and `dp_lead` deck, and the body is the
@@ -800,7 +807,9 @@ What is left:
     `preconnect`/`dns-prefetch` the Rybbit plugin adds for its analytics host is
     silently removed. Harmless — the script still loads — but it should be a decision,
     not a discovery.
-- No other third-party script. Nothing else sets a cookie.
+- No other third-party script, except Cloudflare Turnstile on the contact page where
+  it is configured (ADR-0023). Nothing else sets a cookie; Turnstile's own use of
+  browser storage is Cloudflare's, and the Privacy page has to say so.
 
 **Outcome.** No SEO, schema, sitemap or analytics code was written and none should be.
 The feed already worked and now has a test that says so: `tests/Integration/Templates/FeedTest.php`
@@ -851,7 +860,11 @@ Cloudflare rule, never code in this repo.
 - Automated axe pass on every template, plus a manual keyboard-only run.
 - Contrast re-verified against the token comments, not against a fresh opinion.
 - Lighthouse/CWV budgets in CI: no render-blocking JS, LCP image preloaded,
-  CSS under budget, zero third-party requests on first paint.
+  CSS under budget, zero third-party requests on first paint. The budget is unchanged
+  and still enforced by `tests/e2e/a11y.spec.ts`; Turnstile (ADR-0023) does not breach
+  it in CI, where the constants are unset and nothing off-origin is enqueued. On
+  production, where they are set, the contact page loads one third-party script and
+  that page alone is outside this line. Named here rather than deleted from the test.
 - Security review of every write path.
 - **Headers are not ours.** CSP, `Referrer-Policy` and `Permissions-Policy` come from
   David's security plugin. This repo ships no `send_headers` handler and no header
