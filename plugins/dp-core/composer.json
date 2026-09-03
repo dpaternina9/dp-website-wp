@@ -2,7 +2,7 @@
   "name": "dpaternina/dp-core",
   "description": "dP Core — content model, dynamic blocks, REST and CLI for dpaternina.com.",
   "type": "wordpress-plugin",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "license": "proprietary",
   "repositories": [
     {
