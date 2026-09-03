@@ -16,6 +16,7 @@ use DP\Core\Contact\PanelCopy;
 use DP\Core\Contact\Rejection;
 use DP\Core\Contact\Settings;
 use DP\Core\Contact\Submission;
+use DP\Core\Contact\Turnstile;
 use WP_Block_Type_Registry;
 
 /**
@@ -31,6 +32,12 @@ use WP_Block_Type_Registry;
  * is invisible: it has to be in the markup, out of the tab order, hidden from
  * assistive technology, and empty. A honeypot a person can see is a honeypot a
  * person fills in, and the refusal that follows is indistinguishable from a bug.
+ *
+ * The Turnstile widget gets its own tests for the mirror-image reason. Its
+ * absence is the default and has to stay exact — a site with no keys must draw
+ * the markup it drew before the feature existed — and its presence has to be in
+ * **both** forms, because the failure panel is a form that re-posts and a retry
+ * carrying a spent token is a retry that cannot succeed.
  */
 final class ContactFormTest extends ContactTestCase {
 
@@ -50,6 +57,41 @@ final class ContactFormTest extends ContactTestCase {
 		parent::set_up();
 
 		$this->block = new ContactForm( dirname( __DIR__, 3 ) . '/plugins/dp-core', new Handler() );
+	}
+
+	/**
+	 * A block whose site has Turnstile keys.
+	 *
+	 * @return ContactForm
+	 */
+	private function configured_block(): ContactForm {
+		return new ContactForm(
+			dirname( __DIR__, 3 ) . '/plugins/dp-core',
+			new Handler(),
+			new Turnstile( 'test-sitekey', 'test-secret' )
+		);
+	}
+
+	/**
+	 * One of the two panels that carries a form, rendered.
+	 *
+	 * A `match` rather than a variable method call, so the two names the data
+	 * provider hands over are a closed set the analyser can see.
+	 *
+	 * @param string      $panel Which one: `form` or `retry`.
+	 * @param ContactForm $block The block to render it with.
+	 * @return string
+	 */
+	private function panel_named( string $panel, ContactForm $block ): string {
+		return match ( $panel ) {
+			'retry' => $block->panel(
+				Outcome::failed(
+					Rejection::Turnstile,
+					new Submission( 'Someone', 'someone@example.com', 'Still here.' )
+				)
+			),
+			default => $block->panel( Outcome::form() ),
+		};
 	}
 
 	/**
@@ -179,6 +221,88 @@ final class ContactFormTest extends ContactTestCase {
 
 		$this->assertIsString( $css );
 		$this->assertMatchesRegularExpression( '~\.dp-hp\s*\{~', $css );
+	}
+
+	/**
+	 * With no keys, there is no widget anywhere in the markup.
+	 *
+	 * @param string $panel Which form: `form` or `retry`.
+	 * @return void
+	 *
+	 * @dataProvider provide_panels_that_carry_a_form
+	 */
+	public function test_an_unconfigured_site_draws_no_widget( string $panel ): void {
+		$html = $this->panel_named( $panel, $this->block );
+
+		$this->assertStringNotContainsString( 'cf-turnstile', $html );
+		$this->assertStringNotContainsString( 'challenges.cloudflare.com', $html );
+	}
+
+	/**
+	 * With keys, both forms carry a widget of their own.
+	 *
+	 * @param string $panel Which form: `form` or `retry`.
+	 * @return void
+	 *
+	 * @dataProvider provide_panels_that_carry_a_form
+	 */
+	public function test_a_configured_site_draws_a_widget_in_both_forms( string $panel ): void {
+		$html = $this->panel_named( $panel, $this->configured_block() );
+
+		$this->assertStringContainsString( 'class="cf-turnstile"', $html );
+		$this->assertStringContainsString( 'data-sitekey="test-sitekey"', $html );
+		$this->assertStringContainsString( 'data-action="' . Turnstile::ACTION . '"', $html );
+		$this->assertStringContainsString( 'data-theme="dark"', $html );
+	}
+
+	/**
+	 * The widget sits inside the form, or its token is never posted.
+	 *
+	 * A `.cf-turnstile` beside the form rather than in it would render, look
+	 * right, and contribute nothing to the request — the failure that is
+	 * hardest to see, because the only symptom is a gate that always refuses.
+	 *
+	 * @param string $panel Which form: `form` or `retry`.
+	 * @return void
+	 *
+	 * @dataProvider provide_panels_that_carry_a_form
+	 */
+	public function test_the_widget_sits_inside_the_form( string $panel ): void {
+		$html = $this->panel_named( $panel, $this->configured_block() );
+
+		$opened = strpos( $html, '<form' );
+		$widget = strpos( $html, 'cf-turnstile' );
+		$closed = strpos( $html, '</form>' );
+
+		$this->assertIsInt( $opened );
+		$this->assertIsInt( $widget );
+		$this->assertIsInt( $closed );
+		$this->assertGreaterThan( $opened, $widget );
+		$this->assertLessThan( $closed, $widget );
+	}
+
+	/**
+	 * The secret is not in the markup, on either form.
+	 *
+	 * @return void
+	 */
+	public function test_the_secret_never_reaches_the_page(): void {
+		$html = $this->panel_named( 'form', $this->configured_block() )
+			. $this->panel_named( 'retry', $this->configured_block() );
+
+		$this->assertStringNotContainsString( 'test-secret', $html );
+	}
+
+	/**
+	 * The two panels that carry a form the visitor can post.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function provide_panels_that_carry_a_form(): array {
+		return array(
+			'the form'       => array( 'form' ),
+			'the retry form' => array( 'retry' ),
+		);
 	}
 
 	/**

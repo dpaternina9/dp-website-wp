@@ -97,6 +97,25 @@ final class RateLimiter {
 	 * @return string
 	 */
 	public static function fingerprint(): string {
+		return substr( wp_hash( 'dp_contact_sender|' . self::sender_address() ), 0, 32 );
+	}
+
+	/**
+	 * The sender's address as this site believes it, before it is hashed.
+	 *
+	 * Split out of `fingerprint()` rather than duplicated because "who is this
+	 * request from" is one question with one answer, and the proxy filter below
+	 * is the whole of what makes that answer right on a site that terminates TLS
+	 * somewhere else. The rate limiter never sees this — it takes the hash — but
+	 * `Turnstile` has to hand Cloudflare a real address for `remoteip`, and a
+	 * hash would silently degrade the scoring it exists to feed.
+	 *
+	 * Everything the fingerprint's docblock says about not storing an address
+	 * still holds: this value is used and discarded within one request.
+	 *
+	 * @return string
+	 */
+	public static function sender_address(): string {
 		$raw = isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] )
 			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
 			: '';
@@ -115,9 +134,7 @@ final class RateLimiter {
 		 * @param string $raw The client address as PHP sees it.
 		 */
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- `dp_` is this project's public filter prefix; WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
-		$raw = (string) apply_filters( 'dp_contact_sender_address', $raw );
-
-		return substr( wp_hash( 'dp_contact_sender|' . $raw ), 0, 32 );
+		return (string) apply_filters( 'dp_contact_sender_address', $raw );
 	}
 
 	/**

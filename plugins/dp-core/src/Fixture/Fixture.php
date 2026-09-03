@@ -793,6 +793,20 @@ final class Fixture {
 	 * rewriting it here would hide the problem instead of surfacing it. It is a
 	 * launch blocker, not a seed bug.
 	 *
+	 * **One sentence of it is no longer transcribed, and the exception proves
+	 * the rule.** The Privacy page said no third-party script loads on any page.
+	 * Since ADR-0023 that can be false — the contact page loads Cloudflare
+	 * Turnstile wherever David has configured it — and a seed that keeps saying
+	 * so is not "surfacing a launch blocker", it is shipping a false statement
+	 * about the software in the same commit that made it false. So the claim is
+	 * corrected here and the challenge is described in its own paragraph.
+	 * Everything else on the page is still the design's words, and
+	 * `design-source/` is read-only and was not touched.
+	 *
+	 * This does **not** reach the live site. The Privacy page there is a
+	 * database post David has published, and the seeder never overwrites one.
+	 * Correcting it is a wp-admin job and nothing in this repository can do it.
+	 *
 	 * Seven more are the views the design draws from data rather than from a
 	 * `PAGES` entry: the front page, the writing index, Work, Watch, About, the
 	 * résumé and Contact. WordPress needs a page behind each of them anyway — a template
@@ -1153,7 +1167,7 @@ final class Fixture {
 				'body'     => array(
 					self::p( 'I spent a year building analytics features while arguing that privacy is a constraint you design against, not a disclaimer you add afterwards. It would be strange to then run a personal site that watched you read it.' ),
 					self::h2( 'What this site collects' ),
-					self::p( 'Nothing that identifies you. No cookies are set. No third-party analytics, advertising, or social scripts load on any page.' ),
+					self::p( 'Nothing that identifies you. No cookies are set for anything I do. No analytics, advertising, or social scripts load on any page.' ),
 					self::ul(
 						array(
 							'No cookies, no local storage used for tracking.',
@@ -1163,6 +1177,7 @@ final class Fixture {
 					),
 					self::h2( 'If you write to me' ),
 					self::p( 'The contact form sends me an email with what you typed and nothing else. I keep it in my inbox until the conversation is over. I do not add you to a list, and there is no list to add you to.' ),
+					self::p( 'The contact page is the one page that loads something from somebody else: a Cloudflare Turnstile challenge, which is there to keep automated submissions out. It runs on that page whether or not you write to me, Cloudflare sees the request, and it does its own client-side work that I do not control. It is on no other page.' ),
 					self::h2( 'Things I do not control' ),
 					self::p( 'Video on the Watch page comes from Twitch and YouTube. Thumbnails load from their image servers, so those services see that request. Players do not load at all until you press play, which is the one bit of this I can actually control.' ),
 					self::p( 'The site runs on WordPress. It sets a cookie only if you log in to the admin, which is me and nobody else.' ),

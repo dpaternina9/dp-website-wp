@@ -29,6 +29,17 @@ use DP\Theme\Theme;
  * has somewhere to be printed. This is the pattern `DP\Theme\Blocks\Timeline`
  * already established.
  *
+ * **Turnstile's script is asked for, never named.** When the site is configured
+ * for a challenge, the panel carries a `.cf-turnstile` div that only Cloudflare's
+ * `api.js` turns into a widget, and that script has to be on the page. Which
+ * page, and whether at all, are two facts the plugin holds — so the theme asks
+ * through `dp_contact_turnstile_script` and enqueues whatever URL comes back,
+ * exactly as it answers `dp_destination_url` in the other direction. Nothing
+ * answers on a site without the plugin, or with the plugin unconfigured, and
+ * the answer is then '' and nothing is enqueued. This is the one off-origin
+ * script this theme will ever load, and it loads on one page, only when David
+ * has turned it on (ADR-0023).
+ *
  * **The plugin's class name is behind a guard.** Naming it unguarded fatals the
  * theme on a site where `dp-core` is deactivated, which is what a fresh
  * `composer test:integration` leaves behind — it shows up as a 500 on the tests
@@ -41,6 +52,11 @@ final class ContactForm {
 	 * The script handle.
 	 */
 	public const SCRIPT_HANDLE = 'dpaternina-contact-form';
+
+	/**
+	 * The handle Cloudflare's widget script is enqueued under.
+	 */
+	public const TURNSTILE_HANDLE = 'dpaternina-turnstile';
 
 	/**
 	 * The script, relative to the theme root.
@@ -92,6 +108,75 @@ final class ContactForm {
 			)
 		);
 
+		$this->enqueue_challenge();
+
 		return $content;
+	}
+
+	/**
+	 * Load Cloudflare's widget script, if this site has a challenge at all.
+	 *
+	 * The version is `null` on purpose: appending `?ver=6.9` to somebody else's
+	 * CDN URL busts their cache for no reason and tells them which WordPress
+	 * this is.
+	 *
+	 * @return void
+	 */
+	private function enqueue_challenge(): void {
+		/**
+		 * Filters the URL of the script that draws the contact challenge.
+		 *
+		 * The theme knows the block is on this page; the plugin knows whether a
+		 * challenge is configured and what draws it. This is the seam between
+		 * the two, and it names no class on either side. '' means "nothing to
+		 * load", which is both the default and what an unconfigured or absent
+		 * plugin leaves in place.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param string $url The script URL, or '' for no challenge.
+		 */
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- `dp_` is this project's public filter prefix; WPCS rejects prefixes of three characters or fewer, so it cannot be declared in phpcs.xml.dist.
+		$url = apply_filters( 'dp_contact_turnstile_script', '' );
+
+		if ( ! is_string( $url ) || '' === $url ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			self::TURNSTILE_HANDLE,
+			$url,
+			array(),
+			// phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- deliberate: see the docblock. The file is Cloudflare's and versioned by Cloudflare; a `?ver=` of ours would bust their cache and advertise this site's WordPress version.
+			null,
+			array(
+				'strategy'  => 'defer',
+				'in_footer' => true,
+			)
+		);
+
+		add_filter( 'script_loader_tag', $this->mark_async( ... ), 10, 2 );
+	}
+
+	/**
+	 * Add `async` to the challenge script's tag, beside the `defer` core wrote.
+	 *
+	 * Cloudflare documents `api.js` as `async defer`, and core's enqueue API
+	 * takes one strategy rather than both — `'async'` and `'defer'` are
+	 * alternatives to it. `defer` is the one that matters here, because the
+	 * widget it draws has to find markup that is already parsed; `async` is the
+	 * hint Cloudflare asks for, and adding it in the tag is the only place the
+	 * two can be said at once.
+	 *
+	 * @param string $tag    The script tag core assembled.
+	 * @param string $handle Which script it is for.
+	 * @return string
+	 */
+	public function mark_async( string $tag, string $handle ): string {
+		if ( self::TURNSTILE_HANDLE !== $handle || str_contains( $tag, ' async' ) ) {
+			return $tag;
+		}
+
+		return str_replace( ' defer', ' async defer', $tag );
 	}
 }

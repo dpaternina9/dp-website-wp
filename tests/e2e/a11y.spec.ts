@@ -18,6 +18,17 @@
  *    "there is an audit for it", and the inline-`style=` half of that claim was
  *    the only half a test actually held (`TimelineTest`). This is the rest.
  *
+ * Sweep 2 has one exception, and it is deliberately not encoded here. ADR-0023
+ * put Cloudflare Turnstile on the contact form, which loads `api.js` from
+ * `challenges.cloudflare.com`. It is inert unless `DP_TURNSTILE_SITEKEY` and
+ * `DP_TURNSTILE_SECRET` are both set in `wp-config.php`, and CI sets neither, so
+ * what this file measures on the contact template is "the challenge is off
+ * here" — which is a real thing to measure and the reason the inert-by-default
+ * design matters. The sweep was not weakened to accommodate the feature: on a
+ * deployment that turns it on, the contact page genuinely does make one
+ * off-origin request, and that page alone is outside the promise. Adding
+ * `challenges.cloudflare.com` to an allowlist here would hide that.
+ *
  * The keyboard runs live where their fixtures live: the mobile panel's trap in
  * `chrome.spec.ts`, the timeline in `timeline.spec.ts`, click-to-play in
  * `watch.spec.ts`, the contact form's focus handoff in `contact.spec.ts`. What

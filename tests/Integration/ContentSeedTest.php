@@ -906,13 +906,22 @@ final class ContentSeedTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The Privacy page still says the thing that will not be true.
+	 * The Privacy page is still the design's placeholder, minus one false claim.
 	 *
 	 * Digest section 7 flags it as the one page where placeholder copy shipping
-	 * as-is would actively mislead. It is seeded verbatim anyway, so the problem
-	 * is visible on the site rather than hidden in a document — and this test is
-	 * where somebody will find out, on the day they rewrite it, that the rewrite
-	 * has to happen here too.
+	 * as-is would actively mislead, and the answer to that has always been to
+	 * ship it anyway so the problem is visible on the site rather than hidden in
+	 * a document. That is still the rule, and this test still holds it: the
+	 * placeholder is here, unrewritten, and rewriting it before launch is a
+	 * decision rather than a bug fix.
+	 *
+	 * One sentence is the exception. The page used to promise that no
+	 * third-party script loads on any page, and since ADR-0023 the contact page
+	 * can load Cloudflare Turnstile. Seeding a sentence the same release made
+	 * false is not surfacing a problem, it is publishing an untruth, so the
+	 * claim is narrowed and the challenge is described. This test is where
+	 * somebody finds out, on the day they rewrite the rest, that the rewrite
+	 * has to happen in `Fixture` too.
 	 *
 	 * @return void
 	 */
@@ -922,10 +931,23 @@ final class ContentSeedTest extends WP_UnitTestCase {
 		$privacy = get_page_by_path( 'privacy', OBJECT, 'page' );
 
 		$this->assertInstanceOf( WP_Post::class, $privacy );
+
 		$this->assertStringContainsString(
-			'No third-party analytics, advertising, or social scripts load on any page.',
+			'No Google Analytics, no Meta pixel, no session recording.',
 			$privacy->post_content,
 			'Placeholder copy, carried through unchanged. Rewriting it before launch is a decision, not a bug fix.'
+		);
+
+		$this->assertStringNotContainsString(
+			'No third-party analytics, advertising, or social scripts load on any page.',
+			$privacy->post_content,
+			'ADR-0023 made this false on the contact page. A seed may ship placeholder copy; it may not ship a claim this release disproved.'
+		);
+
+		$this->assertStringContainsString(
+			'Cloudflare Turnstile',
+			$privacy->post_content,
+			'The one third-party script this site loads has to be named on the page that describes what loads.'
 		);
 	}
 

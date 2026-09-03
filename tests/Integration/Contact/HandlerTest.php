@@ -1,6 +1,6 @@
 <?php
 /**
- * Integration tests for the contact form's six gates.
+ * Integration tests for the contact form's seven gates.
  *
  * @package DP\Tests
  */
@@ -32,10 +32,17 @@ use DP\Core\Contact\Submission;
  * - **`wp_mail()` is not reached.** A gate that returns the right enum and still
  *   sends the message is a gate that does nothing.
  * - **The gate order holds.** The handler checks nonce and capability first
- *   because they are the cheapest and least forgiving, and the rate limit second
- *   to last so a mistyped address does not spend one of a real person's three
- *   attempts. Both are behaviour, not implementation detail, and both are tested
+ *   because they are the cheapest and least forgiving, and the rate limit last
+ *   so a mistyped address does not spend one of a real person's three attempts.
+ *   Both are behaviour, not implementation detail, and both are tested
  *   directly.
+ *
+ * The seventh gate, Turnstile, is the only one that is off by default, so its
+ * tests come in two halves. Most of this file runs with no challenge
+ * configured, which is what a fresh install is and what the container has —
+ * and that half is also the assertion that adding the gate changed nothing for
+ * a site that did not ask for it. The rest configures one and answers
+ * siteverify through `ContactTestCase::siteverify()`.
  */
 final class HandlerTest extends ContactTestCase {
 
@@ -302,6 +309,173 @@ final class HandlerTest extends ContactTestCase {
 	}
 
 	/**
+	 * With no keys, the seventh gate is not there at all.
+	 *
+	 * The strongest form of "inert": a submission carrying no token whatsoever
+	 * sends, and nothing was asked of Cloudflare. If this ever fails, every
+	 * site running this plugin without a Turnstile account has a contact form
+	 * that refuses everything.
+	 *
+	 * @return void
+	 */
+	public function test_an_unconfigured_site_has_no_challenge(): void {
+		$outcome = ( new Handler() )->handle( $this->submission( array( 'turnstile' => '' ) ) );
+
+		$this->assertSame( State::Sent, $outcome->state );
+		$this->assertSendCount( 1 );
+		$this->assertSame( array(), $this->siteverify_calls );
+	}
+
+	/**
+	 * Gate six: a configured site accepts a token Cloudflare vouches for.
+	 *
+	 * @return void
+	 */
+	public function test_a_verified_challenge_lets_the_message_through(): void {
+		$this->siteverify( array( 'success' => true ) );
+
+		$handler = new Handler( turnstile: $this->turnstile() );
+
+		$this->assertSame( State::Sent, $handler->handle( $this->submission() )->state );
+		$this->assertSendCount( 1 );
+		$this->assertCount( 1, $this->siteverify_calls );
+	}
+
+	/**
+	 * Gate six: a token Cloudflare will not vouch for stops the message.
+	 *
+	 * @return void
+	 */
+	public function test_an_unverified_challenge_is_refused(): void {
+		$this->siteverify(
+			array(
+				'success'     => false,
+				'error-codes' => array( 'timeout-or-duplicate' ),
+			)
+		);
+
+		$outcome = ( new Handler( turnstile: $this->turnstile() ) )->handle( $this->submission() );
+
+		$this->assertSame( State::Failed, $outcome->state );
+		$this->assertSame( Rejection::Turnstile, $outcome->rejection );
+		$this->assertNothingWasSent();
+	}
+
+	/**
+	 * Gate six: a configured site refuses a submission carrying no token.
+	 *
+	 * This is the one a visitor with a blocked third-party script hits, and it
+	 * is a refusal rather than a pass on purpose. ADR-0023 names the cost.
+	 *
+	 * @return void
+	 */
+	public function test_a_configured_site_refuses_a_submission_with_no_token(): void {
+		$outcome = ( new Handler( turnstile: $this->turnstile() ) )
+			->handle( $this->submission( array( 'turnstile' => '' ) ) );
+
+		$this->assertSame( Rejection::Turnstile, $outcome->rejection );
+		$this->assertNothingWasSent();
+		$this->assertSame( array(), $this->siteverify_calls, 'An empty token should never be carried to Cloudflare.' );
+	}
+
+	/**
+	 * Cloudflare being unreachable refuses the message rather than waving it by.
+	 *
+	 * @return void
+	 */
+	public function test_a_challenge_that_cannot_be_checked_is_refused(): void {
+		$this->siteverify( array( 'success' => true ), 503 );
+
+		$outcome = ( new Handler( turnstile: $this->turnstile() ) )->handle( $this->submission() );
+
+		$this->assertSame( Rejection::Turnstile, $outcome->rejection );
+		$this->assertNothingWasSent();
+	}
+
+	/**
+	 * What Cloudflare called the refusal reaches the log; the token does not.
+	 *
+	 * @return void
+	 */
+	public function test_the_refused_challenge_is_logged_with_its_error_codes(): void {
+		$context = array();
+
+		add_action(
+			'dp_core_contact_refused',
+			static function ( mixed $rejection, mixed $detail ) use ( &$context ): void {
+				unset( $rejection );
+
+				$context[] = $detail;
+			},
+			10,
+			2
+		);
+
+		$this->siteverify(
+			array(
+				'success'     => false,
+				'error-codes' => array( 'invalid-input-response' ),
+			)
+		);
+
+		( new Handler( turnstile: $this->turnstile() ) )->handle(
+			$this->submission( array( 'turnstile' => 'a-token-nobody-should-log' ) )
+		);
+
+		$encoded = wp_json_encode( $context );
+
+		$this->assertIsString( $encoded );
+		$this->assertStringContainsString( 'invalid-input-response', $encoded );
+		$this->assertStringNotContainsString( 'a-token-nobody-should-log', $encoded );
+		$this->assertStringNotContainsString( 'test-secret', $encoded );
+	}
+
+	/**
+	 * The challenge is asked about before the rate limit is spent, not after.
+	 *
+	 * A form left open over lunch comes back with a token Cloudflare has
+	 * expired, and that is a real person making a real mistake. If the limiter
+	 * ran first they would have three of those and then be locked out for ten
+	 * minutes — which is the same argument that put the limiter last in the
+	 * first place, applied to the gate that now sits in front of it.
+	 *
+	 * @return void
+	 */
+	public function test_an_expired_challenge_does_not_spend_an_attempt(): void {
+		$this->siteverify( array( 'success' => false ) );
+
+		$handler = new Handler( turnstile: $this->turnstile() );
+
+		for ( $attempt = 1; $attempt <= RateLimiter::LIMIT * 2; $attempt++ ) {
+			$this->assertSame( Rejection::Turnstile, $handler->handle( $this->submission() )->rejection );
+		}
+
+		remove_all_filters( 'pre_http_request' );
+		$this->siteverify( array( 'success' => true ) );
+
+		$this->assertSame( State::Sent, $handler->handle( $this->submission() )->state );
+	}
+
+	/**
+	 * Nothing is asked of Cloudflare for a submission an earlier gate refused.
+	 *
+	 * The gate sits after the field check so a bot posting an empty body cannot
+	 * make this site issue an outbound HTTP request per attempt.
+	 *
+	 * @return void
+	 */
+	public function test_an_earlier_refusal_never_reaches_cloudflare(): void {
+		$handler = new Handler( turnstile: $this->turnstile() );
+
+		$handler->handle( $this->submission( array( 'nonce' => 'forged' ) ) );
+		$handler->handle( $this->submission( array( 'honeypot' => 'x' ) ) );
+		$handler->handle( $this->submission( array( 'email' => 'not-an-address' ) ) );
+
+		$this->assertSame( array(), $this->siteverify_calls );
+		$this->assertNothingWasSent();
+	}
+
+	/**
 	 * Gate six: this sender has already sent as many as the window allows.
 	 *
 	 * @return void
@@ -448,6 +622,38 @@ final class HandlerTest extends ContactTestCase {
 			array( 'nonce', 'capability', 'honeypot', 'too-fast', 'incomplete' ),
 			$this->refusals
 		);
+	}
+
+	/**
+	 * The same walk with a challenge in it: Turnstile is sixth, the limit last.
+	 *
+	 * A second version of the ordering test rather than a rewrite of the first,
+	 * because the first is what an unconfigured site does and that is the case
+	 * every install starts in. This is the configured one, and the only claim
+	 * it adds is where the new gate sits.
+	 *
+	 * @return void
+	 */
+	public function test_the_challenge_closes_after_the_field_check(): void {
+		$this->siteverify( array( 'success' => false ) );
+
+		$handler = new Handler( turnstile: $this->turnstile() );
+
+		$broken = array(
+			'stamp' => $this->stamp( 0 ),
+			'email' => 'not-an-address',
+		);
+
+		$this->assertSame( Rejection::TooFast, $handler->handle( $this->submission( $broken ) )->rejection );
+
+		unset( $broken['stamp'] );
+		$this->assertSame( Rejection::Incomplete, $handler->handle( $this->submission( $broken ) )->rejection );
+
+		unset( $broken['email'] );
+		$this->assertSame( Rejection::Turnstile, $handler->handle( $this->submission( $broken ) )->rejection );
+
+		$this->assertNothingWasSent();
+		$this->assertSame( array( 'too-fast', 'incomplete', 'turnstile' ), $this->refusals );
 	}
 
 	/**

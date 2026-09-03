@@ -11,6 +11,7 @@ namespace DP\Tests\Integration\Contact;
 
 use DP\Core\Contact\Handler;
 use DP\Core\Contact\Settings;
+use DP\Core\Contact\Turnstile;
 
 /**
  * The addresses David sets in wp-admin, and the filters layered on top.
@@ -22,6 +23,15 @@ use DP\Core\Contact\Settings;
  * them, everything that is not an email address reads as unset — on the way in
  * and on the way out — and the delivery path prefers the option over
  * `admin_email` while still letting the filter override both.
+ *
+ * The section's third row is not a setting and is tested as what it is: a
+ * report. The Turnstile keys are `wp-config.php` constants by decision, so
+ * there is nothing to edit — but ADR-0018 says the state of the site is visible
+ * on the screen that governs it, and "is the contact form behind a challenge"
+ * is exactly the kind of fact that is otherwise invisible from wp-admin for
+ * months. What the tests hold is that the row says which of the two states this
+ * site is in, that it names the hostname being enforced, and that it never
+ * prints the secret or offers a field to type one into.
  */
 final class SettingsTest extends ContactTestCase {
 
@@ -146,6 +156,85 @@ final class SettingsTest extends ContactTestCase {
 
 		$this->assertSendCount( 1 );
 		$this->assertSame( 'elsewhere@example.com', $this->mail[0]['to'] ?? null );
+	}
+
+	/**
+	 * With no constants, the row says so and names them.
+	 *
+	 * Naming them is the only instruction this screen gives, and it is the
+	 * difference between a status row and a dead end: David can see the feature
+	 * exists, see that it is off, and see the two words to search his
+	 * `wp-config.php` for.
+	 *
+	 * @return void
+	 */
+	public function test_the_status_row_reports_an_unconfigured_challenge(): void {
+		$html = $this->status( new Settings( new Turnstile( '', '' ) ) );
+
+		$this->assertStringContainsString( 'not configured', $html );
+		$this->assertStringContainsString( Turnstile::SITEKEY, $html );
+		$this->assertStringContainsString( Turnstile::SECRET, $html );
+	}
+
+	/**
+	 * With constants, the row says so and names the hostname being enforced.
+	 *
+	 * The hostname is the point of the row rather than a detail of it: it is
+	 * derived from `home_url()`, so it is the one part of this configuration
+	 * nobody typed, and therefore the one part nobody can check anywhere else.
+	 *
+	 * @return void
+	 */
+	public function test_the_status_row_reports_a_configured_challenge(): void {
+		$html = $this->status( new Settings( new Turnstile( 'test-sitekey', 'test-secret' ) ) );
+
+		$host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+
+		$this->assertStringContainsString( 'is configured', $html );
+		$this->assertStringContainsString( $host, $html );
+	}
+
+	/**
+	 * The row is a report: no input, no secret, nothing stored.
+	 *
+	 * @return void
+	 */
+	public function test_the_status_row_publishes_no_secret_and_no_field(): void {
+		$html = $this->status( new Settings( new Turnstile( 'test-sitekey', 'test-secret' ) ) );
+
+		$this->assertStringNotContainsString( 'test-secret', $html );
+		$this->assertStringNotContainsString( '<input', $html );
+		$this->assertStringNotContainsString( '<label', $html );
+	}
+
+	/**
+	 * Nothing about the challenge is a registered setting.
+	 *
+	 * The keys are constants, so an option under any of these names would be a
+	 * second place the answer could come from, and two sources for one fact is
+	 * the shape of the bug ADR-0018 exists to prevent.
+	 *
+	 * @return void
+	 */
+	public function test_the_challenge_registers_no_option(): void {
+		$registered = get_registered_settings();
+
+		$this->assertArrayNotHasKey( Turnstile::SITEKEY, $registered );
+		$this->assertArrayNotHasKey( Turnstile::SECRET, $registered );
+		$this->assertArrayNotHasKey( 'dp_contact_turnstile', $registered );
+	}
+
+	/**
+	 * Render the challenge status row.
+	 *
+	 * @param Settings $settings The settings object to render it from.
+	 * @return string
+	 */
+	private function status( Settings $settings ): string {
+		ob_start();
+		$settings->challenge_status();
+
+		return (string) ob_get_clean();
 	}
 
 	/**
