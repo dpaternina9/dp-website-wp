@@ -77,6 +77,7 @@ final class Theme {
 		( new Blocks\LeadImage() )->register();
 		( new Blocks\Markup() )->register();
 		( new Blocks\PageState( $pagination ) )->register();
+		( new Blocks\Photos( $this ) )->register();
 		( new Blocks\ResumeDownload() )->register();
 		( new Blocks\SeriesIndex( $archive ) )->register();
 		( new Blocks\SeriesPartsLink() )->register();

@@ -1043,6 +1043,160 @@ nav picks the page up the way it picks up every page, through the menu David own
     sync key, so the import can never adopt, update or unpublish one, and the Watch page
     is complete with no API configured.
 
+
+---
+
+## Phase 13 — Photos (built — 2026-09-25)
+
+A new section David asked for after launch: his photographs — travel, home,
+anything — grouped by **trip** and **topic**, hundreds of them, curated from the
+Media Library. Designed in `.impeccable/` (the locked brief
+`surfaces/themes-dpaternina-templates-dp-photos-html.md` and the prototype
+`prototypes/photos/index.html`, which David approved) and transcribed here.
+
+Nothing about it is a route. David creates a Photos page and assigns the
+`dp-photos` template — the ninth `customTemplates` entry, one line, on ADR-0020's
+precedent — and the seeder does both on a seeded site. The footer's SITE column
+gains a "Photos link" button beside "Watch link", named in List View and filled
+by the seeder exactly as Watch's is (ADR-0018); the header picks the page up
+through the menu David owns.
+
+**The content model** (`DP\Core\Photos`):
+
+- **A photo is a post, not an attachment.** `dp_photo` — `show_ui` and
+  `show_in_rest`, and no URL of its own: `publicly_queryable`, `has_archive`,
+  `rewrite` and `query_var` off, so `NoHardcodedRoutesTest` passes unchanged.
+  Every field the page prints is core's: the image is the featured image, the
+  title the title (blank prints nothing), the story the post content, the
+  place-and-date line the **raw** excerpt (never the automatic one), and the
+  order the publish date, newest first. It is not one of `PostTypes::all()` — its
+  canvas is prose, so it opens on an ordinary block editor with its fields in the
+  sidebar, the way a page does.
+- **One field of ours**, `dp_photo_related_post`: a post ID behind "Read the
+  story →", printed only while that post is published. A searchable picker in a
+  Photo sidebar panel, reusing the write-up picker's `referenceOptions`.
+- **`dp_trip` — exactly one per photo**, said three ways because the taxonomy API
+  cannot say it once: a single-choice Trip control replaces core's token field
+  (`editor.PostTaxonomyType`); a REST save carrying two trips is **refused** with
+  a 400 (`OneTrip`), never trimmed; and trips are kept out of core's Quick and
+  Bulk Edit (`show_in_quick_edit => false`), whose checkboxes only ever add. The
+  list table's bulk menu gains a **"Set trip…"** option group — one entry per trip
+  plus "No trip" — that replaces.
+- **`dp_topic` — any number**, hierarchical so it draws as checkboxes, which is
+  what makes core's own Quick and Bulk Edit work for it.
+- Both taxonomies are `public => false` with no rewrite and no query var, carry
+  admin columns, and filter the Photos list through two dropdowns.
+- **Counts and date ranges come from published photos with an image**
+  (`Library`), never from the terms' own `count` column. A trip's range — "Dec
+  2017", "Nov – Dec 2017", "Dec 2017 – Jan 2018" — is computed, so the Trips
+  screen prints the same range in a **Dates** column where David manages trips
+  (ADR-0018).
+- **Camera panel**, read-only: the featured image's EXIF as the page will print
+  it, from a `dp_camera` property on the attachment's edit-context REST record
+  formatted by the same `Exif` the block uses. When the file records when it was
+  taken, the panel offers **"Use as publish date"**; nothing moves the date
+  unless David presses it.
+- **"Add photos in bulk"** beside "Add Photo": core's media modal (several at
+  once, uploads allowed), then a small dialog for one trip, any topics and
+  draft/publish, then `POST dp/v1/photos/bulk` (`upload_files` + the type's
+  `create_posts`, + `publish_posts` to publish). One untitled photo per image,
+  dated by the camera when the file says (a draft's date is fixed, not
+  floating), terms applied; images that already back a photo are skipped and
+  reported. `wp dp photos import` is the same `BulkCreate`, taking attachment IDs
+  and/or `--dir` (each file's SHA-1 is kept so a re-run uploads nothing twice),
+  `--trip`, `--topic` and `--status`.
+- **An imported photo cannot be saved with core's Save button** —
+  `isEditedPostSaveable()` refuses a post whose title, excerpt and content are all
+  empty, and an imported photo is exactly that on purpose. The Photo panel says so
+  on such a photo and offers Save and Publish through the entity record.
+
+**The page** (`dp/photo-wall` in dp-core; `templates/dp-photos.html`, the Photos
+section of `components.css`, `assets/js/photo-layout.js` and
+`assets/js/photos.js` in the theme):
+
+- One server render: the stats line ("34 photos · 6 trips · 2016–2018"), the
+  index (all photos, trips with range and count, topics with count), the filter
+  line, the wall, "Show more", a docked pill, an empty sheet and an empty
+  lightbox `<dialog>`. Every word on a control is a block attribute in the
+  inspector (the contact form's `COPY_PANELS` mechanism); counts and dates are
+  translatable number phrases.
+- **Three modes by the component's width** (`@container dp-photos`, ADR-0007):
+  **margin** at ≥1376px (1120 + 216 + 40) with the index sticky in the left
+  margin; **spine** below that — a 44px rail whose panel slides over the wall
+  with a clip-path reveal and never reflows it; **phone** under 600px — a docked
+  "Index 34" / "Putumayo 5 ✕" pill that opens a bottom-sheet `<dialog>`, trips in
+  two columns. The pill steps aside once the wall has scrolled away, so it never
+  covers the footer's links.
+- **Everything works with scripts off.** Index entries are links to `?trip=` /
+  `?topic=`; the wall is CSS columns; a tile is a link to `?photo=<slug>` (keeping
+  the filter), and the server draws that photo's whole pop-up in a panel above the
+  wall, with previous and next as links and the page of the wall that holds it;
+  "Show more" is a link to `?photos-page=N` (not `page`/`paged`, which are core's),
+  which is a **depth**: the server draws pages 1 to N and the link lands on the
+  first new tile (`#dp-pw-pN`). Unknown values degrade to the unfiltered page.
+- **With the script**: shortest-column masonry (~260px columns, 12px gap; two
+  columns and 6px on a phone; panoramas over 2.2 : 1 span two columns; tiles
+  taller than 1.8 column widths cropped in the grid only — `TALL_CAP`, one
+  constant, `Infinity` turns it off). Hovering or focusing an index entry dims
+  every other photo, and when none of the lit ones is on screen a small "N below
+  ↓" (or "above ↑") says where they went. A click fetches the filtered page and
+  keeps the tiles both sets share, which glide to their new places (380ms,
+  `--ease-out`); `pushState`, Back works, and a polite status announces the
+  result. The lightbox grows from its tile (FLIP, skipped under reduced motion),
+  counts "07 / 34", steps with buttons, arrow keys and swipes through the
+  filtered set — loading the next page at the end of this one — preloads the next
+  photo, keeps the URL on the open photo with `replaceState`, and returns focus
+  to the tile. A `?photo=` URL opens straight into it.
+- **More photos as you scroll, up to a point** (added 2026-09-25, David). The
+  script fetches the next page a viewport before the end of the wall
+  (`?photos-page=N&photos-part=1`, which returns page N alone) and places only the
+  new tiles, continuing the last layout — until the wall holds `AUTO_LOAD_CAP` =
+  150 photos, beside `TALL_CAP` in `photo-layout.js`; past that "Show more" is
+  the only way on and the footer stays reachable. The count is per filter. The
+  address bar keeps the depth with `replaceState` and the history entry keeps the
+  scroll position, so reload and Back return to the same place; opening and
+  closing a photo keeps both. Appends are announced ("48 more photos loaded").
+  `content-visibility: auto` on the tiles was measured and left out: on a 200-tile
+  wall it added ~3ms of layout and saved no task time.
+- **The lightbox never scrolls and never overflows.** The stage is a flex box
+  filling a definite row of a one-viewport dialog (`overflow: hidden`), so a 1:4
+  or 6:1 photo is always wholly inside it; the script also sizes the element to
+  the contained box, so the grow-from-tile lands exactly. Only the text column
+  scrolls. It is `clamp(360px, 32vw, 520px)` wide with the story at body size and
+  the post block kit's headings, lists, links, quote and images scaled to fit; on
+  a phone it takes up to half the height and the photo the rest.
+- **The pop-up says how to move**: keycaps for ← → "Browse" and Esc "Close"
+  where the pointer is a mouse, "Swipe to browse" on touch — mono, muted, next to
+  the counter. The key hint is the dialog's `aria-describedby`, because the
+  arrow-key and Escape shortcuts have no button to announce them; the swipe hint
+  is `aria-hidden`. All three words are block attributes.
+- **The lightbox's text is a `<template>` after each tile**, rendered by the same
+  PHP method as the scriptless panel: instant first paint of everything, one
+  renderer, no endpoint to authorise. The cost is bytes — each page of forty-eight
+  carries its photos' stories — and a page is forty-eight.
+
+**Toolchain** (2026-09-25): Node 26 is the project's version (`.nvmrc`,
+`engines`). `@wordpress/env` 10.x exited silently under it — its zip-source
+download ran through `extract-zip` 1.7, which never calls back on the libuv that
+ships with Node 24.16+ and 26, so the promise never settled, the event loop
+drained and the process exited 0 mid-start. 11.x replaced `extract-zip` with
+`adm-zip` (gutenberg #78762); `@wordpress/env` is now `^11.16.0`. Its breaking
+changes do not reach this repo: both ports are explicit in `.wp-env.json`, the
+permalink structure is set by `afterStart`, and nothing called `install-path`.
+
+**Seed:** a Photos page (placeholder intro), three placeholder trips spanning a
+month, two months and a new year, two placeholder topics, and nine photos on the
+seed's one placeholder image, with fields deliberately uneven — untitled, no
+excerpt, a story, a related post, no trip — so the empty-field rule is on the
+page. No trip, place or date in it is a fact about David.
+
+**Open, for David:**
+
+- ~~The closing CTA band is on the page~~ — David: no closing banner on Photos;
+  removed from `dp-photos.html`.
+- Tall photos are cropped in the grid (`TALL_CAP = 1.8`), the brief's open
+  question. One constant reverses it.
+
 ---
 
 ## Sequencing

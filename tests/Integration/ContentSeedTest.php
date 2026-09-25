@@ -124,6 +124,12 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				'videos'        => 8,
 
 				/*
+				 * The Photos page's wall. Placeholder copy on the seed's one
+				 * placeholder image; see `Fixture::photos()`.
+				 */
+				'photos'        => 9,
+
+				/*
 				 * Seven from the design, twenty-two of filler that says so.
 				 * `posts_per_page` is ten and the index holds one post back, so
 				 * this is what makes three pages, a middle page, and an
@@ -140,9 +146,10 @@ final class ContentSeedTest extends WP_UnitTestCase {
 				 * the theme's custom templates are assigned to nothing and
 				 * cannot be reached at all. The eleventh is the series index,
 				 * which the design does not draw and which is the only way
-				 * `/series/` is anything but a 404.
+				 * `/series/` is anything but a 404. The twelfth is Photos,
+				 * which carries the `dp-photos` template.
 				 */
-				'pages'         => 11,
+				'pages'         => 12,
 
 				/*
 				 * The permalink structure, `page_on_front`, `page_for_posts` and

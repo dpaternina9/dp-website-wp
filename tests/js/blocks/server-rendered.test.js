@@ -46,13 +46,14 @@ describe( 'the server-rendered blocks', () => {
 		__reset();
 	} );
 
-	it( 'names the five blocks the plugin renders in PHP', () => {
+	it( 'names the six blocks the plugin renders in PHP', () => {
 		expect( SERVER_RENDERED ).toEqual( [
 			'dp/timeline',
 			'dp/contact-form',
 			'dp/resume-ledger',
 			'dp/watch-featured',
 			'dp/video-grid',
+			'dp/photo-wall',
 		] );
 	} );
 
@@ -87,6 +88,7 @@ describe( 'the server-rendered blocks', () => {
 			'dp/resume-ledger',
 			'dp/watch-featured',
 			'dp/video-grid',
+			'dp/photo-wall',
 		] );
 	} );
 
@@ -104,7 +106,10 @@ describe( 'the server-rendered blocks', () => {
 	} );
 
 	it( 'offers inspector copy panels only where the attributes are copy', () => {
-		expect( Object.keys( COPY_PANELS ) ).toEqual( [ 'dp/contact-form' ] );
+		expect( Object.keys( COPY_PANELS ) ).toEqual( [
+			'dp/contact-form',
+			'dp/photo-wall',
+		] );
 	} );
 
 	it( 'lets the contact copy be edited from the inspector', () => {

@@ -80,3 +80,7 @@ desktop.ini
 
 # Agent worktrees created by the harness inside the repo.
 .claude/
+
+# Impeccable design prototypes (local reference only)
+.impeccable/prototypes/
+.impeccable/questions/

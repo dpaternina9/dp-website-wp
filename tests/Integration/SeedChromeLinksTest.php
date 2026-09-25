@@ -433,7 +433,7 @@ final class SeedChromeLinksTest extends WP_UnitTestCase {
 
 		$this->assertSame( 0, $report->count( 'chrome_links' ) );
 		$this->assertSame( 0, $this->saved_count() );
-		$this->assertSame( 11, $report->count( 'pages' ), 'Everything else was seeded regardless.' );
+		$this->assertSame( 12, $report->count( 'pages' ), 'Everything else was seeded regardless.' );
 	}
 
 	/**

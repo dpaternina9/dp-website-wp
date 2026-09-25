@@ -5357,3 +5357,1215 @@ p.dp-gear-note {
 		animation: none;
 	}
 }
+
+
+/* -------------------------------------------------------------------------
+ * Photos — the page head, the index, the wall and the pop-up
+ *
+ * Transcribed from the prototype David approved
+ * (.impeccable/prototypes/photos/index.html) against the locked brief
+ * (.impeccable/surfaces/themes-dpaternina-templates-dp-photos-html.md). The
+ * markup is `dp/photo-wall` in dp-core plus `templates/dp-photos.html`; the
+ * behaviour is `assets/js/photos.js`.
+ *
+ * **Three modes, one markup, decided by the component's width** (ADR-0007,
+ * digest §1 — no media queries). `.dp-photos` is the container; the prototype
+ * measured the window with a ResizeObserver, which is what the design tool could
+ * do, and this is what CSS can:
+ *
+ *   margin  ≥ 1376px  the index sits in the left margin, sticky, and the wall
+ *                     keeps the full --container-lg. 1376 = 1120 + 216 + 40:
+ *                     the wall, the index column and the gap between them.
+ *                     (The prototype's 184px column plus the 32px of inline
+ *                     inset its entries now carry, so names keep their room.)
+ *   spine   600–1375  a 44px rail; the index slides over the wall on press
+ *                     (clip-path), so the wall never reflows to make room.
+ *   phone   < 600     a docked pill at the bottom opens the index in a sheet.
+ *
+ * Container queries cannot read custom properties, so the two numbers are
+ * written into the conditions; they are the sums above and nothing else.
+ *
+ * **Without the script, spine and phone draw the index in the flow above the
+ * wall.** A rail that opens a panel and a pill that opens a sheet are buttons,
+ * and a button is nothing without a script; so both are drawn only once
+ * `photos.js` has marked the block `.is-enhanced`. Margin mode needs no script
+ * at all. The wall does the same: CSS columns until the script lays it out
+ * (`.is-laid`), in the design's shortest-column order.
+ *
+ * Dark only; every colour is a token. The lightbox's ground is --dp-black,
+ * the deepest the palette has — the prototype's #060608 had no token.
+ * ---------------------------------------------------------------------- */
+
+.dp-photos {
+	--dp-pw-wide: var(--container-lg);
+	--dp-pw-index-w: 216px;
+	--dp-pw-entry-x: 12px;
+	--dp-pw-entry-y: 8px;
+	--dp-pw-index-gap: 40px;
+	--dp-pw-spine-w: 44px;
+	--dp-pw-gap: 12px;
+
+	/* The pop-up's text column: room for a short story, never a sliver. */
+	--dp-pw-info-w: clamp(360px, 32vw, 520px);
+
+	/* Where the sticky index and rail stop: under the sticky site header
+	   (its bar is 12px + a 44px control + 12px + the hairline), plus the
+	   prototype's 24px. */
+	--dp-pw-stick: calc(var(--control-h-md) + 24px + var(--border-width) + 24px);
+	container: dp-photos / inline-size;
+	padding-inline: var(--gutter);
+	padding-block-end: 120px;
+}
+
+main.dp-photos > .dp-photos-head,
+main.dp-photos > .dp-pw {
+	margin-block-start: 0;
+}
+
+/* Two classes, so the centring out-ranks the house style's margin on `p`
+   and core's flow-layout margins, which are one class each (ADR-0011). */
+.dp-photos .dp-photos-head,
+.dp-photos p.dp-pw-stats,
+.dp-photos .dp-pw-body {
+	box-sizing: border-box;
+	max-width: var(--dp-pw-wide);
+	margin-inline: auto;
+}
+
+.dp-photos-head {
+	padding-block-start: clamp(32px, 7vw, 88px);
+}
+
+h1.dp-photos-title {
+	margin: 0 0 16px;
+	font-family: var(--font-display);
+	font-size: var(--fs-display);
+	font-weight: var(--fw-bold);
+	line-height: 1.02;
+	letter-spacing: var(--ls-display);
+}
+
+.dp-photos-intro > * {
+	max-width: 52ch;
+}
+
+.dp-photos-intro.wp-block-post-content > * + * {
+	margin-block-start: 12px;
+}
+
+.dp-photos-intro p {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-md);
+	line-height: 1.45;
+}
+
+p.dp-pw-stats {
+	margin-block-start: 20px;
+	margin-block-end: clamp(28px, 4vw, 48px);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-pw-body {
+	position: relative;
+}
+
+.dp-pw-sr {
+	position: absolute;
+	overflow: hidden;
+	width: 1px;
+	height: 1px;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- The index */
+
+.dp-pw-index {
+	font-size: var(--fs-sm);
+}
+
+/* In the flow above the wall until a mode puts it somewhere else. */
+.dp-pw-index-inner {
+	margin-block-end: 28px;
+}
+
+/* The headings, and the date lines below, start where an entry's name does:
+   one inset in from the column edge the entry boxes sit on. */
+h2.dp-pw-index-heading {
+	margin: 28px 0 10px;
+	padding-inline: var(--dp-pw-entry-x);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+ul.dp-pw-index-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+ul.dp-pw-index-list > li {
+	margin: 0;
+}
+
+a.dp-pw-entry {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: baseline;
+	column-gap: 12px;
+	margin: 0;
+	padding: var(--dp-pw-entry-y) var(--dp-pw-entry-x);
+	border-radius: var(--radius-sm);
+	color: var(--text-secondary);
+	text-decoration: none;
+	transition:
+		color var(--dur-fast) var(--ease-out),
+		background-color var(--dur-fast) var(--ease-out);
+}
+
+a.dp-pw-entry:hover {
+	background: var(--dp-graphite);
+	color: var(--text-primary);
+}
+
+a.dp-pw-entry[aria-current="page"] {
+	background: var(--dp-graphite);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-primary);
+}
+
+a.dp-pw-entry-all .dp-pw-entry-name {
+	color: var(--text-primary);
+	font-weight: var(--fw-semibold);
+}
+
+.dp-pw-entry-n {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+a.dp-pw-entry[aria-current="page"] .dp-pw-entry-n {
+	color: var(--accent-text);
+}
+
+.dp-pw-entry-when {
+	grid-column: 1 / -1;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	line-height: 1.4;
+	letter-spacing: 0.02em;
+}
+
+/* In the flow (no script, spine or phone), the trips run in two columns. */
+ul.dp-pw-trips {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+	gap: 0 20px;
+}
+
+.dp-pw-index-close,
+.dp-pw-spine,
+.dp-pw-dock {
+	display: none;
+}
+
+/* ----------------------------------------------------- The filter line */
+
+p.dp-pw-filter {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 6px 14px;
+	min-height: 28px;
+	margin: 0 0 14px;
+	color: var(--text-muted);
+	font-size: var(--fs-sm);
+}
+
+/* Unfiltered, the line keeps its height so filtering does not push the wall. */
+p.dp-pw-filter[hidden] {
+	display: flex;
+	visibility: hidden;
+}
+
+.dp-pw-filter-name {
+	color: var(--text-primary);
+	font-weight: var(--fw-semibold);
+}
+
+.dp-pw-filter-when {
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: 1;
+}
+
+a.dp-pw-filter-clear {
+	color: var(--accent-text);
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+/* --------------------------------------------------------------- The wall */
+
+/* Without the script: columns, newest first down each one. */
+.dp-pw-wall {
+	column-gap: var(--dp-pw-gap);
+	column-width: 260px;
+}
+
+a.dp-pw-tile {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	margin-block-end: var(--dp-pw-gap);
+	border-radius: var(--radius-sm);
+	background: var(--dp-graphite);
+	break-inside: avoid;
+	transition:
+		transform var(--dur-slow) var(--ease-out),
+		opacity var(--dur-base) var(--ease-out),
+		filter var(--dur-base) var(--ease-out);
+}
+
+img.dp-pw-img {
+	display: block;
+	width: 100%;
+	height: auto;
+	object-fit: cover;
+	object-position: 50% 40%;
+	transition: transform var(--dur-slow) var(--ease-out);
+}
+
+a.dp-pw-tile:hover img.dp-pw-img {
+	transform: scale(1.025);
+}
+
+/*
+ * No `content-visibility` on the tiles, and that is a measured decision rather
+ * than an oversight: on a 200-tile wall, resized four times and scrolled
+ * through, it cost ~3ms more layout and saved no task time (Chromium,
+ * Performance.getMetrics, two runs each way). A tile is one image in an
+ * absolutely placed box; the browser already skips painting the ones off
+ * screen, and lazy images are not fetched until they near it.
+ */
+
+/* Laid out by the script: absolutely placed, moved with transforms. */
+.dp-pw-wall.is-laid {
+	position: relative;
+	columns: auto;
+}
+
+.dp-pw-wall.is-laid a.dp-pw-tile {
+	position: absolute;
+	top: 0;
+	left: 0;
+	margin: 0;
+}
+
+.dp-pw-wall.is-laid img.dp-pw-img {
+	height: 100%;
+}
+
+.dp-pw-wall.is-settling a.dp-pw-tile {
+	transition: none;
+}
+
+/* Loading the next page: the link stays where it is and says so quietly. */
+a.dp-pw-more-link.is-loading {
+	color: var(--text-muted);
+	pointer-events: none;
+}
+
+.dp-pw-tag {
+	position: absolute;
+	bottom: 8px;
+	left: 8px;
+	overflow: hidden;
+	max-width: calc(100% - 16px);
+	padding: 5px 9px;
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--dp-ink) 82%, transparent);
+	color: var(--text-primary);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-semibold);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	opacity: 0;
+	transform: translateY(4px);
+	transition:
+		opacity var(--dur-base) var(--ease-out),
+		transform var(--dur-base) var(--ease-out);
+}
+
+a.dp-pw-tile:hover .dp-pw-tag,
+a.dp-pw-tile:focus-visible .dp-pw-tag {
+	opacity: 1;
+	transform: none;
+}
+
+@media (hover: none) {
+
+	.dp-pw-tag {
+		display: none;
+	}
+}
+
+a.dp-pw-tile.is-out {
+	opacity: 0;
+	pointer-events: none;
+}
+
+/* The signature moment: an index entry lights its photos across the wall. */
+.dp-pw-wall[data-hl] a.dp-pw-tile:not(.is-hl) {
+	opacity: 0.16;
+	filter: grayscale(1);
+}
+
+/* "5 below ↓" — every lit photo is off screen. */
+.dp-pw-hint {
+	position: fixed;
+	z-index: 25;
+	bottom: 24px;
+	left: 50%;
+	padding: 8px 14px;
+	border-radius: var(--radius-pill);
+	background: color-mix(in srgb, var(--dp-graphite) 94%, transparent);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate), var(--shadow-lg);
+	color: var(--text-primary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+	pointer-events: none;
+	transform: translateX(-50%);
+}
+
+.dp-pw-hint[hidden] {
+	display: none;
+}
+
+p.dp-pw-more {
+	margin: 32px 0 0;
+	text-align: center;
+}
+
+a.dp-pw-more-link {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--control-h-md);
+	padding: 0 22px;
+	border-radius: var(--radius-pill);
+	background: var(--dp-graphite);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-primary);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	text-decoration: none;
+	transition: box-shadow var(--dur-base) var(--ease-out);
+}
+
+a.dp-pw-more-link:hover {
+	box-shadow: inset 0 0 0 var(--border-width) var(--accent-text);
+}
+
+/* ------------------------------------------- The details, panel and lightbox */
+
+h2.dp-pw-d-title {
+	margin: 0 0 8px;
+	font-family: var(--font-display);
+	font-size: var(--fs-lg);
+	font-weight: var(--fw-bold);
+	line-height: 1.2;
+	letter-spacing: -0.01em;
+	text-wrap: balance;
+}
+
+p.dp-pw-d-caption {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--fs-sm);
+}
+
+/*
+ * The story is post content, so the house style already reaches every block in
+ * it (ADR-0005). What changes here is scale: a column 360–520px wide is not an
+ * article, so the article's generous heading space and the quote's display
+ * size come down to fit it, and the body stays at body size.
+ */
+.dp-pw-d-story {
+	margin-block-start: 24px;
+	color: var(--text-primary);
+	font-size: var(--fs-base);
+	line-height: var(--lh-relaxed);
+}
+
+.dp-pw-d-story > * {
+	max-width: none;
+	margin-block: 0;
+}
+
+.dp-pw-d-story > * + * {
+	margin-block-start: 16px;
+}
+
+.dp-pw-d-story > h2.wp-block-heading,
+.dp-pw-d-story > h3.wp-block-heading {
+	margin-block-start: 28px;
+	font-family: var(--font-display);
+	font-size: var(--fs-md);
+	line-height: var(--lh-snug);
+}
+
+.dp-pw-d-story > h3.wp-block-heading {
+	font-size: var(--fs-base);
+}
+
+/* The kit's list is built for the post column: a 28px marker track plus a
+   gap, on top of which the browser's own list indent used to land. In the
+   narrow story column that read as a dash floating far from its text, so the
+   marker track shrinks to the marker and the indent goes. */
+.dp-pw-d-story ul,
+.dp-pw-d-story ol {
+	padding-inline-start: 0;
+}
+
+.dp-pw-d-story .wp-block-list > li {
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 10px;
+}
+
+.dp-pw-d-story li + li {
+	margin-block-start: 6px;
+}
+
+.dp-pw-d-story a {
+	color: var(--accent-text);
+	text-underline-offset: 0.2em;
+}
+
+.dp-pw-d-story > .wp-block-quote {
+	margin-block: 24px;
+	margin-inline: 0;
+	padding: 16px 20px;
+}
+
+.dp-pw-d-story > .wp-block-quote > p {
+	font-size: var(--fs-md);
+}
+
+.dp-pw-d-story figure {
+	margin-inline: 0;
+}
+
+.dp-pw-d-story img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	border-radius: var(--radius-sm);
+}
+
+.dp-pw-d-story figcaption {
+	margin-block-start: 8px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+p.dp-pw-d-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 16px 0 0;
+}
+
+a.dp-pw-chip {
+	padding: 5px 10px;
+	border-radius: var(--radius-pill);
+	background: var(--dp-graphite);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-secondary);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-semibold);
+	text-decoration: none;
+	transition:
+		color var(--dur-fast) var(--ease-out),
+		box-shadow var(--dur-fast) var(--ease-out);
+}
+
+a.dp-pw-chip:hover {
+	box-shadow: inset 0 0 0 var(--border-width) var(--accent-text);
+	color: var(--text-primary);
+}
+
+a.dp-pw-d-story-link {
+	display: inline-flex;
+	gap: 8px;
+	margin-block-start: 24px;
+	color: var(--accent-text);
+	font-weight: var(--fw-semibold);
+	text-decoration: none;
+}
+
+a.dp-pw-d-story-link:hover {
+	text-decoration: underline;
+}
+
+p.dp-pw-d-camera {
+	margin: 24px 0 0;
+	padding-block-start: 16px;
+	border-block-start: var(--border-width) solid var(--dp-slate);
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: 1.7;
+}
+
+.dp-pw-count {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* The counter and, beside it, how to move: the same mono, the same muted,
+   so neither competes with the photo. */
+.dp-pw-lb-meta {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	min-width: 0;
+}
+
+.dp-pw-lb-hint {
+	display: none;
+	align-items: center;
+	gap: 16px;
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.dp-pw-lb-hint-group {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+kbd.dp-pw-kbd {
+	display: inline-grid;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 5px;
+	border-radius: var(--radius-xs);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: 0.04em;
+	text-transform: none;
+	place-items: center;
+}
+
+/* Input capability, not layout: a mouse means keys, a finger means swipes. */
+@media (hover: hover) and (pointer: fine) {
+
+	.dp-pw-lb-hint-keys {
+		display: inline-flex;
+	}
+}
+
+@media (hover: none), (pointer: coarse) {
+
+	.dp-pw-lb-hint-touch {
+		display: inline-flex;
+	}
+}
+
+.dp-pw-panel-close,
+.dp-pw-lb-close {
+	display: grid;
+	place-items: center;
+	width: var(--control-h-md);
+	height: var(--control-h-md);
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-sm);
+	background: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition:
+		color var(--dur-fast) var(--ease-out),
+		background-color var(--dur-fast) var(--ease-out);
+}
+
+.dp-pw-panel-close:hover,
+.dp-pw-lb-close:hover {
+	background: var(--dp-graphite);
+	color: var(--text-primary);
+}
+
+.dp-pw-panel-step,
+.dp-pw-lb-step {
+	position: absolute;
+	top: 0;
+	bottom: 24px;
+	display: grid;
+	width: 72px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	place-items: center;
+}
+
+.dp-pw-panel-step:hover,
+.dp-pw-lb-step:hover {
+	color: var(--text-primary);
+}
+
+span.dp-pw-panel-step,
+.dp-pw-lb-step:disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
+.dp-pw-prev {
+	left: 0;
+}
+
+.dp-pw-next {
+	right: 0;
+}
+
+/* The open photo, in the page, for a request carrying `?photo=`. */
+.dp-pw-panel {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--dp-pw-info-w);
+	grid-template-rows: 64px auto;
+	margin-block-end: 28px;
+	border-radius: var(--radius-md);
+	background: var(--dp-black);
+	scroll-margin-block-start: var(--dp-pw-stick);
+}
+
+.dp-pw-panel-top,
+.dp-pw-lb-top {
+	display: flex;
+	grid-column: 1 / -1;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 16px 0 24px;
+}
+
+.dp-pw-panel-stage,
+.dp-pw-lb-stage {
+	position: relative;
+	display: grid;
+	min-height: 0;
+	padding: 0 72px 24px;
+	place-items: center;
+}
+
+/*
+ * The lightbox's stage is a flex box, not the panel's grid, and that is the
+ * whole of the containment rule. The stage fills a definite grid row of a
+ * dialog exactly one viewport tall, so its content box is definite, and a flex
+ * item's percentage max-height resolves against it — which a grid item in an
+ * auto row does not, and that is how a 1:4 photo used to run off the bottom.
+ * `width`/`height: auto` beat the attributes the script sets for the aspect
+ * ratio, so the two maxima scale the photo down keeping its shape: always
+ * wholly inside, never scrolled, never cropped.
+ */
+.dp-pw-lb-stage {
+	display: flex;
+	overflow: hidden;
+	align-items: center;
+	justify-content: center;
+}
+
+img.dp-pw-panel-img {
+	max-height: 78vh;
+	border-radius: var(--radius-xs);
+	box-shadow: var(--shadow-lg);
+	object-fit: contain;
+}
+
+.dp-pw-panel-info,
+.dp-pw-lb-info {
+	overflow: auto;
+	min-height: 0;
+	padding: 8px 40px 40px 16px;
+	overscroll-behavior: contain;
+}
+
+/* One dialog for the whole set. */
+dialog.dp-pw-lb {
+	overflow: hidden;
+	width: 100vw;
+	max-width: none;
+	height: 100dvh;
+	max-height: none;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: var(--dp-black);
+	color: var(--text-primary);
+}
+
+dialog.dp-pw-lb::backdrop {
+	background: var(--dp-black);
+}
+
+dialog.dp-pw-lb[open] {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) var(--dp-pw-info-w);
+	grid-template-rows: 64px minmax(0, 1fr);
+}
+
+img.dp-pw-lb-img {
+	flex: none;
+	width: auto;
+	height: auto;
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: var(--radius-xs);
+	box-shadow: var(--shadow-lg);
+	object-fit: contain;
+	transform-origin: 0 0;
+}
+
+img.dp-pw-lb-img:not([src]) {
+	visibility: hidden;
+}
+
+/* ----------------------------------------------------- The phone's sheet */
+
+dialog.dp-pw-sheet {
+	position: fixed;
+	inset: auto 0 0;
+	width: 100%;
+	max-width: none;
+	max-height: 82vh;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 20px 20px 0 0;
+	background: var(--dp-graphite);
+	box-shadow: inset 0 var(--border-width) 0 var(--dp-slate), var(--shadow-lg);
+	color: var(--text-primary);
+	transform: translateY(100%);
+	transition:
+		transform var(--dur-slow) var(--ease-out),
+		overlay var(--dur-slow) allow-discrete,
+		display var(--dur-slow) allow-discrete;
+}
+
+dialog.dp-pw-sheet[open] {
+	transform: none;
+}
+
+@starting-style {
+
+	dialog.dp-pw-sheet[open] {
+		transform: translateY(100%);
+	}
+}
+
+dialog.dp-pw-sheet::backdrop {
+	background: color-mix(in srgb, var(--dp-black) 55%, transparent);
+}
+
+.dp-pw-grab {
+	width: 40px;
+	height: 4px;
+	margin: 10px auto 4px;
+	border-radius: 2px;
+	background: var(--dp-slate);
+}
+
+/* The sheet's own padding plus an entry's inset puts the names 20px from
+   the edge; the boxes themselves sit 8px in. */
+dialog.dp-pw-sheet .dp-pw-index {
+	--dp-pw-entry-y: 10px;
+	overflow: auto;
+	max-height: calc(82vh - 18px);
+	padding: 12px 8px 32px;
+	font-size: var(--fs-base);
+}
+
+dialog.dp-pw-sheet ul.dp-pw-trips {
+	grid-template-columns: 1fr 1fr;
+}
+
+dialog.dp-pw-sheet .dp-pw-index-inner {
+	margin: 0;
+}
+
+/* ------------------------------------------------------------- Margin mode */
+
+@container dp-photos (width >= 1376px) {
+
+	.dp-photos .dp-photos-head,
+	.dp-photos p.dp-pw-stats,
+	.dp-photos .dp-pw-body {
+		max-width: calc(var(--dp-pw-wide) + var(--dp-pw-index-w) + var(--dp-pw-index-gap));
+		padding-inline-start: calc(var(--dp-pw-index-w) + var(--dp-pw-index-gap));
+	}
+
+	.dp-pw-index {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: var(--dp-pw-index-w);
+	}
+
+	.dp-pw-index-inner {
+		position: sticky;
+		top: var(--dp-pw-stick);
+		overflow: auto;
+		max-height: calc(100vh - var(--dp-pw-stick) - 24px);
+		margin: 0;
+		padding-inline-end: 4px;
+		scrollbar-width: thin;
+	}
+
+	ul.dp-pw-trips {
+		display: block;
+	}
+
+	h2.dp-pw-index-heading:first-of-type {
+		margin-block-start: 28px;
+	}
+}
+
+/* -------------------------------------------------------------- Spine mode */
+
+@container dp-photos (600px <= width < 1376px) {
+
+	.dp-pw.is-enhanced .dp-pw-body,
+	.dp-pw.is-enhanced .dp-pw-stats,
+	.dp-photos:has(.dp-pw.is-enhanced) .dp-photos-head {
+		max-width: none;
+		padding-inline-start: calc(var(--dp-pw-spine-w) + 20px);
+	}
+
+	.dp-pw.is-enhanced .dp-pw-spine {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		display: flex;
+		width: var(--dp-pw-spine-w);
+	}
+
+	.dp-pw.is-enhanced .dp-pw-index {
+		position: absolute;
+		z-index: 20;
+		top: 0;
+		left: 0;
+		width: 300px;
+		height: 100%;
+		pointer-events: none;
+	}
+
+	.dp-pw.is-enhanced .dp-pw-index-inner {
+		position: sticky;
+		top: var(--dp-pw-stick);
+		overflow: auto;
+		max-height: calc(100vh - var(--dp-pw-stick) - 24px);
+		margin: 0;
+		padding: 14px 10px 16px;
+		border-radius: var(--radius-md);
+		background: color-mix(in srgb, var(--dp-graphite) 94%, transparent);
+		box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate), var(--shadow-lg);
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: auto;
+		clip-path: inset(0 100% 0 0 round var(--radius-md));
+		backdrop-filter: blur(14px);
+		transition:
+			clip-path var(--dur-slow) var(--ease-out),
+			opacity var(--dur-base) var(--ease-out),
+			visibility 0s linear var(--dur-slow);
+	}
+
+	.dp-pw.is-starting .dp-pw-index-inner {
+		transition: none;
+	}
+
+	.dp-pw.is-enhanced.is-index-open .dp-pw-index-inner {
+		opacity: 1;
+		visibility: visible;
+		clip-path: inset(0 0 0 0 round var(--radius-md));
+		transition:
+			clip-path var(--dur-slow) var(--ease-out),
+			opacity var(--dur-base) var(--ease-out),
+			visibility 0s;
+	}
+
+	.dp-pw.is-enhanced ul.dp-pw-trips {
+		display: block;
+	}
+
+	.dp-pw.is-enhanced .dp-pw-index-close {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		display: grid;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		border: 0;
+		border-radius: var(--radius-sm);
+		background: none;
+		color: var(--text-muted);
+		cursor: pointer;
+		place-items: center;
+	}
+
+	/* Clear of the close button, which sits over the first row's count. */
+	.dp-pw.is-enhanced ul.dp-pw-index-all {
+		margin-inline-end: 40px;
+	}
+
+	.dp-pw.is-enhanced .dp-pw-index-close:hover {
+		background: var(--dp-slate);
+		color: var(--text-primary);
+	}
+}
+
+button.dp-pw-spine-button {
+	position: sticky;
+	top: var(--dp-pw-stick);
+	display: flex;
+	width: var(--dp-pw-spine-w);
+	height: min(420px, calc(100vh - var(--dp-pw-stick) - 24px));
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	padding: 14px 0;
+	border: 0;
+	border-radius: var(--radius-md);
+	background: var(--dp-graphite);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition:
+		box-shadow var(--dur-base) var(--ease-out),
+		background-color var(--dur-base) var(--ease-out);
+}
+
+button.dp-pw-spine-button:hover,
+button.dp-pw-spine-button[aria-expanded="true"] {
+	box-shadow: inset 0 0 0 var(--border-width) var(--accent-text);
+}
+
+.dp-pw-icon {
+	flex: none;
+}
+
+.dp-pw-spine-label {
+	overflow: hidden;
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+	transform: rotate(180deg);
+	writing-mode: vertical-rl;
+}
+
+.dp-pw-spine-current b {
+	color: var(--accent-text);
+	font-weight: var(--fw-medium);
+}
+
+/* -------------------------------------------------------------- Phone mode */
+
+@container dp-photos (width < 600px) {
+
+	.dp-pw-wall {
+		--dp-pw-gap: 6px;
+		column-count: 2;
+		column-width: auto;
+	}
+
+	p.dp-pw-filter[hidden] {
+		display: none;
+	}
+
+	.dp-pw.is-enhanced .dp-pw-body > .dp-pw-index {
+		display: none;
+	}
+
+	.dp-pw.is-enhanced .dp-pw-dock {
+		position: fixed;
+		z-index: 30;
+		bottom: max(16px, env(safe-area-inset-bottom));
+		left: 50%;
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		padding: 4px;
+		border-radius: var(--radius-pill);
+		background: color-mix(in srgb, var(--dp-graphite) 92%, transparent);
+		box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate), var(--shadow-lg);
+		transform: translateX(-50%);
+		backdrop-filter: blur(14px);
+		transition: opacity var(--dur-base) var(--ease-out);
+	}
+
+	.dp-pw.is-enhanced .dp-pw-dock.is-away {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.dp-pw-hint {
+		bottom: 84px;
+	}
+
+	/*
+	 * Stacked: the text gets up to half the screen and scrolls inside it; the
+	 * photo takes whatever is left and stays contained in it.
+	 */
+	.dp-pw-panel,
+	dialog.dp-pw-lb[open] {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: 56px minmax(0, 1fr) auto;
+	}
+
+	.dp-pw-panel {
+		grid-template-rows: 56px auto auto;
+		margin-inline: calc(-1 * var(--gutter));
+		border-radius: 0;
+	}
+
+	.dp-pw-panel-stage,
+	.dp-pw-lb-stage {
+		padding: 0 0 12px;
+	}
+
+	img.dp-pw-panel-img,
+	img.dp-pw-lb-img {
+		border-radius: 0;
+	}
+
+	.dp-pw-lb-step {
+		display: none;
+	}
+
+	/* No room for the key hint beside the counter; it stays the dialog's
+	   description, so a keyboard user is still told. The swipe hint is short
+	   enough to stay. */
+	.dp-pw-lb-hint-keys {
+		display: none;
+	}
+
+	.dp-pw-panel-step {
+		position: static;
+		display: none;
+	}
+
+	.dp-pw-panel-info,
+	.dp-pw-lb-info {
+		padding: 12px 20px max(24px, env(safe-area-inset-bottom));
+	}
+
+	.dp-pw-lb-info {
+		max-height: 50dvh;
+	}
+
+	.dp-pw-d-story {
+		margin-block-start: 12px;
+	}
+
+	a.dp-pw-d-story-link,
+	p.dp-pw-d-camera {
+		margin-block-start: 14px;
+	}
+}
+
+.dp-pw-dock button,
+.dp-pw-dock a {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: var(--control-h-md);
+	padding: 0 18px;
+	border: 0;
+	border-radius: var(--radius-pill);
+	background: none;
+	color: var(--text-primary);
+	font-size: var(--fs-sm);
+	font-weight: var(--fw-semibold);
+	white-space: nowrap;
+	cursor: pointer;
+	text-decoration: none;
+}
+
+.dp-pw-dock-n {
+	color: var(--accent-text);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+}
+
+a.dp-pw-dock-clear {
+	justify-content: center;
+	width: var(--control-h-md);
+	padding: 0;
+	color: var(--text-muted);
+}
+
+a.dp-pw-dock-clear[hidden] {
+	display: none;
+}
+
+/* The tile's own transform is its place on the wall, so only its transition
+   goes; the photo's hover lift and the tag's rise go entirely. */
+@media (prefers-reduced-motion: reduce) {
+
+	a.dp-pw-tile {
+		transition: none;
+	}
+
+	a.dp-pw-tile:hover img.dp-pw-img,
+	.dp-pw-tag {
+		transform: none;
+		transition: none;
+	}
+}
