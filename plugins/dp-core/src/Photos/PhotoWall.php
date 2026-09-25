@@ -254,6 +254,7 @@ final class PhotoWall {
 			. ( null !== $open && isset( $shown[ $open->id ] ) ? $this->panel( $shown[ $open->id ], $set, $links ) : '' )
 			. $this->wall( $slice, $shown, $links, ( $first - 1 ) * self::PER_PAGE )
 			. $this->more( $page, $pages, $links )
+			. '<p class="dp-pw-pending" aria-hidden="true" hidden>' . esc_html__( 'Loading more photos…', 'dp-core' ) . '</p>'
 			. $this->status()
 			. '</div>'
 			. '</div>'
@@ -401,8 +402,21 @@ final class PhotoWall {
 	 * @return string
 	 */
 	private function filter_line( Filter $filter, int $count, Links $links ): string {
+		/*
+		 * The words the script needs to draw this line itself, the moment an
+		 * entry is pressed and before the filtered page arrives: the count
+		 * phrase in both its forms, and the clear link's label and href.
+		 */
+		$open = '<p class="dp-pw-filter"'
+			/* translators: %s: how many photos the filter shows; always 1. */
+			. ' data-one="' . esc_attr( _n( '%s photo', '%s photos', 1, 'dp-core' ) ) . '"'
+			/* translators: %s: how many photos the filter shows. */
+			. ' data-many="' . esc_attr( _n( '%s photo', '%s photos', 2, 'dp-core' ) ) . '"'
+			. ' data-show-all="' . esc_attr( $this->copy['showAllLabel'] ) . '"'
+			. ' data-show-all-href="' . esc_url( $links->filtered( Filter::none() ) ) . '"';
+
 		if ( ! $filter->active() ) {
-			return '<p class="dp-pw-filter" hidden></p>';
+			return $open . ' hidden></p>';
 		}
 
 		$group = null;
@@ -415,7 +429,7 @@ final class PhotoWall {
 
 		$when = null === $group ? '' : $group->when();
 
-		return '<p class="dp-pw-filter">'
+		return $open . '>'
 			. '<strong class="dp-pw-filter-name">' . esc_html( $filter->name() ) . '</strong>'
 			. ( '' === $when ? '' : '<span class="dp-pw-filter-when">' . esc_html( $when ) . '</span>' )
 			/* translators: %s: how many photos the filter shows. */
@@ -898,6 +912,7 @@ final class PhotoWall {
 		);
 
 		update_post_thumbnail_cache( $query );
+		$this->prime_related( $query->posts );
 
 		$photos = array();
 
@@ -914,6 +929,34 @@ final class PhotoWall {
 		}
 
 		return $photos;
+	}
+
+	/**
+	 * Load every related post this page links to, in one query.
+	 *
+	 * `Photo::related()` checks each one is published and asks for its
+	 * permalink; without this that is one query per photo that has a story
+	 * post. Their meta is not needed, only the rows.
+	 *
+	 * @param array<int, mixed> $posts The photos being drawn.
+	 * @return void
+	 */
+	private function prime_related( array $posts ): void {
+		$ids = array();
+
+		foreach ( $posts as $post ) {
+			if ( $post instanceof WP_Post ) {
+				$id = PostType::sanitize_post_id( get_post_meta( $post->ID, PostType::RELATED_POST, true ) );
+
+				if ( $id > 0 ) {
+					$ids[] = $id;
+				}
+			}
+		}
+
+		if ( array() !== $ids ) {
+			_prime_post_caches( array_values( array_unique( $ids ) ), false, false );
+		}
 	}
 
 	/**

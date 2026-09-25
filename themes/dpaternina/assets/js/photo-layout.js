@@ -181,7 +181,55 @@
 		);
 	}
 
+	/**
+	 * Whether a photo is in a filter, from what its tile carries.
+	 *
+	 * The same rule the server applies (`Photos\Entry::in()` in dp-core): a trip
+	 * matches the one trip a photo has, a topic matches any of its topics, and
+	 * no filter matches everything.
+	 *
+	 * @param {string} trip   The tile's `data-trip`.
+	 * @param {string} topics The tile's `data-topics`, space-separated.
+	 * @param {string} kind   `trip`, `topic`, or '' for all photos.
+	 * @param {string} slug   The filter's slug.
+	 * @return {boolean} Whether it matches.
+	 */
+	function inFilter( trip, topics, kind, slug ) {
+		if ( 'trip' === kind ) {
+			return trip === slug;
+		}
+
+		if ( 'topic' === kind ) {
+			return ( topics || '' ).split( /\s+/ ).includes( slug );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Whether the server's set only adds to the end of what is on screen.
+	 *
+	 * When it does, reconciling after an instant filter is a matter of placing
+	 * the new tiles underneath — nothing on screen moves. When it does not (a
+	 * tile the wall lacked belongs in the middle, or the order differs), the
+	 * wall is laid out again.
+	 *
+	 * @param {string[]} shown  Tile ids on screen, in order.
+	 * @param {string[]} server Tile ids the filtered page holds, in order.
+	 * @return {boolean} Whether `shown` is a prefix of `server`.
+	 */
+	function extendsShown( shown, server ) {
+		return (
+			shown.length <= server.length &&
+			shown.every( function ( id, index ) {
+				return id === server[ index ];
+			} )
+		);
+	}
+
 	const api = {
+		inFilter,
+		extendsShown,
 		pageLanded,
 		place,
 		columnsFor,

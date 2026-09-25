@@ -100,6 +100,134 @@ test.describe( 'the Photos page', () => {
 		).toHaveCount( SHARED_PHOTOS.photos.length );
 	} );
 
+	test( 'filters at once from the wall, then adds what the server has', async ( {
+		page,
+	} ) => {
+		const { some } = SHARED_PHOTOS.bulk;
+		const held: Array< () => Promise< void > > = [];
+
+		// Hold every filtered-page request until the test lets it through.
+		await page.route(
+			( url ) => url.searchParams.has( 'topic' ),
+			( route ) => {
+				held.push( () => route.continue().catch( () => {} ) );
+			}
+		);
+
+		await page.setViewportSize( { width: 1440, height: 1000 } );
+		await page.goto( photosPage );
+
+		const wall = page.locator( '.dp-pw-wall' );
+		const shown = wall.locator( 'a.dp-pw-tile:not(.is-out)' );
+		const entry = page.locator(
+			`a.dp-pw-entry[data-slug="${ some.topic.slug }"]`
+		);
+		const onWall = await wall
+			.locator( 'a.dp-pw-tile' )
+			.evaluateAll(
+				( nodes, slug ) =>
+					nodes.filter(
+						( node ) =>
+							( node as HTMLElement ).dataset.topics
+								?.split( ' ' )
+								.includes( slug )
+					).length,
+				some.topic.slug
+			);
+		const first = wall.locator( 'a.dp-pw-tile' ).first();
+
+		expect( onWall ).toBeGreaterThan( 0 );
+		expect( onWall ).toBeLessThan( some.count );
+
+		await entry.click();
+
+		// Everything the reader sees change happens before any answer.
+		expect( held.length ).toBeGreaterThan( 0 );
+		await expect( entry ).toHaveAttribute( 'aria-current', 'page' );
+		await expect( page.locator( '.dp-pw-filter-name' ) ).toHaveText(
+			some.topic.name
+		);
+		await expect( page.locator( '.dp-pw-filter-count' ) ).toHaveText(
+			`${ some.count } photos`
+		);
+		await expect( page.locator( '.dp-pw-dock-label' ) ).toHaveText(
+			some.topic.name
+		);
+		await expect( shown ).toHaveCount( onWall );
+		await expect( page ).toHaveURL(
+			new RegExp( `topic=${ some.topic.slug }` )
+		);
+		await expect( page.locator( '.dp-pw-pending' ) ).toBeVisible();
+		await expect( wall ).toHaveAttribute( 'aria-busy', 'true' );
+
+		const before = await first.evaluate(
+			( node ) => ( node as HTMLElement ).style.transform
+		);
+
+		// The answer adds the rest underneath; nothing already shown moves.
+		await Promise.all( held.splice( 0 ).map( ( release ) => release() ) );
+		await expect( shown ).toHaveCount( 48 );
+		await expect( page.locator( '.dp-pw-pending' ) ).toBeHidden();
+		await expect( wall ).not.toHaveAttribute( 'aria-busy', 'true' );
+		expect(
+			await first.evaluate(
+				( node ) => ( node as HTMLElement ).style.transform
+			)
+		).toBe( before );
+	} );
+
+	test( 'keeps only the newest press when two filters race', async ( {
+		page,
+	} ) => {
+		const held = new Map< string, () => Promise< void > >();
+
+		await page.route(
+			( url ) => url.searchParams.has( 'trip' ),
+			( route ) => {
+				const trip =
+					new URL( route.request().url() ).searchParams.get(
+						'trip'
+					) || '';
+
+				held.set( trip, () => route.continue().catch( () => {} ) );
+			}
+		);
+
+		await page.setViewportSize( { width: 1440, height: 1000 } );
+		await page.goto( photosPage );
+
+		const north = page.locator(
+			`a.dp-pw-entry[data-slug="${ NORTH.slug }"]`
+		);
+		const south = page.locator(
+			`a.dp-pw-entry[data-slug="${ SOUTH.slug }"]`
+		);
+
+		await north.click();
+		await south.click();
+
+		await expect( south ).toHaveAttribute( 'aria-current', 'page' );
+		await expect( north ).not.toHaveAttribute( 'aria-current', 'page' );
+		await expect.poll( () => held.size ).toBe( 2 );
+
+		// The newer answer lands, then the older one: the older is dropped.
+		await held.get( SOUTH.slug )!();
+		await expect( page.locator( '.dp-pw-filter-name' ) ).toHaveText(
+			SOUTH.name
+		);
+		await held.get( NORTH.slug )!();
+		await page.waitForTimeout( 500 );
+
+		await expect( page ).toHaveURL( new RegExp( `trip=${ SOUTH.slug }` ) );
+		await expect( page.locator( '.dp-pw-filter-name' ) ).toHaveText(
+			SOUTH.name
+		);
+		await expect( south ).toHaveAttribute( 'aria-current', 'page' );
+		await expect( page.locator( 'a.dp-pw-tile:not(.is-out)' ) ).toHaveCount(
+			1
+		);
+	} );
+
 	test( 'steps through the filtered set in one lightbox and gives focus back', async ( {
 		page,
 	} ) => {
