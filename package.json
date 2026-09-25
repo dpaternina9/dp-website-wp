@@ -34,5 +34,10 @@
     "@wordpress/scripts": "^30.7.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@wordpress/scripts": {
+      "@wordpress/env": "$@wordpress/env"
+    }
   }
 }
