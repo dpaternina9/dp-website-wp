@@ -87,7 +87,7 @@ final class BulkScreen {
 		wp_enqueue_script(
 			self::HANDLE,
 			plugins_url( self::SCRIPT, $this->plugin_file ),
-			array( 'wp-api-fetch', 'media-editor' ),
+			array( 'wp-api-fetch', 'media-editor', 'inline-edit-post' ),
 			$this->asset_version( self::SCRIPT ),
 			true
 		);

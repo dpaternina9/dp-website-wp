@@ -11,6 +11,7 @@ namespace DP\Tests\Integration\Photos;
 
 use DP\Core\Photos\AdminList;
 use DP\Core\Photos\Library;
+use DP\Core\Photos\PostType;
 use DP\Core\Photos\Taxonomies;
 
 /**
@@ -73,6 +74,51 @@ final class AdminListTest extends PhotosTestCase {
 		$this->list->handle_bulk_action( 'edit.php', AdminList::SET_TRIP . '0', array( $photo ) );
 
 		$this->assertSame( array(), wp_get_object_terms( $photo, Taxonomies::TRIP, array( 'fields' => 'ids' ) ) );
+	}
+
+	/**
+	 * Quick Edit's Trip select replaces the trip — and only from Quick Edit.
+	 *
+	 * @return void
+	 */
+	public function test_quick_edit_sets_one_trip(): void {
+		$this->become( 'editor' );
+
+		$old   = $this->term( Taxonomies::TRIP, 'Old' );
+		$new   = $this->term( Taxonomies::TRIP, 'New' );
+		$photo = $this->photo( array( 'trip' => $old->term_id ) );
+
+		ob_start();
+		$this->list->quick_edit_trip( 'taxonomy-' . Taxonomies::TRIP, PostType::NAME );
+		$box = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'name="' . AdminList::QUICK_TRIP . '"', $box );
+		$this->assertStringContainsString( '>New</option>', $box );
+
+		ob_start();
+		$this->list->quick_edit_trip( 'taxonomy-' . Taxonomies::TOPIC, PostType::NAME );
+		$this->assertSame( '', ob_get_clean(), 'Only the trip column gets the select.' );
+
+		$_POST[ AdminList::QUICK_TRIP ] = (string) $new->term_id;
+
+		// Not a Quick Edit request: the trip stays.
+		$this->list->save_quick_edit_trip( $photo );
+		$this->assertSame( array( $old->term_id ), wp_get_object_terms( $photo, Taxonomies::TRIP, array( 'fields' => 'ids' ) ) );
+
+		add_filter( 'wp_doing_ajax', '__return_true' );
+		$nonce                    = wp_create_nonce( 'inlineeditnonce' );
+		$_POST['_inline_edit']    = $nonce;
+		$_REQUEST['_inline_edit'] = $nonce;
+
+		$this->list->save_quick_edit_trip( $photo );
+		$this->assertSame( array( $new->term_id ), wp_get_object_terms( $photo, Taxonomies::TRIP, array( 'fields' => 'ids' ) ) );
+
+		$_POST[ AdminList::QUICK_TRIP ] = '0';
+		$this->list->save_quick_edit_trip( $photo );
+		$this->assertSame( array(), wp_get_object_terms( $photo, Taxonomies::TRIP, array( 'fields' => 'ids' ) ) );
+
+		remove_filter( 'wp_doing_ajax', '__return_true' );
+		unset( $_POST[ AdminList::QUICK_TRIP ], $_POST['_inline_edit'], $_REQUEST['_inline_edit'] );
 	}
 
 	/**

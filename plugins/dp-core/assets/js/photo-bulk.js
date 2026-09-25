@@ -14,6 +14,40 @@
  * @since 1.2.0
  */
 
+/*
+ * Quick Edit's Trip select (`DP\\Core\\Photos\\AdminList::quick_edit_trip()`).
+ * Core fills its own fields from the row's hidden inline data when the panel
+ * opens; this does the same for the trip, from the `.dp_trip` value the row
+ * carries, so the select starts on the photo's current trip.
+ */
+( function () {
+	'use strict';
+
+	const inlineEdit = window.inlineEditPost;
+
+	if ( ! inlineEdit || 'function' !== typeof inlineEdit.edit ) {
+		return;
+	}
+
+	const edit = inlineEdit.edit;
+
+	inlineEdit.edit = function ( id ) {
+		const opened = edit.apply( this, arguments );
+		const postId = 'object' === typeof id ? this.getId( id ) : id;
+		const row = document.getElementById( 'inline_' + postId );
+		const current = row && row.querySelector( '.dp_trip' );
+		const select = document.querySelector(
+			'#edit-' + postId + ' select[name="dp_quick_trip"]'
+		);
+
+		if ( select ) {
+			select.value = current ? current.textContent.trim() : '0';
+		}
+
+		return opened;
+	};
+} )();
+
 ( function () {
 	'use strict';
 
