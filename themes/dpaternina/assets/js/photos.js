@@ -63,6 +63,12 @@
 	const lbNext = lightbox.querySelector( '.dp-pw-next' );
 	const status = root.querySelector( '.dp-pw-status' );
 	const hint = root.querySelector( '.dp-pw-hint' );
+	const floatEdit = root.querySelector( '.dp-pw-edit-float' );
+	const lbEdit = lightbox.querySelector( '.dp-pw-lb-edit' );
+
+	/** The tile the floating Edit pill belongs to, and its hide timer. */
+	let editFor = null;
+	let editTimer = 0;
 	const PAGE_ARG = root.dataset.pageArg || 'photos-page';
 	const PHOTO_ARG = root.dataset.photoArg || 'photo';
 	const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -169,6 +175,7 @@
 		} );
 
 		wall.style.height = result.height + 'px';
+		placeEdit();
 		lastLayout = result;
 
 		if ( instant ) {
@@ -218,6 +225,7 @@
 		} );
 
 		wall.style.height = result.height + 'px';
+		placeEdit();
 		lastLayout = result;
 
 		window.requestAnimationFrame( function () {
@@ -907,6 +915,163 @@
 		dock.classList.toggle( 'is-away', ! entries[ 0 ].isIntersecting );
 	} ).observe( body );
 
+	/* ------------------------------------------------------ Edit pill */
+
+	/*
+	 * One Edit link for the whole wall, printed by the server only for someone
+	 * who may edit photos, and floated over whichever tile is hovered or
+	 * focused — but only a tile that carries `data-edit`, which the server
+	 * gives only to photos this user may edit. The link sits in `.dp-pw-body`,
+	 * which also holds the wall, so it scrolls with it and needs no tracking;
+	 * it is re-placed after anything that moves tiles.
+	 *
+	 * Keyboard: Tab from a tile with the pill showing goes to the pill, and Tab
+	 * from the pill goes on to the next tile, so the pill is the next stop
+	 * after the tile it belongs to. Shift-Tab reverses both.
+	 */
+	/**
+	 * Put the pill over a tile's top-right corner.
+	 */
+	function placeEdit() {
+		if ( ! floatEdit || ! editFor || ! editFor.isConnected ) {
+			return;
+		}
+
+		const base = body.getBoundingClientRect();
+		const box = editFor.getBoundingClientRect();
+
+		floatEdit.style.transform =
+			'translate(' +
+			( box.right - base.left - 8 ) +
+			'px, ' +
+			( box.top - base.top + 8 ) +
+			'px) translateX(-100%)';
+	}
+
+	/**
+	 * Show the pill over a tile, or hide it.
+	 *
+	 * @param {?HTMLElement} tile The tile, or null.
+	 */
+	function showEdit( tile ) {
+		if ( ! floatEdit ) {
+			return;
+		}
+
+		window.clearTimeout( editTimer );
+
+		if ( editFor && editFor !== tile ) {
+			editFor.classList.remove( 'is-pointed' );
+		}
+
+		if (
+			! tile ||
+			! tile.dataset.edit ||
+			tile.classList.contains( 'is-out' ) ||
+			lightbox.open
+		) {
+			editFor = null;
+			floatEdit.hidden = true;
+			floatEdit.removeAttribute( 'href' );
+
+			return;
+		}
+
+		editFor = tile;
+		floatEdit.href = tile.dataset.edit;
+		floatEdit.hidden = false;
+		placeEdit();
+	}
+
+	/**
+	 * Hide the pill after a moment, so the pointer can travel onto it.
+	 */
+	function leaveEdit() {
+		window.clearTimeout( editTimer );
+		editTimer = window.setTimeout( function () {
+			if (
+				floatEdit.matches( ':hover, :focus' ) ||
+				( editFor && editFor.matches( ':hover, :focus' ) )
+			) {
+				return;
+			}
+
+			showEdit( null );
+		}, 250 );
+	}
+
+	if ( floatEdit ) {
+		wall.addEventListener( 'pointerover', function ( event ) {
+			const tile = event.target.closest( 'a.dp-pw-tile' );
+
+			if ( tile ) {
+				showEdit( tile );
+			}
+		} );
+		wall.addEventListener( 'pointerleave', leaveEdit );
+		wall.addEventListener( 'focusin', function ( event ) {
+			showEdit( event.target.closest( 'a.dp-pw-tile' ) );
+		} );
+		wall.addEventListener( 'focusout', leaveEdit );
+
+		floatEdit.addEventListener( 'pointerenter', function () {
+			window.clearTimeout( editTimer );
+
+			// The tile keeps looking hovered while the pointer is on its pill.
+			if ( editFor ) {
+				editFor.classList.add( 'is-pointed' );
+			}
+		} );
+		floatEdit.addEventListener( 'pointerleave', function () {
+			if ( editFor ) {
+				editFor.classList.remove( 'is-pointed' );
+			}
+
+			leaveEdit();
+		} );
+		floatEdit.addEventListener( 'focusout', leaveEdit );
+
+		wall.addEventListener( 'keydown', function ( event ) {
+			const tile = event.target.closest( 'a.dp-pw-tile' );
+
+			if (
+				'Tab' === event.key &&
+				! event.shiftKey &&
+				tile &&
+				tile === editFor &&
+				! floatEdit.hidden
+			) {
+				event.preventDefault();
+				floatEdit.focus();
+			}
+		} );
+
+		floatEdit.addEventListener( 'keydown', function ( event ) {
+			if ( 'Tab' !== event.key || ! editFor ) {
+				return;
+			}
+
+			const shown = tiles().filter( function ( tile ) {
+				return ! tile.classList.contains( 'is-out' );
+			} );
+			const target = event.shiftKey
+				? editFor
+				: shown[ shown.indexOf( editFor ) + 1 ];
+
+			if ( target ) {
+				event.preventDefault();
+				target.focus();
+			}
+		} );
+
+		wall.addEventListener( 'transitionend', function ( event ) {
+			if ( event.target === editFor ) {
+				placeEdit();
+			}
+		} );
+		window.addEventListener( 'resize', placeEdit );
+	}
+
 	/* --------------------------------------------------------- Lightbox */
 
 	/**
@@ -1022,6 +1187,16 @@
 		}
 
 		lightbox.setAttribute( 'aria-label', label );
+
+		if ( lbEdit ) {
+			if ( tile.dataset.edit ) {
+				lbEdit.href = tile.dataset.edit;
+				lbEdit.hidden = false;
+			} else {
+				lbEdit.removeAttribute( 'href' );
+				lbEdit.hidden = true;
+			}
+		}
 		lbCount.textContent =
 			String( position ).padStart( 2, '0' ) +
 			' / ' +
@@ -1100,6 +1275,7 @@
 	 * @param {boolean}           grow Whether to animate from the tile.
 	 */
 	function openAt( tile, grow ) {
+		showEdit( null );
 		show( tile );
 		lightbox.showModal();
 		fit();

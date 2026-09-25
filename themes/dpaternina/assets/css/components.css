@@ -5653,7 +5653,8 @@ img.dp-pw-img {
 	transition: transform var(--dur-slow) var(--ease-out);
 }
 
-a.dp-pw-tile:hover img.dp-pw-img {
+a.dp-pw-tile:hover img.dp-pw-img,
+a.dp-pw-tile.is-pointed img.dp-pw-img {
 	transform: scale(1.025);
 }
 
@@ -5715,6 +5716,7 @@ a.dp-pw-more-link.is-loading {
 }
 
 a.dp-pw-tile:hover .dp-pw-tag,
+a.dp-pw-tile.is-pointed .dp-pw-tag,
 a.dp-pw-tile:focus-visible .dp-pw-tag {
 	opacity: 1;
 	transform: none;
@@ -6077,12 +6079,67 @@ span.dp-pw-panel-step,
 	scroll-margin-block-start: var(--dp-pw-stick);
 }
 
+/*
+ * Edit — admin chrome, printed only for someone who may edit the photo. The
+ * counter's and the chips' language: mono caps, graphite, a slate hairline,
+ * teal on hover. One floats over the hovered or focused tile (`photos.js`);
+ * one sits beside the close button in the lightbox and in the scriptless panel.
+ */
+a.dp-pw-edit {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	padding: 0 10px;
+	border-radius: var(--radius-pill);
+	background: var(--dp-graphite);
+	box-shadow: inset 0 0 0 var(--border-width) var(--dp-slate);
+	color: var(--text-secondary);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	font-weight: var(--fw-medium);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-decoration: none;
+	text-transform: uppercase;
+	white-space: nowrap;
+	transition:
+		color var(--dur-fast) var(--ease-out),
+		box-shadow var(--dur-fast) var(--ease-out);
+}
+
+a.dp-pw-edit:hover,
+a.dp-pw-edit:focus-visible {
+	box-shadow: inset 0 0 0 var(--border-width) var(--accent-text);
+	color: var(--accent-text);
+}
+
+a.dp-pw-edit[hidden] {
+	display: none;
+}
+
+/* Floated by the script over a tile, inside `.dp-pw-body`. */
+a.dp-pw-edit-float {
+	position: absolute;
+	z-index: 5;
+	top: 0;
+	left: 0;
+	background: color-mix(in srgb, var(--dp-graphite) 92%, transparent);
+}
+
+.dp-pw-top-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
 .dp-pw-panel-top,
 .dp-pw-lb-top {
 	display: flex;
 	grid-column: 1 / -1;
 	align-items: center;
 	justify-content: space-between;
+	gap: 12px;
 	padding: 0 16px 0 24px;
 }
 

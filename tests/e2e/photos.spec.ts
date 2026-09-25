@@ -112,9 +112,28 @@ test.describe( 'the Photos page', () => {
 		const lightbox = page.locator( 'dialog.dp-pw-lb' );
 
 		await first.focus();
+
+		// The suite is logged in as an administrator, so focusing a tile
+		// shows its Edit pill, and it is the next tab stop.
+		const pill = page.locator( 'a.dp-pw-edit-float' );
+		const editHref = await first.getAttribute( 'data-edit' );
+
+		expect( editHref ).toMatch( /post\.php\?post=\d+&action=edit/ );
+		await expect( pill ).toBeVisible();
+		await expect( pill ).toHaveAttribute( 'href', editHref! );
+		await page.keyboard.press( 'Tab' );
+		await expect( pill ).toBeFocused();
+		await page.keyboard.press( 'Shift+Tab' );
+		await expect( first ).toBeFocused();
+
 		await page.keyboard.press( 'Enter' );
 
 		await expect( lightbox ).toHaveAttribute( 'open', '' );
+		await expect( pill ).toBeHidden();
+		await expect( lightbox.locator( 'a.dp-pw-lb-edit' ) ).toHaveAttribute(
+			'href',
+			editHref!
+		);
 		await expect( lightbox.locator( '.dp-pw-count' ) ).toHaveText(
 			'01 / 02'
 		);
@@ -332,6 +351,24 @@ test.describe( 'the Photos page', () => {
 				`at ${ width }px`
 			).toEqual( [] );
 		}
+	} );
+} );
+
+test.describe( 'the Photos page for a visitor', () => {
+	test.use( { storageState: { cookies: [], origins: [] } } );
+
+	test( 'carries no Edit link and no edit URL', async ( {
+		page,
+		requestUtils,
+	} ) => {
+		const url = await sharedPhotosPageUrl( requestUtils );
+
+		await page.goto( url );
+		await expect( page.locator( 'a.dp-pw-tile' ).first() ).toBeVisible();
+		await expect( page.locator( '.dp-pw-edit, [data-edit]' ) ).toHaveCount(
+			0
+		);
+		expect( await page.content() ).not.toContain( 'action=edit' );
 	} );
 } );
 

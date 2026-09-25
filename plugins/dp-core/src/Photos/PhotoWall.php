@@ -431,7 +431,17 @@ final class PhotoWall {
 			}
 		}
 
-		return '<div class="dp-pw-wall">' . $tiles . '</div>';
+		/*
+		 * One shared Edit link for the whole wall, outside it, which the script
+		 * floats over whichever tile is hovered or focused. It is not inside a
+		 * tile because a tile is a link, and not beside each tile because tiles
+		 * are placed by transform and reused across filters. Printed only for
+		 * someone who may edit photos; each tile's own `data-edit` says whether
+		 * it applies to that photo.
+		 */
+		$float = self::may_edit_photos() ? self::edit_link( '', 'dp-pw-edit-float' ) : '';
+
+		return '<div class="dp-pw-wall">' . $tiles . '</div>' . $float;
 	}
 
 	/**
@@ -474,12 +484,13 @@ final class PhotoWall {
 		 * from the top again, one page deeper, and the fragment scrolls to what
 		 * is new.
 		 */
+		$edit   = self::edit_url( $photo->post->ID );
 		$anchor = 1 === $position % self::PER_PAGE && $position > 1
 			? ' id="' . esc_attr( self::page_anchor( intdiv( $position, self::PER_PAGE ) + 1 ) ) . '"'
 			: '';
 
 		return sprintf(
-			'<a class="dp-pw-tile"' . $anchor . ' href="%1$s" aria-label="%2$s" data-id="%3$d" data-slug="%4$s" data-position="%5$d" data-trip="%6$s" data-topics="%7$s" data-w="%8$d" data-h="%9$d" data-src="%10$s" data-srcset="%11$s">%12$s%13$s</a><template class="dp-pw-details" data-for="%3$d">%14$s</template>',
+			'<a class="dp-pw-tile"' . $anchor . ' href="%1$s" aria-label="%2$s" data-id="%3$d" data-slug="%4$s" data-position="%5$d" data-trip="%6$s" data-topics="%7$s" data-w="%8$d" data-h="%9$d" data-src="%10$s" data-srcset="%11$s"%15$s>%12$s%13$s</a><template class="dp-pw-details" data-for="%3$d">%14$s</template>',
 			esc_url( $links->photo( $entry->slug ) . '#' . self::PANEL_ID ),
 			esc_attr( $photo->label() ),
 			$photo->post->ID,
@@ -493,7 +504,8 @@ final class PhotoWall {
 			esc_attr( is_string( $srcset ) ? $srcset : '' ),
 			$image,
 			'' === $photo->title ? '' : '<span class="dp-pw-tag" aria-hidden="true">' . esc_html( $photo->title ) . '</span>',
-			$this->details( $photo, $links )
+			$this->details( $photo, $links ),
+			'' === $edit ? '' : ' data-edit="' . esc_url( $edit ) . '"'
 		);
 	}
 
@@ -574,7 +586,10 @@ final class PhotoWall {
 		return '<section class="dp-pw-panel" id="' . esc_attr( self::PANEL_ID ) . '" data-id="' . esc_attr( (string) $photo->post->ID ) . '" aria-label="' . esc_attr( $photo->label() ) . '">'
 			. '<div class="dp-pw-panel-top">'
 			. '<span class="dp-pw-count">' . esc_html( self::counter( $position + 1, count( $set ) ) ) . '</span>'
+			. '<div class="dp-pw-top-actions">'
+			. self::edit_link( self::edit_url( $photo->post->ID ), 'dp-pw-panel-edit' )
 			. '<a class="dp-pw-panel-close" href="' . esc_url( $links->filtered( $links->filter ) ) . '" aria-label="' . esc_attr__( 'Close the photo', 'dp-core' ) . '">' . self::icon( 'close' ) . '</a>'
+			. '</div>'
 			. '</div>'
 			. '<div class="dp-pw-panel-stage">'
 			. $step( $previous, 'dp-pw-prev', __( 'Previous photo', 'dp-core' ), 'prev' )
@@ -636,7 +651,10 @@ final class PhotoWall {
 			. '<span class="dp-pw-count" aria-live="polite"></span>'
 			. $this->hints()
 			. '</div>'
+			. '<div class="dp-pw-top-actions">'
+			. ( self::may_edit_photos() ? self::edit_link( '', 'dp-pw-lb-edit' ) : '' )
 			. '<button type="button" class="dp-pw-lb-close" aria-label="' . esc_attr__( 'Close the photo', 'dp-core' ) . '">' . self::icon( 'close' ) . '</button>'
+			. '</div>'
 			. '</div>'
 			. '<div class="dp-pw-lb-stage">'
 			. '<button type="button" class="dp-pw-lb-step dp-pw-prev" aria-label="' . esc_attr__( 'Previous photo', 'dp-core' ) . '">' . self::icon( 'prev' ) . '</button>'
@@ -664,6 +682,66 @@ final class PhotoWall {
 			/* translators: %s: how many lit photos are further up the page. */
 			. ' data-above="' . esc_attr__( '%s above ↑', 'dp-core' ) . '"'
 			. '></span>';
+	}
+
+	/**
+	 * Where to edit a photo, for someone allowed to — and '' for anyone else.
+	 *
+	 * Admin chrome, like the admin bar's "Edit Page": checked on the server per
+	 * photo, so neither the URL nor the control ever reaches a visitor who could
+	 * not use it. Hiding it with CSS would still print the URL.
+	 *
+	 * @param int $post_id The photo.
+	 * @return string
+	 */
+	private static function edit_url( int $post_id ): string {
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return '';
+		}
+
+		$url = get_edit_post_link( $post_id, 'raw' );
+
+		return is_string( $url ) ? $url : '';
+	}
+
+	/**
+	 * Whether the current user may edit photos at all.
+	 *
+	 * Decides whether the two script-driven Edit links — the one floated over
+	 * the wall and the one in the lightbox — are printed. Their href is empty
+	 * until the script copies it from a tile that carries one.
+	 *
+	 * @return bool
+	 */
+	private static function may_edit_photos(): bool {
+		$type = get_post_type_object( PostType::NAME );
+
+		return null !== $type && current_user_can( (string) $type->cap->edit_posts );
+	}
+
+	/**
+	 * The Edit pill, or '' when there is nowhere to go.
+	 *
+	 * With an empty URL (the script-driven ones) it is printed `hidden` with no
+	 * href, and the script fills both in. Its words are admin chrome and are
+	 * translated rather than David's copy: the visible "Edit", and the name
+	 * "Edit this photo", which contains it (WCAG 2.5.3).
+	 *
+	 * @param string $url      The edit URL, or '' for a script-driven link.
+	 * @param string $modifier An extra class.
+	 * @return string
+	 */
+	private static function edit_link( string $url, string $modifier ): string {
+		if ( '' === $url && 'dp-pw-panel-edit' === $modifier ) {
+			return '';
+		}
+
+		return '<a class="dp-pw-edit ' . esc_attr( $modifier ) . '"'
+			. ( '' === $url ? ' hidden' : ' href="' . esc_url( $url ) . '"' )
+			. ' aria-label="' . esc_attr__( 'Edit this photo', 'dp-core' ) . '">'
+			. self::icon( 'edit' )
+			. '<span>' . esc_html__( 'Edit', 'dp-core' ) . '</span>'
+			. '</a>';
 	}
 
 	/**
@@ -874,14 +952,15 @@ final class PhotoWall {
 	}
 
 	/**
-	 * One of the four inline icons. Decorative, always `aria-hidden`.
+	 * One of the five inline icons. Decorative, always `aria-hidden`.
 	 *
-	 * @param string $name `index`, `close`, `prev` or `next`.
+	 * @param string $name `index`, `edit`, `close`, `prev` or `next`.
 	 * @return string
 	 */
 	private static function icon( string $name ): string {
 		return match ( $name ) {
 			'index' => '<svg class="dp-pw-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3 4.5h12M3 9h12M3 13.5h7"/></svg>',
+			'edit'  => '<svg class="dp-pw-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.5 2.5l3 3L5.5 13.5H2.5v-3z"/><path d="M9 4l3 3"/></svg>',
 			'close' => '<svg class="dp-pw-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9"/></svg>',
 			'prev'  => '<svg class="dp-pw-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7"/></svg>',
 			default => '<svg class="dp-pw-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7"/></svg>',
