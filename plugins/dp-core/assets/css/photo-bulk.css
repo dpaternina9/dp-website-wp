@@ -1,0 +1,54 @@
+/*
+ * "Add photos in bulk" — the dialog after the media modal.
+ *
+ * wp-admin's own look: the dialog borrows core's colours through its admin
+ * classes (`button`, `description`), and this file only sizes and spaces it.
+ * Admin screens are outside the site's design system and its tokens.
+ */
+
+.dp-photo-bulk-dialog {
+	width: min(480px, calc(100vw - 32px));
+	padding: 24px;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.dp-photo-bulk-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.5);
+}
+
+.dp-photo-bulk-dialog h2 {
+	margin-top: 0;
+}
+
+.dp-photo-bulk-dialog select {
+	min-width: 16em;
+}
+
+.dp-photo-bulk-dialog fieldset {
+	margin: 16px 0;
+}
+
+.dp-photo-bulk-dialog legend {
+	margin-bottom: 6px;
+	font-weight: 600;
+}
+
+.dp-photo-bulk-topics label,
+.dp-photo-bulk-status label {
+	display: inline-block;
+	margin: 0 16px 6px 0;
+}
+
+.dp-photo-bulk-result:empty,
+.dp-photo-bulk-chosen:empty {
+	display: none;
+}
+
+.dp-photo-bulk-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-bottom: 0;
+}

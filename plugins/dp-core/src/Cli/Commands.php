@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace DP\Core\Cli;
 
 use DP\Core\Fixture\Seeder;
+use DP\Core\Photos\BulkCreate;
 use DP\Core\Watch\VideoSync;
 
 /**
@@ -50,5 +51,6 @@ final class Commands {
 
 		$this->wp_cli->add_command( 'dp seed', new SeedCommand( Seeder::create(), $this->wp_cli ) );
 		$this->wp_cli->add_command( 'dp watch sync', new WatchSyncCommand( VideoSync::create(), $this->wp_cli ) );
+		$this->wp_cli->add_command( 'dp photos import', new PhotosImportCommand( new BulkCreate(), $this->wp_cli ) );
 	}
 }

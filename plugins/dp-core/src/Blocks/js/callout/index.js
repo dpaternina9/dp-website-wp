@@ -4,9 +4,10 @@
  * It is registered as `dp/callout`'s editorScript, which is what gets it
  * enqueued: WordPress loads every registered block's editor script on every
  * block-editor screen, so one entry point covers the block, the two house style
- * extensions that have no block of their own, the editor previews for the three
- * blocks this plugin renders entirely on the server, and the seven blocks the
- * three custom post types draw their editing form with.
+ * extensions that have no block of their own, the editor previews for the
+ * blocks this plugin renders entirely on the server, the seven blocks the
+ * three custom post types draw their editing form with, and the Trip, Photo and
+ * Camera panels a photo is edited with.
  *
  * Nothing in here runs on the front end. The callout is a static block and the
  * house style is CSS, so a published page loads no JavaScript from this plugin
@@ -27,11 +28,14 @@ import { evaluateHouseLimits } from '../house-style/limits';
 import { installHouseLimitWarnings } from '../house-style/limits-notices';
 import { registerServerRenderedBlocks } from '../dynamic/server-rendered';
 import { installFieldEditing } from '../fields';
+import { installPhotoEditing } from '../photos';
 
 registerBlockType( metadata.name, { edit, save } );
 
 registerServerRenderedBlocks();
 
 installFieldEditing();
+
+installPhotoEditing();
 
 installHouseLimitWarnings( evaluateHouseLimits );

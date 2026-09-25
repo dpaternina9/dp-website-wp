@@ -941,6 +941,25 @@ final class Fixture {
 				),
 			),
 			array(
+				'key'      => 'photos',
+				'slug'     => 'photos',
+				'title'    => 'Photos',
+				'template' => 'dp-photos',
+				'role'     => '',
+				'updated'  => '',
+				'deck'     => '',
+
+				/*
+				 * The intro under the title is the page's own body — the
+				 * template renders `core/post-content` there — so it is David's
+				 * to write. This one says what it is. The wall below it is
+				 * `photos()`, filed under `photo_trips()` and `photo_topics()`.
+				 */
+				'body'     => array(
+					self::p( 'Placeholder. One line about what these photos are goes here.' ),
+				),
+			),
+			array(
 
 				/*
 				 * Not keyed `series`: `Seeder::seed_chrome_links()` builds its
@@ -1186,6 +1205,95 @@ final class Fixture {
 					self::p( 'Questions about any of it: hello@dpaternina.com.' ),
 				),
 			),
+		);
+	}
+
+	/**
+	 * The trips the seeded photos are filed under.
+	 *
+	 * Placeholders, and named as placeholders: a trip is a place and a time,
+	 * which is a fact about David, and this fixture does not invent those
+	 * (CLAUDE.md). What they exercise is the shape — three trips, one of them
+	 * spanning two months and one spanning a new year, so every form of the
+	 * index's date range is on the page.
+	 *
+	 * @return list<array{key: string, slug: string, name: string}>
+	 */
+	public function photo_trips(): array {
+		return array(
+			array(
+				'key'  => 'a',
+				'slug' => 'placeholder-trip-a',
+				'name' => 'Placeholder trip A',
+			),
+			array(
+				'key'  => 'b',
+				'slug' => 'placeholder-trip-b',
+				'name' => 'Placeholder trip B',
+			),
+			array(
+				'key'  => 'c',
+				'slug' => 'placeholder-trip-c',
+				'name' => 'Placeholder trip C',
+			),
+		);
+	}
+
+	/**
+	 * The topics the seeded photos carry.
+	 *
+	 * @return list<array{key: string, slug: string, name: string}>
+	 */
+	public function photo_topics(): array {
+		return array(
+			array(
+				'key'  => 'one',
+				'slug' => 'placeholder-topic-one',
+				'name' => 'Placeholder topic one',
+			),
+			array(
+				'key'  => 'two',
+				'slug' => 'placeholder-topic-two',
+				'name' => 'Placeholder topic two',
+			),
+		);
+	}
+
+	/**
+	 * The seeded photos.
+	 *
+	 * Every one uses the placeholder image the seed already has — the theme's
+	 * own mark, through `dp_seed_lead_image_path` — because the fixture ships
+	 * no photography and must not borrow anybody's. So the wall is a wall of
+	 * identical squares; what it demonstrates is the index, the filters, the
+	 * pop-up and the empty-field rule, which is why the fields are uneven on
+	 * purpose: some photos have a title and some do not, one has a story, one
+	 * links to a post, and none has a camera line (the mark carries no EXIF).
+	 *
+	 * @return list<array{key: string, title: string, excerpt: string, story: string, date: string, trip: string, topics: list<string>, related: string}>
+	 */
+	public function photos(): array {
+		$photo = static fn ( string $key, string $title, string $excerpt, string $date, string $trip, array $topics, string $story = '', string $related = '' ): array => array(
+			'key'     => $key,
+			'title'   => $title,
+			'excerpt' => $excerpt,
+			'story'   => $story,
+			'date'    => $date,
+			'trip'    => $trip,
+			'topics'  => array_values( array_filter( $topics, 'is_string' ) ),
+			'related' => $related,
+		);
+
+		return array(
+			$photo( 'a1', 'Placeholder photo title', 'Placeholder place — month and year', '2018-01-23 10:00:00', 'a', array( 'one' ) ),
+			$photo( 'a2', '', 'Placeholder place — month and year', '2018-01-22 16:30:00', 'a', array( 'one', 'two' ) ),
+			$photo( 'a3', 'Placeholder photo with a story', 'Placeholder place — month and year', '2017-12-30 09:15:00', 'a', array( 'two' ), 'Placeholder. A few sentences about this photo go here — the pop-up prints the whole post content under the caption.' ),
+			$photo( 'b1', '', '', '2017-12-12 18:00:00', 'b', array() ),
+			$photo( 'b2', 'Placeholder photo title', '', '2017-12-11 12:00:00', 'b', array( 'one' ), '', 'house-style' ),
+			$photo( 'b3', '', 'Placeholder place — month and year', '2017-12-10 08:45:00', 'b', array( 'two' ) ),
+			$photo( 'c1', 'Placeholder photo title', 'Placeholder place — month and year', '2017-08-19 19:20:00', 'c', array() ),
+			$photo( 'c2', '', '', '2017-07-02 14:00:00', 'c', array( 'one' ) ),
+			$photo( 'x1', 'Placeholder photo with no trip', '', '2016-08-05 11:00:00', '', array( 'two' ) ),
 		);
 	}
 

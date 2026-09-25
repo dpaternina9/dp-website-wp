@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "dp/photo-wall",
+	"version": "0.1.0",
+	"title": "Photos — index and wall",
+	"category": "dp",
+	"icon": "format-gallery",
+	"description": "Every published photo, newest first, with the trip and topic index beside it and one pop-up for the set. Counts, date ranges and the camera line are worked out from the photos; the words on the controls are yours to change in the sidebar.",
+	"keywords": [ "photos", "gallery", "trips", "topics", "masonry" ],
+	"textdomain": "dp-core",
+	"attributes": {
+		"indexLabel": { "type": "string", "default": "Index" },
+		"allLabel": { "type": "string", "default": "All photos" },
+		"tripsHeading": { "type": "string", "default": "Trips" },
+		"topicsHeading": { "type": "string", "default": "Topics" },
+		"showAllLabel": { "type": "string", "default": "Show all" },
+		"showMoreLabel": { "type": "string", "default": "Show more" },
+		"storyLabel": { "type": "string", "default": "Read the story" },
+		"browseLabel": { "type": "string", "default": "Browse" },
+		"closeLabel": { "type": "string", "default": "Close" },
+		"swipeLabel": { "type": "string", "default": "Swipe to browse" }
+	},
+	"supports": {
+		"anchor": false,
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"align": false,
+		"color": false,
+		"spacing": false,
+		"typography": false,
+		"interactivity": false
+	}
+}

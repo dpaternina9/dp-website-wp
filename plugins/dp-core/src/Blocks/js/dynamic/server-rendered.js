@@ -48,6 +48,7 @@ export const SERVER_RENDERED = [
 	'dp/resume-ledger',
 	'dp/watch-featured',
 	'dp/video-grid',
+	'dp/photo-wall',
 ];
 
 /**
@@ -134,6 +135,50 @@ export const COPY_PANELS = {
 				{
 					key: 'emailInsteadLabel',
 					label: __( '"Email instead" link', 'dp-core' ),
+				},
+			],
+		},
+	],
+	'dp/photo-wall': [
+		{
+			title: __( 'Words on the controls', 'dp-core' ),
+			fields: [
+				{ key: 'indexLabel', label: __( 'Index', 'dp-core' ) },
+				{
+					key: 'allLabel',
+					label: __( 'First index entry', 'dp-core' ),
+				},
+				{
+					key: 'tripsHeading',
+					label: __( 'Trips heading', 'dp-core' ),
+				},
+				{
+					key: 'topicsHeading',
+					label: __( 'Topics heading', 'dp-core' ),
+				},
+				{
+					key: 'showAllLabel',
+					label: __( 'Clear-the-filter link', 'dp-core' ),
+				},
+				{
+					key: 'showMoreLabel',
+					label: __( '"Show more" link', 'dp-core' ),
+				},
+				{
+					key: 'storyLabel',
+					label: __( 'Related post link', 'dp-core' ),
+				},
+				{
+					key: 'browseLabel',
+					label: __( 'Pop-up hint beside the arrow keys', 'dp-core' ),
+				},
+				{
+					key: 'closeLabel',
+					label: __( 'Pop-up hint beside Esc', 'dp-core' ),
+				},
+				{
+					key: 'swipeLabel',
+					label: __( 'Pop-up hint on touch screens', 'dp-core' ),
 				},
 			],
 		},

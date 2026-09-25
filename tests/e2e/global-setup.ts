@@ -206,6 +206,92 @@ export async function sharedWorkPageUrl(
 }
 
 /**
+ * The Photos page and what its wall shows.
+ *
+ * The wall is every published `dp_photo` on the site — a global query, so its
+ * content is established here and owned by no spec (ADR-0013). Four photos: two
+ * on one trip, one on the other, one on no trip, and a topic across two of
+ * them, so a filter, a hover and a step through the lightbox all have
+ * something to find. Dated in 2019 so their order is fixed: newest first is
+ * `photos[0]`.
+ */
+export const SHARED_PHOTOS = {
+	page: { slug: 'e2e-shared-photos', title: 'Photos' },
+	trips: {
+		north: { slug: 'e2e-trip-north', name: 'Photo fixture — north' },
+		south: { slug: 'e2e-trip-south', name: 'Photo fixture — south' },
+	},
+	topic: { slug: 'e2e-topic-night', name: 'Photo fixture — night' },
+
+	/*
+	 * A trip deep enough to scroll: past the wall's own auto-load cap (150) and
+	 * one page beyond it, so the spec sees loading stop and "Show more" take
+	 * over. Dated 2015, so they sit below the four photos above on the
+	 * unfiltered wall and never displace them from its first page.
+	 */
+	bulk: {
+		trip: { slug: 'e2e-trip-bulk', name: 'Photo fixture — many' },
+		count: 200,
+		slug: ( index: number ) =>
+			`e2e-bulk-${ String( index ).padStart( 3, '0' ) }`,
+	},
+	photos: [
+		{
+			slug: 'e2e-photo-1',
+			title: 'Photo fixture one',
+			trip: 'north',
+			night: true,
+			date: '2019-04-04T10:00:00',
+		},
+		{
+			slug: 'e2e-photo-2',
+			title: 'Photo fixture two',
+			trip: 'north',
+			night: false,
+			date: '2019-04-03T10:00:00',
+		},
+		{
+			slug: 'e2e-photo-3',
+			title: 'Photo fixture three',
+			trip: 'south',
+			night: true,
+			date: '2019-04-02T10:00:00',
+		},
+		{
+			slug: 'e2e-photo-4',
+			title: 'Photo fixture four',
+			trip: '',
+			night: false,
+			date: '2019-04-01T10:00:00',
+		},
+	],
+} as const;
+
+/**
+ * The Photos page's URL, for a spec that is about to visit it.
+ *
+ * @param requestUtils The suite's REST client.
+ * @return The page's permalink.
+ */
+export async function sharedPhotosPageUrl(
+	requestUtils: RequestUtils
+): Promise< string > {
+	const found = await requestUtils.rest< Established[] >( {
+		path: '/wp/v2/pages',
+		params: { slug: SHARED_PHOTOS.page.slug, status: 'any', per_page: 1 },
+	} );
+
+	if ( ! found[ 0 ] ) {
+		throw new Error(
+			`The shared photos page ("${ SHARED_PHOTOS.page.slug }") is missing. ` +
+				'It is established in tests/e2e/global-setup.ts.'
+		);
+	}
+
+	return found[ 0 ].link;
+}
+
+/**
  * The Watch page's URL, for a spec that is about to visit it.
  *
  * A lookup, like `sharedWorkPageUrl()` and for the same reason.
@@ -508,6 +594,7 @@ async function establishSharedContent(
 
 	await establishPagerArchive( requestUtils );
 	await establishWatchContent( requestUtils );
+	await establishPhotoContent( requestUtils );
 
 	await establish( requestUtils, 'pages', SHARED_WORK_PAGE.slug, {
 		title: SHARED_WORK_PAGE.title,
@@ -590,6 +677,204 @@ async function establishWatchContent(
 				'shorter edited pieces on YouTube, and both end up here.',
 		},
 	} );
+}
+
+/**
+ * One `dp_trip` or `dp_topic` term under a slug this file owns.
+ *
+ * @param requestUtils The suite's REST client.
+ * @param taxonomy     `dp_trip` or `dp_topic`.
+ * @param slug         The slug.
+ * @param name         The name.
+ * @return The term's ID.
+ */
+async function establishPhotoTerm(
+	requestUtils: RequestUtils,
+	taxonomy: string,
+	slug: string,
+	name: string
+): Promise< number > {
+	const existing = await requestUtils.rest< Established[] >( {
+		path: `/wp/v2/${ taxonomy }`,
+		params: { slug, per_page: 1 },
+	} );
+
+	const term = await requestUtils.rest< Established >( {
+		path: existing[ 0 ]
+			? `/wp/v2/${ taxonomy }/${ existing[ 0 ].id }`
+			: `/wp/v2/${ taxonomy }`,
+		method: 'POST',
+		data: { slug, name },
+	} );
+
+	return term.id;
+}
+
+/**
+ * Establish the Photos page, its terms and its four photos.
+ *
+ * Each photo's image is uploaded only when the photo has none yet, so a re-run
+ * does not add four attachments to the library every time.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function establishPhotoContent(
+	requestUtils: RequestUtils
+): Promise< void > {
+	const trips: Record< string, number > = {
+		north: await establishPhotoTerm(
+			requestUtils,
+			'dp_trip',
+			SHARED_PHOTOS.trips.north.slug,
+			SHARED_PHOTOS.trips.north.name
+		),
+		south: await establishPhotoTerm(
+			requestUtils,
+			'dp_trip',
+			SHARED_PHOTOS.trips.south.slug,
+			SHARED_PHOTOS.trips.south.name
+		),
+	};
+	const night = await establishPhotoTerm(
+		requestUtils,
+		'dp_topic',
+		SHARED_PHOTOS.topic.slug,
+		SHARED_PHOTOS.topic.name
+	);
+
+	for ( const photo of SHARED_PHOTOS.photos ) {
+		const existing = await requestUtils.rest<
+			Array< Established & { featured_media: number } >
+		>( {
+			path: '/wp/v2/dp_photo',
+			params: { slug: photo.slug, status: 'any', per_page: 1 },
+		} );
+
+		let media = existing[ 0 ]?.featured_media ?? 0;
+
+		if ( ! media ) {
+			media = (
+				await requestUtils.uploadMedia(
+					path.join(
+						process.cwd(),
+						'themes/dpaternina/assets/img/dp-mark-gradient-128.png'
+					)
+				)
+			).id;
+		}
+
+		await establish( requestUtils, 'dp_photo', photo.slug, {
+			title: photo.title,
+			date: photo.date,
+			featured_media: media,
+			dp_trip: photo.trip ? [ trips[ photo.trip ] ] : [],
+			dp_topic: photo.night ? [ night ] : [],
+		} );
+	}
+
+	await establishBulkPhotos( requestUtils );
+
+	await establish( requestUtils, 'pages', SHARED_PHOTOS.page.slug, {
+		title: SHARED_PHOTOS.page.title,
+		template: 'dp-photos',
+		content:
+			'<!-- wp:paragraph --><p>Shared fixture — the line under the title.</p><!-- /wp:paragraph -->',
+	} );
+}
+
+/**
+ * Establish the two hundred photos the infinite-scroll test scrolls through.
+ *
+ * Through the REST batch endpoint, twenty-five to a request, rather than one
+ * request per photo or a WP-CLI seed: the suite's only channel to the tests
+ * site is REST (ADR-0013's "established here, owned by nobody"), and eight
+ * batch calls are seconds where two hundred single calls are a minute. They
+ * share one image — the wall places by the dimensions the image reports, and
+ * what is under test is the paging, not the pictures. Only missing slugs are
+ * created, so a re-run adds nothing.
+ *
+ * @param requestUtils The suite's REST client.
+ */
+async function establishBulkPhotos(
+	requestUtils: RequestUtils
+): Promise< void > {
+	const { bulk } = SHARED_PHOTOS;
+	const trip = await establishPhotoTerm(
+		requestUtils,
+		'dp_trip',
+		bulk.trip.slug,
+		bulk.trip.name
+	);
+
+	const have = new Set< string >();
+
+	for ( let page = 1; page <= Math.ceil( bulk.count / 100 ); page++ ) {
+		const found = await requestUtils.rest< Array< { slug: string } > >( {
+			path: '/wp/v2/dp_photo',
+			params: {
+				dp_trip: trip,
+				status: 'any',
+				per_page: 100,
+				page,
+				_fields: 'slug',
+			},
+		} );
+
+		found.forEach( ( photo ) => have.add( photo.slug ) );
+
+		if ( found.length < 100 ) {
+			break;
+		}
+	}
+
+	const missing = Array.from(
+		{ length: bulk.count },
+		( _, index ) => index + 1
+	).filter( ( index ) => ! have.has( bulk.slug( index ) ) );
+
+	if ( ! missing.length ) {
+		return;
+	}
+
+	const donor = await requestUtils.rest<
+		Array< { featured_media: number } >
+	>( {
+		path: '/wp/v2/dp_photo',
+		params: {
+			slug: SHARED_PHOTOS.photos[ 0 ].slug,
+			status: 'any',
+			per_page: 1,
+		},
+	} );
+	const media = donor[ 0 ]?.featured_media ?? 0;
+
+	for ( let start = 0; start < missing.length; start += 25 ) {
+		await requestUtils.rest( {
+			path: '/batch/v1',
+			method: 'POST',
+			data: {
+				validation: 'normal',
+				requests: missing
+					.slice( start, start + 25 )
+					.map( ( index ) => ( {
+						method: 'POST',
+						path: '/wp/v2/dp_photo',
+						body: {
+							slug: bulk.slug( index ),
+							title: `Bulk photo ${ index }`,
+							status: 'publish',
+							date: new Date(
+								Date.UTC( 2015, 0, 1, 0, 400 - index )
+							)
+								.toISOString()
+								.slice( 0, 19 ),
+							featured_media: media,
+							dp_trip: [ trip ],
+						},
+					} ) ),
+			},
+		} );
+	}
 }
 
 export default globalSetup;

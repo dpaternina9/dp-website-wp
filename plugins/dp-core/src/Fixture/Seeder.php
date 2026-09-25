@@ -12,6 +12,8 @@ namespace DP\Core\Fixture;
 use DP\Core\Content\ContentModel;
 use DP\Core\Content\PostTypes;
 use DP\Core\Content\Taxonomies;
+use DP\Core\Photos\PostType as PhotoType;
+use DP\Core\Photos\Taxonomies as PhotoTaxonomies;
 use RuntimeException;
 use WP_Filesystem_Base;
 use WP_Post;
@@ -153,6 +155,7 @@ final class Seeder {
 			$links      = $this->seed_chrome_links( $pages, $series );
 			$ships      = $this->seed_ships( $roles, $posts );
 			$videos     = $this->seed_videos();
+			$photos     = $this->seed_photos( $lead, $posts );
 			$brand      = $this->seed_brand();
 		} finally {
 			kses_init();
@@ -166,6 +169,7 @@ final class Seeder {
 				'roles'         => count( $roles ),
 				'shipped'       => count( $ships ),
 				'videos'        => count( $videos ),
+				'photos'        => count( $photos ),
 				'posts'         => count( $posts ),
 				'planned_parts' => count( $planned ),
 				'pages'         => count( $pages ),
@@ -222,7 +226,12 @@ final class Seeder {
 		}
 
 		foreach ( $this->index['terms'] as $key => $term_id ) {
-			$taxonomy = str_starts_with( $key, 'series:' ) ? Taxonomies::SERIES : 'category';
+			$taxonomy = match ( true ) {
+				str_starts_with( $key, 'series:' ) => Taxonomies::SERIES,
+				str_starts_with( $key, 'trip:' )   => PhotoTaxonomies::TRIP,
+				str_starts_with( $key, 'topic:' )  => PhotoTaxonomies::TOPIC,
+				default                            => 'category',
+			};
 
 			if ( get_term( $term_id, $taxonomy ) instanceof WP_Term ) {
 				wp_delete_term( $term_id, $taxonomy );
@@ -417,6 +426,92 @@ final class Seeder {
 					'dp_live_meta'    => $video['live_meta'],
 				)
 			);
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * The Photos page's wall: three trips, two topics, nine photos.
+	 *
+	 * Every photo's image is the seed's one placeholder image — the lead image,
+	 * which is the theme's own mark (`lead_image()`) — so with no theme answering
+	 * there is no image, and no photos are seeded: a photo without an image is
+	 * nothing the wall can draw. What is seeded is placeholder copy throughout;
+	 * see `Fixture::photos()`.
+	 *
+	 * The dates are written as given, because the publish date is a photo's
+	 * place on the wall.
+	 *
+	 * @param int                $image The placeholder image's attachment ID, or 0.
+	 * @param array<string, int> $posts Post slug to post ID, for the related links.
+	 * @return array<string, int> Fixture key to post ID.
+	 */
+	private function seed_photos( int $image, array $posts ): array {
+		if ( $image <= 0 || ! post_type_exists( PhotoType::NAME ) ) {
+			return array();
+		}
+
+		$trips  = array();
+		$topics = array();
+
+		foreach ( $this->fixture->photo_trips() as $trip ) {
+			$trips[ $trip['key'] ] = $this->upsert_term( 'trip:' . $trip['key'], PhotoTaxonomies::TRIP, $trip['name'], $trip['slug'], '' );
+		}
+
+		foreach ( $this->fixture->photo_topics() as $topic ) {
+			$topics[ $topic['key'] ] = $this->upsert_term( 'topic:' . $topic['key'], PhotoTaxonomies::TOPIC, $topic['name'], $topic['slug'], '' );
+		}
+
+		$ids = array();
+
+		/*
+		 * An untitled photo with no excerpt and no story is exactly what an
+		 * import makes, and `wp_insert_post()` refuses one as "empty" — the same
+		 * check `Photos\BulkCreate` lifts for its own inserts, lifted here for
+		 * the same reason and put back straight after.
+		 */
+		$allow = static fn (): bool => false;
+
+		add_filter( 'wp_insert_post_empty_content', $allow );
+
+		try {
+			foreach ( $this->fixture->photos() as $photo ) {
+				$related = '' === $photo['related'] ? 0 : ( $posts[ $photo['related'] ] ?? 0 );
+				$content = '' === $photo['story']
+					? ''
+					: $this->markup->render( array( new FixtureBlock( FixtureBlockKind::Paragraph, text: $photo['story'] ) ) );
+
+				$post_id = $this->upsert_post(
+					'photo:' . $photo['key'],
+					PhotoType::NAME,
+					$photo['title'],
+					'publish',
+					0,
+					array( PhotoType::RELATED_POST => $related ),
+					slug: 'placeholder-photo-' . $photo['key'],
+					excerpt: $photo['excerpt'],
+					content: $content,
+					date: $photo['date']
+				);
+
+				set_post_thumbnail( $post_id, $image );
+				wp_set_object_terms( $post_id, '' === $photo['trip'] ? array() : array( $trips[ $photo['trip'] ] ?? 0 ), PhotoTaxonomies::TRIP );
+
+				$filed = array();
+
+				foreach ( $photo['topics'] as $topic ) {
+					if ( isset( $topics[ $topic ] ) ) {
+						$filed[] = $topics[ $topic ];
+					}
+				}
+
+				wp_set_object_terms( $post_id, $filed, PhotoTaxonomies::TOPIC );
+
+				$ids[ $photo['key'] ] = $post_id;
+			}
+		} finally {
+			remove_filter( 'wp_insert_post_empty_content', $allow );
 		}
 
 		return $ids;

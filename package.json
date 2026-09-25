@@ -5,8 +5,8 @@
   "description": "dpaternina.com — block theme + companion plugin monorepo.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22.15.0",
-    "npm": ">=10.9.0"
+    "node": ">=26.0.0",
+    "npm": ">=11.0.0"
   },
   "scripts": {
     "prepare": "husky",
@@ -30,7 +30,7 @@
     "@commitlint/config-conventional": "^19.6.0",
     "@playwright/test": "^1.49.0",
     "@wordpress/e2e-test-utils-playwright": "^1.17.0",
-    "@wordpress/env": "^10.16.0",
+    "@wordpress/env": "^11.16.0",
     "@wordpress/scripts": "^30.7.0",
     "husky": "^9.1.7",
     "typescript": "^5.9.3"
