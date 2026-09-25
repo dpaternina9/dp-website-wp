@@ -159,7 +159,30 @@
 		};
 	}
 
+	/**
+	 * Whether a fetched page actually moved the wall on.
+	 *
+	 * The guard against the loop the live site hit: a page cache answered the
+	 * next-page URL with a stale copy, every tile in it was already on the wall,
+	 * the same link came back, it was still in view, and the wall fetched the
+	 * same URL again — for ever, with the link unclickable the whole time. A
+	 * page that adds nothing, or is not the page asked for, or is not a wall at
+	 * all, is a page that did not land; auto-loading stops and the link becomes
+	 * a plain link.
+	 *
+	 * @param {number}  added    New tiles the page brought.
+	 * @param {number}  expected The page number asked for.
+	 * @param {?number} returned The page number the response says it is, or null.
+	 * @return {boolean} Whether to carry on.
+	 */
+	function pageLanded( added, expected, returned ) {
+		return (
+			added > 0 && Number.isFinite( returned ) && returned === expected
+		);
+	}
+
 	const api = {
+		pageLanded,
 		place,
 		columnsFor,
 		shouldAutoLoad,

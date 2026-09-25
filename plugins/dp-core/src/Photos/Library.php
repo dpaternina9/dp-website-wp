@@ -47,7 +47,7 @@ final class Library {
 	 * @return list<Entry>
 	 */
 	public function entries(): array {
-		$key    = sprintf( 'library:%s:%s', wp_cache_get_last_changed( 'posts' ), wp_cache_get_last_changed( 'terms' ) );
+		$key    = 'library:' . $this->version();
 		$cached = wp_cache_get( $key, self::CACHE_GROUP );
 
 		if ( is_array( $cached ) ) {
@@ -59,6 +59,21 @@ final class Library {
 		wp_cache_set( $key, $entries, self::CACHE_GROUP );
 
 		return $entries;
+	}
+
+	/**
+	 * The set's change stamp: different whenever anything the set is built
+	 * from — posts, their meta, terms — has changed.
+	 *
+	 * The same two `last_changed` stamps the set is cached under, so "the
+	 * library changed" and "this stamp changed" are one fact. The wall prints
+	 * it for the script, which adds it to the one URL it fetches pages with,
+	 * so a page cache or a CDN can never answer a new set with an old page.
+	 *
+	 * @return string
+	 */
+	public function version(): string {
+		return substr( md5( wp_cache_get_last_changed( 'posts' ) . ':' . wp_cache_get_last_changed( 'terms' ) ), 0, 12 );
 	}
 
 	/**

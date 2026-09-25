@@ -202,6 +202,9 @@ test.describe( 'the Photos page', () => {
 		await page.goto( withArgs( photosPage, { trip: bulk.trip.slug } ) );
 		await expect( tiles ).toHaveCount( 48 );
 
+		// While the wall loads by itself, the link is not on screen.
+		await expect( more ).toBeHidden();
+
 		// Each approach to the end fetches the next page, until the cap.
 		for ( const expected of [ 96, 144, 192 ] ) {
 			await page.evaluate( () =>
@@ -230,6 +233,86 @@ test.describe( 'the Photos page', () => {
 		await more.click();
 		await expect( tiles ).toHaveCount( bulk.count );
 		await expect( more ).toHaveCount( 0 );
+	} );
+
+	test( 'loads a wall under the cap to its end without ever showing the link', async ( {
+		page,
+	} ) => {
+		const { some } = SHARED_PHOTOS.bulk;
+		const tiles = page.locator( 'a.dp-pw-tile' );
+		const more = page.locator( 'a.dp-pw-more-link' );
+		let seen = false;
+
+		await page.setViewportSize( { width: 1440, height: 1000 } );
+		await page.goto( withArgs( photosPage, { topic: some.topic.slug } ) );
+		await expect( tiles ).toHaveCount( 48 );
+
+		// Every part fetch carries the set's change stamp.
+		const part = page.waitForRequest( /photos-part=1/ );
+
+		while ( ( await tiles.count() ) < some.count ) {
+			seen = seen || ( await more.isVisible() );
+			await page.evaluate( () =>
+				window.scrollTo( 0, document.body.scrollHeight )
+			);
+			await page.waitForTimeout( 150 );
+		}
+
+		expect( ( await part ).url() ).toMatch( /photos-v=[0-9a-f]{12}/ );
+		await expect( tiles ).toHaveCount( some.count );
+		await expect( more ).toHaveCount( 0 );
+		await expect( page.locator( '.dp-pw-loading' ) ).toHaveCount( 0 );
+		expect( seen ).toBe( false );
+	} );
+
+	test( 'hands the way on back to the link when a page brings nothing new', async ( {
+		page,
+	} ) => {
+		const { some } = SHARED_PHOTOS.bulk;
+		const tiles = page.locator( 'a.dp-pw-tile' );
+		const more = page.locator( 'a.dp-pw-more-link' );
+		const url = withArgs( photosPage, { topic: some.topic.slug } );
+		let parts = 0;
+
+		// A stale cache: the next page answers with the first page again.
+		const stale = await ( await page.request.get( url ) ).text();
+
+		await page.route( /photos-part=1/, ( route ) => {
+			parts++;
+
+			return route.fulfill( {
+				status: 200,
+				contentType: 'text/html',
+				body: stale,
+			} );
+		} );
+
+		await page.setViewportSize( { width: 1440, height: 1000 } );
+		await page.goto( url );
+		await expect( tiles ).toHaveCount( 48 );
+
+		for ( let i = 0; i < 4; i++ ) {
+			await page.evaluate( () =>
+				window.scrollTo( 0, document.body.scrollHeight )
+			);
+			await page.waitForTimeout( 250 );
+		}
+
+		// One request, no loop; the link is back, plain and clickable.
+		expect( parts ).toBe( 1 );
+		await expect( tiles ).toHaveCount( 48 );
+		await expect( more ).toBeVisible();
+		await expect( more ).not.toHaveClass( /is-loading/ );
+		await expect( page.locator( '.dp-pw-loading' ) ).toBeHidden();
+		await expect( page.locator( '.dp-pw-wall' ) ).not.toHaveAttribute(
+			'aria-busy',
+			'true'
+		);
+
+		await more.click();
+		await expect( page ).toHaveURL( /photos-page=2/ );
+		await expect( tiles ).toHaveCount( some.count );
+		expect( parts ).toBe( 1 );
 	} );
 
 	test( 'comes back to the same depth and place on reload', async ( {

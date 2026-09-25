@@ -11,6 +11,7 @@ const {
 	place,
 	columnsFor,
 	shouldAutoLoad,
+	pageLanded,
 	PANORAMA,
 	TALL_CAP,
 	AUTO_LOAD_CAP,
@@ -124,5 +125,23 @@ describe( 'loading more by itself', () => {
 
 	it( 'takes a different cap when asked', () => {
 		expect( shouldAutoLoad( 10, true, false, 8 ) ).toBe( false );
+	} );
+} );
+
+describe( 'a fetched page landing', () => {
+	it( 'carries on when the page asked for brought new photos', () => {
+		expect( pageLanded( 48, 2, 2 ) ).toBe( true );
+		expect( pageLanded( 1, 5, 5 ) ).toBe( true );
+	} );
+
+	it( 'stops on a page with nothing new — a stale cached copy', () => {
+		expect( pageLanded( 0, 2, 2 ) ).toBe( false );
+	} );
+
+	it( 'stops when the page is not the one asked for, or not a wall at all', () => {
+		expect( pageLanded( 48, 2, 1 ) ).toBe( false );
+		expect( pageLanded( 48, 3, 2 ) ).toBe( false );
+		expect( pageLanded( 48, 2, null ) ).toBe( false );
+		expect( pageLanded( 48, 2, NaN ) ).toBe( false );
 	} );
 } );

@@ -44,6 +44,7 @@ final class Photos {
 	 * @param AdminList   $admin_list     The list screens.
 	 * @param BulkRoute   $route      The bulk import's REST route.
 	 * @param BulkScreen  $screen     The bulk import's button and dialog.
+	 * @param CachePurge  $purge      Tells page caches the Photos page changed.
 	 */
 	private function __construct(
 		private readonly PostType $post_type,
@@ -53,7 +54,8 @@ final class Photos {
 		private readonly PhotoWall $wall,
 		private readonly AdminList $admin_list,
 		private readonly BulkRoute $route,
-		private readonly BulkScreen $screen
+		private readonly BulkScreen $screen,
+		private readonly CachePurge $purge
 	) {}
 
 	/**
@@ -76,7 +78,8 @@ final class Photos {
 			new PhotoWall( rtrim( dirname( $plugin_file ), '/' ), $library ),
 			new AdminList( $library ),
 			new BulkRoute( new BulkCreate() ),
-			new BulkScreen( $plugin_file, $version )
+			new BulkScreen( $plugin_file, $version ),
+			new CachePurge()
 		);
 	}
 
@@ -98,5 +101,6 @@ final class Photos {
 		$this->admin_list->register();
 		$this->route->register();
 		$this->screen->register();
+		$this->purge->register();
 	}
 }

@@ -502,4 +502,35 @@ final class PhotoWallTest extends PhotosTestCase {
 			}
 		}
 	}
+
+	/**
+	 * The wall carries the set's change stamp; the stamp argument changes nothing
+	 * and never reaches a printed link.
+	 *
+	 * @return void
+	 */
+	public function test_the_change_stamp_is_printed_and_the_argument_is_harmless(): void {
+		for ( $i = 1; $i <= 50; $i++ ) {
+			$this->photo( array( 'slug' => 'v' . $i ) );
+		}
+
+		$version = ( new Library() )->version();
+		$plain   = $this->render( array( 'photos-page' => '2' ) );
+		$stamped = $this->render(
+			array(
+				'photos-page' => '2',
+				'photos-v'    => 'anything-at-all',
+			)
+		);
+
+		$this->assertStringContainsString( 'data-version="' . $version . '"', $plain );
+		$this->assertStringContainsString( 'data-version-arg="photos-v"', $plain );
+		$this->assertSame( $plain, $stamped );
+		$this->assertStringNotContainsString( 'photos-v=', $stamped );
+
+		// A change to the set is a new stamp.
+		$this->photo( array( 'slug' => 'v51' ) );
+
+		$this->assertNotSame( $version, ( new Library() )->version() );
+	}
 }

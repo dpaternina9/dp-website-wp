@@ -79,6 +79,12 @@
 	/** Tiles fading out after a filter, and the timer that removes each. */
 	const leaving = new WeakMap();
 
+	/** Whether auto-loading has handed the way on back to the link. */
+	let autoStopped = false;
+
+	/** Page URLs that came back without moving the wall on. */
+	const spent = new Set();
+
 	/** The last layout, which an append continues from. */
 	let lastLayout = null;
 
@@ -511,6 +517,11 @@
 
 		adopt( doc, '.dp-pw-filter' );
 		adopt( doc, '.dp-pw-more' );
+
+		// A new filter is a new wall: auto-loading is back in charge of it.
+		autoStopped = false;
+		root.dataset.version = next.dataset.version || root.dataset.version;
+		syncMore();
 		watchMore();
 		adopt( doc, '.dp-pw-spine-current' );
 		adopt( doc, '.dp-pw-dock-open' );
@@ -659,6 +670,14 @@
 		const url = new URL( href );
 
 		url.searchParams.set( root.dataset.partArg || 'photos-part', '1' );
+
+		// The set's change stamp: a changed set is a URL no cache has seen.
+		if ( root.dataset.version ) {
+			url.searchParams.set(
+				root.dataset.versionArg || 'photos-v',
+				root.dataset.version
+			);
+		}
 		url.hash = '';
 
 		return url.href;
@@ -697,7 +716,53 @@
 	}
 
 	/**
+	 * Hand the way on back to the link, for good, on this wall.
+	 *
+	 * Auto-loading stops; every busy state is cleared; the link is shown as a
+	 * plain link, whose click the script no longer intercepts — it navigates to
+	 * its depth URL, which the server draws whole. A new filter is a new wall
+	 * and starts auto-loading again.
+	 */
+	function giveUp() {
+		autoStopped = true;
+		autoLoader.disconnect();
+		syncMore();
+	}
+
+	/**
+	 * Draw the "Show more" row for who is in charge of it.
+	 *
+	 * While auto-loading is in charge — scripts on, the wall short of
+	 * AUTO_LOAD_CAP, and nothing gone wrong — the link is hidden (it stays in
+	 * the document, the path without a script), and while a page is on its way
+	 * the quiet loading line shows in its place. Otherwise the link shows.
+	 */
+	function syncMore() {
+		const row = root.querySelector( '.dp-pw-more' );
+
+		if ( ! row ) {
+			return;
+		}
+
+		const link = row.querySelector( 'a.dp-pw-more-link' );
+		const note = row.querySelector( '.dp-pw-loading' );
+		const auto =
+			! autoStopped &&
+			layoutApi.shouldAutoLoad( tiles().length, !! link, false );
+
+		row.classList.toggle( 'is-auto', auto );
+
+		if ( note ) {
+			note.hidden = ! ( auto && loading );
+		}
+	}
+
+	/**
 	 * Append the next page of the wall, placing only the new tiles.
+	 *
+	 * One request at a time, never the same URL twice once it has come back
+	 * empty, and on any failure the link is handed back (`giveUp()`) rather
+	 * than left waiting.
 	 *
 	 * @return {Promise<HTMLElement[]>} The tiles added.
 	 */
@@ -712,54 +777,80 @@
 			return loading;
 		}
 
-		more.classList.add( 'is-loading' );
+		const url = partUrl( more.href );
+		const expected = Number( more.dataset.page ) || 0;
+
+		if ( spent.has( url ) ) {
+			giveUp();
+
+			return Promise.reject( new Error( 'Already came back empty.' ) );
+		}
+
 		wall.setAttribute( 'aria-busy', 'true' );
 
-		loading = fetchPage( partUrl( more.href ) )
+		loading = fetchPage( url )
 			.then( function ( doc ) {
+				const next = doc.querySelector( '.dp-pw[data-dp-photos]' );
+				const incoming = next
+					? Array.from( next.querySelectorAll( '.dp-pw-wall > *' ) )
+					: [];
+				const fresh = incoming.filter( function ( node ) {
+					return (
+						node.matches( 'a.dp-pw-tile' ) &&
+						! wall.querySelector(
+							'a.dp-pw-tile[data-id="' + node.dataset.id + '"]'
+						)
+					);
+				} );
+				const returned = next ? Number( next.dataset.page ) : null;
+
+				if (
+					! layoutApi.pageLanded( fresh.length, expected, returned )
+				) {
+					spent.add( url );
+					throw new Error( 'The page did not move the wall on.' );
+				}
+
 				const added = [];
 
-				doc.querySelectorAll( '.dp-pw-wall > *' ).forEach(
-					function ( node ) {
-						if (
-							node.matches( 'a.dp-pw-tile' ) &&
-							wall.querySelector(
-								'a.dp-pw-tile[data-id="' +
-									node.dataset.id +
-									'"]'
-							)
-						) {
-							return;
-						}
-
-						const fresh = document.importNode( node, true );
-
-						if ( fresh.matches( 'a.dp-pw-tile' ) ) {
-							added.push( fresh );
-						}
-
-						wall.append( fresh );
+				incoming.forEach( function ( node ) {
+					if (
+						node.matches( 'a.dp-pw-tile' ) &&
+						! fresh.includes( node )
+					) {
+						return;
 					}
-				);
+
+					const imported = document.importNode( node, true );
+
+					if ( imported.matches( 'a.dp-pw-tile' ) ) {
+						added.push( imported );
+					}
+
+					wall.append( imported );
+				} );
 
 				adopt( doc, '.dp-pw-more' );
-				root.dataset.page = doc.querySelector( '.dp-pw' ).dataset.page;
+				root.dataset.page = String( returned );
 				placeNew( added );
-				recordDepth( Number( root.dataset.page ) || 1 );
+				recordDepth( returned );
 				announceLoaded( added.length );
-				watchMore();
 
 				return added;
 			} )
 			.catch( function ( error ) {
-				// The link is still a link: pressing it now navigates.
-				more.classList.remove( 'is-loading' );
+				loading = null;
+				giveUp();
 				throw error;
 			} )
 			.finally( function () {
 				loading = null;
 				wall.removeAttribute( 'aria-busy' );
+				syncMore();
+				watchMore();
 			} );
+
+		syncMore();
 
 		return loading;
 	}
@@ -767,7 +858,14 @@
 	root.addEventListener( 'click', function ( event ) {
 		const more = event.target.closest( 'a.dp-pw-more-link' );
 
-		if ( ! more || event.button !== 0 || event.metaKey || event.ctrlKey ) {
+		if (
+			! more ||
+			autoStopped ||
+			event.button !== 0 ||
+			event.metaKey ||
+			event.ctrlKey
+		) {
+			// Once auto-loading has given up, the link is just a link.
 			return;
 		}
 
@@ -786,9 +884,8 @@
 
 	/*
 	 * The hybrid: while the wall is short of AUTO_LOAD_CAP photos, the next page
-	 * is fetched a viewport before the reader reaches the link; past it, the
-	 * link is the only way on and the footer stays reachable. A failed fetch
-	 * leaves the link exactly as it was, so the next press navigates.
+	 * is fetched a viewport before the reader reaches the end of the wall; past
+	 * it, the link is the only way on and the footer stays reachable.
 	 */
 	const autoLoader = new window.IntersectionObserver(
 		function ( entries ) {
@@ -798,6 +895,7 @@
 
 			if (
 				seen &&
+				! autoStopped &&
 				layoutApi.shouldAutoLoad(
 					tiles().length,
 					!! root.querySelector( 'a.dp-pw-more-link' ),
@@ -816,10 +914,12 @@
 	function watchMore() {
 		autoLoader.disconnect();
 
-		const more = root.querySelector( 'a.dp-pw-more-link' );
+		// The row, not the link: while auto-loading, the link is hidden, and a
+		// hidden element never intersects anything.
+		const row = root.querySelector( '.dp-pw-more' );
 
-		if ( more ) {
-			autoLoader.observe( more );
+		if ( row && ! autoStopped ) {
+			autoLoader.observe( row );
 		}
 	}
 
@@ -1396,6 +1496,7 @@
 	/* ----------------------------------------------------------- Start */
 
 	layout( true );
+	syncMore();
 	watchMore();
 
 	/*
