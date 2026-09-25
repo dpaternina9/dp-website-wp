@@ -13,6 +13,8 @@ use DP\Core\Photos\PhotoWall;
 use DP\Core\Photos\PostType;
 use DP\Core\Photos\Taxonomies;
 use WP_Block_Type_Registry;
+use WP_Error;
+use WP_REST_Request;
 
 /**
  * A photo is data, not a URL; a trip is one choice, a topic is a checkbox.
@@ -46,6 +48,46 @@ final class RegistrationTest extends PhotosTestCase {
 		foreach ( array( 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ) as $feature ) {
 			$this->assertTrue( post_type_supports( PostType::NAME, $feature ), $feature );
 		}
+	}
+
+	/**
+	 * A photo with nothing but an image saves, from the editor as from an import.
+	 *
+	 * Core refuses a post whose title, content and excerpt are all empty with
+	 * `empty_content`; the editor's save of a titleless photo came back 400
+	 * until the post type opted out. Asserted over REST, the path that failed.
+	 *
+	 * @return void
+	 */
+	public function test_a_photo_with_no_text_saves(): void {
+		$this->become( 'editor' );
+
+		$photo = $this->ok(
+			self::factory()->post->create(
+				array(
+					'post_type'   => PostType::NAME,
+					'post_status' => 'draft',
+					'post_title'  => 'Temporary',
+				)
+			)
+		);
+
+		$request = new WP_REST_Request( 'POST', '/wp/v2/' . PostType::NAME . '/' . $photo );
+		$request->set_body_params(
+			array(
+				'title'   => '',
+				'content' => '',
+				'excerpt' => '',
+				'status'  => 'publish',
+			)
+		);
+
+		$response = rest_do_request( $request );
+
+		$this->assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
+		$this->assertSame( 'publish', get_post_status( $photo ) );
+		$this->assertSame( '', get_the_title( $photo ) );
+		$this->assertInstanceOf( WP_Error::class, wp_insert_post( array( 'post_type' => 'post' ), true ), 'Other post types keep the check.' );
 	}
 
 	/**
