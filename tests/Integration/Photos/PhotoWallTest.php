@@ -463,4 +463,43 @@ final class PhotoWallTest extends PhotosTestCase {
 		$this->assertNotEmpty( $tags->get_attribute( 'width' ) );
 		$this->assertNotEmpty( $tags->get_attribute( 'height' ) );
 	}
+
+	/**
+	 * An editor gets an Edit link to each photo; nobody else gets the URL at all.
+	 *
+	 * @return void
+	 */
+	public function test_only_someone_who_can_edit_sees_the_edit_link(): void {
+		$photo = $this->photo( array( 'slug' => 'river' ) );
+
+		// Resolve the URL as an editor would see it; `get_edit_post_link()`
+		// returns nothing for a user who cannot edit.
+		$this->become( 'editor' );
+		$url = (string) get_edit_post_link( $photo, 'raw' );
+
+		$this->assertNotSame( '', $url );
+
+		$wall  = $this->render();
+		$panel = $this->render( array( 'photo' => 'river' ) );
+
+		$this->assertStringContainsString( 'data-edit="' . esc_url( $url ) . '"', $wall );
+		$this->assertStringContainsString( 'dp-pw-edit-float', $wall );
+		$this->assertStringContainsString( 'dp-pw-lb-edit', $wall );
+		$this->assertMatchesRegularExpression( '~<a class="dp-pw-edit dp-pw-panel-edit" href="' . preg_quote( esc_url( $url ), '~' ) . '" aria-label="Edit this photo">.*?<span>Edit</span></a>~s', $panel );
+
+		foreach ( array( 'subscriber', '' ) as $role ) {
+			if ( '' === $role ) {
+				wp_set_current_user( 0 );
+			} else {
+				$this->become( $role );
+			}
+
+			foreach ( array( $this->render(), $this->render( array( 'photo' => 'river' ) ) ) as $html ) {
+				$this->assertStringNotContainsString( 'post.php?post=' . $photo, $html, '' === $role ? 'logged out' : $role );
+				$this->assertStringNotContainsString( esc_url( $url ), $html, '' === $role ? 'logged out' : $role );
+				$this->assertStringNotContainsString( 'data-edit', $html );
+				$this->assertStringNotContainsString( 'dp-pw-edit', $html );
+			}
+		}
+	}
 }
