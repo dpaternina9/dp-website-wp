@@ -5735,6 +5735,11 @@ a.dp-pw-tile.is-out {
 	filter: grayscale(1);
 }
 
+/* A tile the filter has taken off the wall stays gone while the index is lit. */
+.dp-pw-wall[data-hl] a.dp-pw-tile.is-out {
+	opacity: 0;
+}
+
 /* "5 below ↓" — every lit photo is off screen. */
 .dp-pw-hint {
 	position: fixed;
@@ -5778,7 +5783,14 @@ p.dp-pw-more.is-auto a.dp-pw-more-link {
 	display: none;
 }
 
-.dp-pw-loading {
+/* The same quiet line, under the wall, while a filter's page is on its way. */
+p.dp-pw-pending {
+	margin: 32px 0 0;
+	text-align: center;
+}
+
+.dp-pw-loading,
+p.dp-pw-pending {
 	color: var(--text-muted);
 	font-family: var(--font-mono);
 	font-size: var(--fs-xs);
@@ -5787,7 +5799,8 @@ p.dp-pw-more.is-auto a.dp-pw-more-link {
 	text-transform: uppercase;
 }
 
-.dp-pw-loading[hidden] {
+.dp-pw-loading[hidden],
+p.dp-pw-pending[hidden] {
 	display: none;
 }
 

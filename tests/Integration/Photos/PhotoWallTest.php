@@ -221,7 +221,7 @@ final class PhotoWallTest extends PhotosTestCase {
 			$html = $this->render( $query );
 
 			$this->assertSame( array( 'two', 'one' ), $this->tiles( $html ), (string) wp_json_encode( $query ) );
-			$this->assertStringContainsString( '<p class="dp-pw-filter" hidden></p>', $html );
+			$this->assertMatchesRegularExpression( '~<p class="dp-pw-filter"[^>]* hidden></p>~', $html );
 			$this->assertStringNotContainsString( 'dp-pw-panel', $html );
 		}
 	}
@@ -532,5 +532,48 @@ final class PhotoWallTest extends PhotosTestCase {
 		$this->photo( array( 'slug' => 'v51' ) );
 
 		$this->assertNotSame( $version, ( new Library() )->version() );
+	}
+
+	/**
+	 * The filter line carries what the script needs to draw it before the server does.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_line_carries_its_words_for_the_script(): void {
+		$this->photo();
+
+		$html = $this->wall->render_for( array( 'showAllLabel' => 'Everything again' ), array() );
+
+		$this->assertMatchesRegularExpression( '~<p class="dp-pw-filter" data-one="%s photo" data-many="%s photos" data-show-all="Everything again" data-show-all-href="[^"]*" hidden></p>~', $html );
+		$this->assertStringContainsString( '<p class="dp-pw-pending" aria-hidden="true" hidden>Loading more photos…</p>', $html );
+	}
+
+	/**
+	 * Related posts are loaded in one go, however many photos link to one.
+	 *
+	 * @return void
+	 */
+	public function test_related_posts_do_not_cost_a_query_each(): void {
+		global $wpdb;
+
+		$count = static function ( PhotoWall $wall ) use ( $wpdb ): int {
+			wp_cache_flush();
+			$before = $wpdb->num_queries;
+			$wall->render_for( array(), array() );
+
+			return $wpdb->num_queries - $before;
+		};
+
+		for ( $i = 1; $i <= 3; $i++ ) {
+			update_post_meta( $this->photo(), PostType::RELATED_POST, $this->ok( self::factory()->post->create() ) );
+		}
+
+		$few = $count( $this->wall );
+
+		for ( $i = 1; $i <= 12; $i++ ) {
+			update_post_meta( $this->photo(), PostType::RELATED_POST, $this->ok( self::factory()->post->create() ) );
+		}
+
+		$this->assertSame( $few, $count( $this->wall ) );
 	}
 }

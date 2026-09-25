@@ -12,6 +12,8 @@ const {
 	columnsFor,
 	shouldAutoLoad,
 	pageLanded,
+	inFilter,
+	extendsShown,
 	PANORAMA,
 	TALL_CAP,
 	AUTO_LOAD_CAP,
@@ -143,5 +145,33 @@ describe( 'a fetched page landing', () => {
 		expect( pageLanded( 48, 3, 2 ) ).toBe( false );
 		expect( pageLanded( 48, 2, null ) ).toBe( false );
 		expect( pageLanded( 48, 2, NaN ) ).toBe( false );
+	} );
+} );
+
+describe( 'filtering the tiles already on the wall', () => {
+	it( 'matches a trip by the one trip a photo has', () => {
+		expect( inFilter( 'putumayo', '', 'trip', 'putumayo' ) ).toBe( true );
+		expect( inFilter( 'duitama', '', 'trip', 'putumayo' ) ).toBe( false );
+		expect( inFilter( '', '', 'trip', 'putumayo' ) ).toBe( false );
+	} );
+
+	it( 'matches a topic by any of its topics, whole words only', () => {
+		expect( inFilter( '', 'night water', 'topic', 'water' ) ).toBe( true );
+		expect( inFilter( '', 'night water', 'topic', 'night' ) ).toBe( true );
+		expect( inFilter( '', 'nightlife', 'topic', 'night' ) ).toBe( false );
+		expect( inFilter( '', '', 'topic', 'night' ) ).toBe( false );
+	} );
+
+	it( 'matches everything with no filter', () => {
+		expect( inFilter( '', '', '', '' ) ).toBe( true );
+	} );
+
+	it( 'knows when the answer only adds to the end of what is shown', () => {
+		expect( extendsShown( [ 'a', 'b' ], [ 'a', 'b', 'c' ] ) ).toBe( true );
+		expect( extendsShown( [ 'a', 'b' ], [ 'a', 'b' ] ) ).toBe( true );
+		expect( extendsShown( [], [ 'a' ] ) ).toBe( true );
+		expect( extendsShown( [ 'a', 'c' ], [ 'a', 'b', 'c' ] ) ).toBe( false );
+		expect( extendsShown( [ 'b', 'a' ], [ 'a', 'b' ] ) ).toBe( false );
+		expect( extendsShown( [ 'a', 'b', 'c' ], [ 'a', 'b' ] ) ).toBe( false );
 	} );
 } );

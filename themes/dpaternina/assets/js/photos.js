@@ -79,6 +79,15 @@
 	/** Tiles fading out after a filter, and the timer that removes each. */
 	const leaving = new WeakMap();
 
+	/** The newest filter press; an answer to any older one is dropped. */
+	let filterSeq = 0;
+
+	/** Aborts the request behind the newest filter press. */
+	let filterAbort = null;
+
+	/** Whether a filter press is waiting for the server's answer. */
+	let reconciling = false;
+
 	/** Whether auto-loading has handed the way on back to the link. */
 	let autoStopped = false;
 
@@ -275,7 +284,7 @@
 		}
 
 		const slug = entry.dataset.slug;
-		const lit = tiles().filter( function ( tile ) {
+		const lit = shownTiles().filter( function ( tile ) {
 			const on =
 				'trip' === kind
 					? tile.dataset.trip === slug
@@ -354,17 +363,25 @@
 	/**
 	 * A page of the wall, parsed, fetched once per URL.
 	 *
-	 * @param {string} url The page's URL.
+	 * A signal aborts the request only when this call is the one that made it;
+	 * a page a hover already started is shared, and a stale answer from it is
+	 * dropped by the caller instead.
+	 *
+	 * @param {string}       url      The page's URL.
+	 * @param {?AbortSignal} [signal] Aborts the request.
 	 * @return {Promise<Document>} The parsed page.
 	 */
-	function fetchPage( url ) {
+	function fetchPage( url, signal ) {
 		const key = url.split( '#' )[ 0 ];
 
 		if ( ! pages.has( key ) ) {
 			pages.set(
 				key,
 				window
-					.fetch( key, { credentials: 'same-origin' } )
+					.fetch( key, {
+						credentials: 'same-origin',
+						signal: signal || undefined,
+					} )
 					.then( function ( response ) {
 						if ( ! response.ok ) {
 							throw new Error( String( response.status ) );
@@ -438,6 +455,10 @@
 	/**
 	 * Show the wall a fetched page describes, keeping the tiles already here.
 	 *
+	 * The general case of reconciling, which lays the wall out again: used
+	 * when the server's set is not simply the tiles on screen plus some more
+	 * underneath (`reconcile()` handles that case without moving anything).
+	 *
 	 * @param {Document} doc The fetched page.
 	 */
 	function swapIn( doc ) {
@@ -475,6 +496,7 @@
 				window.clearTimeout( leaving.get( old ) );
 				leaving.delete( old );
 				old.classList.remove( 'is-out' );
+				old.inert = false;
 				old.href = node.getAttribute( 'href' );
 				old.dataset.position = node.dataset.position;
 				fragment.append( old );
@@ -527,17 +549,7 @@
 		adopt( doc, '.dp-pw-dock-open' );
 		adopt( doc, '.dp-pw-dock-clear' );
 
-		index.querySelectorAll( 'a.dp-pw-entry' ).forEach( function ( entry ) {
-			const on =
-				entry.dataset.kind === ( root.dataset.filter || '' ) &&
-				entry.dataset.slug === ( root.dataset.filterSlug || '' );
-
-			if ( on ) {
-				entry.setAttribute( 'aria-current', 'page' );
-			} else {
-				entry.removeAttribute( 'aria-current' );
-			}
-		} );
+		markCurrent();
 
 		layout( false );
 
@@ -553,8 +565,6 @@
 				tile.style.opacity = '';
 			} );
 		}
-
-		announce();
 	}
 
 	/**
@@ -580,36 +590,404 @@
 	}
 
 	/**
+	 * Mark the index entry for the filter the wall is showing.
+	 */
+	function markCurrent() {
+		index.querySelectorAll( 'a.dp-pw-entry' ).forEach( function ( entry ) {
+			const on =
+				entry.dataset.kind === ( root.dataset.filter || '' ) &&
+				entry.dataset.slug === ( root.dataset.filterSlug || '' );
+
+			if ( on ) {
+				entry.setAttribute( 'aria-current', 'page' );
+			} else {
+				entry.removeAttribute( 'aria-current' );
+			}
+		} );
+	}
+
+	/**
+	 * The index entry for a filter, or null.
+	 *
+	 * @param {string} kind `trip`, `topic` or ''.
+	 * @param {string} slug The slug, or ''.
+	 * @return {?HTMLAnchorElement} The entry.
+	 */
+	function entryFor( kind, slug ) {
+		return (
+			Array.from( index.querySelectorAll( 'a.dp-pw-entry' ) ).find(
+				function ( entry ) {
+					return (
+						entry.dataset.kind === kind &&
+						entry.dataset.slug === slug
+					);
+				}
+			) || null
+		);
+	}
+
+	/**
+	 * Draw the filter line from an index entry, the way the server draws it.
+	 *
+	 * The name, the date range and the count are all on the entry already; the
+	 * count phrase and the clear link's words are on the line, from the server.
+	 *
+	 * @param {HTMLAnchorElement} entry The entry.
+	 */
+	function drawFilterLine( entry ) {
+		const line = root.querySelector( '.dp-pw-filter' );
+
+		if ( ! line ) {
+			return;
+		}
+
+		if ( ! entry.dataset.kind ) {
+			line.replaceChildren();
+			line.hidden = true;
+
+			return;
+		}
+
+		const count = Number( entry.dataset.count ) || 0;
+		const when = entry.querySelector( '.dp-pw-entry-when' );
+		const part = function ( tag, className, text ) {
+			const node = document.createElement( tag );
+
+			node.className = className;
+			node.textContent = text;
+
+			return node;
+		};
+		const clear = part(
+			'a',
+			'dp-pw-filter-clear',
+			line.dataset.showAll || ''
+		);
+
+		clear.href = line.dataset.showAllHref || '';
+		clear.dataset.kind = '';
+		clear.dataset.slug = '';
+
+		line.replaceChildren(
+			...[
+				part(
+					'strong',
+					'dp-pw-filter-name',
+					entry.querySelector( '.dp-pw-entry-name' ).textContent
+				),
+				when && part( 'span', 'dp-pw-filter-when', when.textContent ),
+				part(
+					'span',
+					'dp-pw-filter-count',
+					( 1 === count
+						? line.dataset.one
+						: line.dataset.many || ''
+					).replace( '%s', count.toLocaleString() )
+				),
+				clear,
+			].filter( Boolean )
+		);
+		line.hidden = false;
+	}
+
+	/**
+	 * Name the filter on the spine and the phone's pill.
+	 *
+	 * @param {HTMLAnchorElement} entry The entry.
+	 */
+	function drawLabels( entry ) {
+		const kind = entry.dataset.kind;
+		const name = entry.querySelector( '.dp-pw-entry-name' ).textContent;
+		const spineCurrent = root.querySelector( '.dp-pw-spine-current' );
+		const label = root.querySelector( '.dp-pw-dock-label' );
+		const count = root.querySelector( '.dp-pw-dock-n' );
+		const clear = root.querySelector( '.dp-pw-dock-clear' );
+
+		if ( spineCurrent ) {
+			spineCurrent.replaceChildren();
+
+			if ( kind ) {
+				const bold = document.createElement( 'b' );
+
+				bold.textContent = name;
+				spineCurrent.append( ' · ', bold );
+			}
+		}
+
+		if ( label ) {
+			label.textContent = kind
+				? name
+				: index.getAttribute( 'aria-label' );
+		}
+
+		if ( count ) {
+			count.textContent = Number(
+				entry.dataset.count || 0
+			).toLocaleString();
+		}
+
+		if ( clear ) {
+			clear.hidden = ! kind;
+		}
+	}
+
+	/**
+	 * The tiles showing now, in wall order.
+	 *
+	 * @return {HTMLAnchorElement[]} The tiles.
+	 */
+	function shownTiles() {
+		return tiles().filter( function ( tile ) {
+			return ! tile.classList.contains( 'is-out' );
+		} );
+	}
+
+	/**
+	 * The quiet line under the wall while the filtered page is on its way.
+	 *
+	 * Shown only when it would tell the reader something: when the wall holds
+	 * fewer photos than the entry says the filter has. The wall is `aria-busy`
+	 * for the same span.
+	 */
+	function syncPending() {
+		const note = root.querySelector( '.dp-pw-pending' );
+		const entry = entryFor(
+			root.dataset.filter || '',
+			root.dataset.filterSlug || ''
+		);
+		const short =
+			!! reconciling &&
+			!! entry &&
+			shownTiles().length < Number( entry.dataset.count || 0 );
+
+		if ( note ) {
+			note.hidden = ! short;
+		}
+
+		if ( short ) {
+			wall.setAttribute( 'aria-busy', 'true' );
+		} else if ( ! loading ) {
+			wall.removeAttribute( 'aria-busy' );
+		}
+	}
+
+	/**
+	 * Filter the wall now, from what is already on it.
+	 *
+	 * Everything the reader sees change on a press happens here, in the same
+	 * frame: the entry is marked, the line and the labels say the filter, and
+	 * the tiles already on the wall that match glide into place while the rest
+	 * fade out. The server's answer then only adds what the wall did not have.
+	 *
+	 * @param {string} kind `trip`, `topic` or ''.
+	 * @param {string} slug The slug, or ''.
+	 * @return {boolean} Whether there was an entry to filter by.
+	 */
+	function applyLocal( kind, slug ) {
+		const entry = entryFor( kind, slug );
+
+		if ( ! entry ) {
+			return false;
+		}
+
+		root.dataset.filter = kind;
+		root.dataset.filterSlug = slug;
+		markCurrent();
+		drawFilterLine( entry );
+		drawLabels( entry );
+		showEdit( null );
+
+		tiles().forEach( function ( tile ) {
+			const on = layoutApi.inFilter(
+				tile.dataset.trip || '',
+				tile.dataset.topics || '',
+				kind,
+				slug
+			);
+
+			window.clearTimeout( leaving.get( tile ) );
+			leaving.delete( tile );
+			tile.classList.toggle( 'is-out', ! on );
+			tile.inert = ! on;
+		} );
+
+		// The "Show more" row belongs to the wall that was; the server's answer
+		// brings this one's.
+		autoLoader.disconnect();
+
+		const row = root.querySelector( '.dp-pw-more' );
+
+		if ( row ) {
+			row.hidden = true;
+		}
+
+		layout( false );
+		announce();
+
+		return true;
+	}
+
+	/**
+	 * Bring the wall in line with the server's answer, moving as little as possible.
+	 *
+	 * When the answer is the tiles on screen plus more after them — the usual
+	 * case, and the only one when the wall held every photo — the extra tiles
+	 * are placed underneath and nothing on screen moves; when it is exactly
+	 * the tiles on screen, nothing visible changes at all. Anything else falls
+	 * back to `swapIn()`, which lays the wall out again.
+	 *
+	 * @param {Document} doc   The filtered page.
+	 * @param {boolean}  local Whether `applyLocal()` already drew this filter.
+	 */
+	function reconcile( doc, local ) {
+		const next = doc.querySelector( '.dp-pw[data-dp-photos]' );
+
+		if ( ! next ) {
+			throw new Error( 'No wall in the response.' );
+		}
+
+		const serverTiles = Array.from(
+			next.querySelectorAll( '.dp-pw-wall > a.dp-pw-tile' )
+		);
+		const shown = shownTiles();
+
+		if (
+			! local ||
+			! layoutApi.extendsShown(
+				shown.map( function ( tile ) {
+					return tile.dataset.id;
+				} ),
+				serverTiles.map( function ( tile ) {
+					return tile.dataset.id;
+				} )
+			)
+		) {
+			swapIn( doc );
+
+			if ( ! local ) {
+				announce();
+			}
+
+			return;
+		}
+
+		[ 'total', 'page', 'pages', 'filter', 'filterSlug' ].forEach(
+			function ( key ) {
+				root.dataset[ key ] = next.dataset[ key ] || '';
+			}
+		);
+		root.dataset.version = next.dataset.version || root.dataset.version;
+
+		// What the filter hid is not coming back on this wall.
+		tiles().forEach( function ( tile ) {
+			if ( tile.classList.contains( 'is-out' ) ) {
+				const details = wall.querySelector(
+					'template[data-for="' + tile.dataset.id + '"]'
+				);
+
+				if ( details ) {
+					details.remove();
+				}
+
+				tile.remove();
+			}
+		} );
+
+		const added = [];
+
+		serverTiles.slice( shown.length ).forEach( function ( node ) {
+			const fresh = document.importNode( node, true );
+			const details = next.querySelector(
+				'.dp-pw-wall > template[data-for="' + node.dataset.id + '"]'
+			);
+
+			wall.append( fresh );
+
+			if ( details ) {
+				wall.append( document.importNode( details, true ) );
+			}
+
+			added.push( fresh );
+		} );
+
+		shown.forEach( function ( tile, position ) {
+			tile.href = serverTiles[ position ].getAttribute( 'href' );
+			tile.dataset.position = serverTiles[ position ].dataset.position;
+		} );
+
+		placeNew( added );
+		adopt( doc, '.dp-pw-more' );
+
+		autoStopped = false;
+		syncMore();
+		watchMore();
+		markCurrent();
+	}
+
+	/**
 	 * Filter the wall to what a link points at.
+	 *
+	 * At once from the tiles on the wall (`applyLocal()`), then from the
+	 * server's answer (`reconcile()`). Only the newest press counts: an older
+	 * request still out is aborted, and an older answer that lands anyway is
+	 * dropped. If the answer never comes, the link is followed.
 	 *
 	 * @param {string}  url  The link's URL.
 	 * @param {boolean} push Whether this is a new history entry.
-	 * @return {Promise<void>} Settles when the wall has changed.
+	 * @return {Promise<void>} Settles when the wall has been reconciled.
 	 */
 	function filterTo( url, push ) {
-		root.setAttribute( 'aria-busy', 'true' );
+		const seq = ++filterSeq;
+		const params = new URL( url ).searchParams;
+		const kind = [ 'trip', 'topic' ].find( function ( arg ) {
+			return params.has( arg );
+		} );
+		const local = applyLocal(
+			kind || '',
+			kind ? params.get( kind ) || '' : ''
+		);
 
-		return fetchPage( url )
+		if ( filterAbort ) {
+			filterAbort.abort();
+		}
+
+		const controller = new window.AbortController();
+
+		filterAbort = controller;
+		reconciling = true;
+		syncPending();
+
+		if ( push ) {
+			window.history.pushState( { dpPhotos: true }, '', url );
+		}
+
+		if ( body.getBoundingClientRect().top < 0 ) {
+			body.scrollIntoView( {
+				behavior: quiet.matches ? 'auto' : 'smooth',
+				block: 'start',
+			} );
+		}
+
+		return fetchPage( url, controller.signal )
 			.then( function ( doc ) {
-				swapIn( doc );
-
-				if ( push ) {
-					window.history.pushState( { dpPhotos: true }, '', url );
-				}
-
-				if ( body.getBoundingClientRect().top < 0 ) {
-					body.scrollIntoView( {
-						behavior: quiet.matches ? 'auto' : 'smooth',
-						block: 'start',
-					} );
+				if ( seq === filterSeq ) {
+					reconcile( doc, local );
 				}
 			} )
-			.catch( function () {
+			.catch( function ( error ) {
+				if ( seq !== filterSeq || 'AbortError' === error?.name ) {
+					return;
+				}
+
 				// The upgrade failed; do what the link would have done.
 				window.location.assign( url );
 			} )
 			.finally( function () {
-				root.removeAttribute( 'aria-busy' );
+				if ( seq === filterSeq ) {
+					reconciling = false;
+					filterAbort = null;
+					syncPending();
+				}
 			} );
 	}
 
