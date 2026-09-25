@@ -49,6 +49,8 @@ module.exports = {
 			'<rootDir>/tests/js/__mocks__/wordpress-editor.js',
 		'^@wordpress/html-entities$':
 			'<rootDir>/tests/js/__mocks__/wordpress-html-entities.js',
+		'^@wordpress/notices$':
+			'<rootDir>/tests/js/__mocks__/wordpress-notices.js',
 		'^@wordpress/plugins$':
 			'<rootDir>/tests/js/__mocks__/wordpress-plugins.js',
 		'^@wordpress/server-side-render$':

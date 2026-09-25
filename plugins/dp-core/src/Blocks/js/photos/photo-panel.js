@@ -16,23 +16,25 @@
  *   when it was taken, the panel offers that as the publish date. It never
  *   applies it: the date changes only when David presses the button.
  *
- * **The Save row.** WordPress will not save a post whose title, excerpt and
- * content are all empty — `isEditedPostSaveable()` — and an imported photo is
- * exactly that, by design: no title is shown as no title. So on a photo with
- * unsaved changes and nothing WordPress counts as content, the Photo panel
- * says so and offers to save or publish it directly through the entity record.
+ * **The save notice.** WordPress will not save a post whose title, excerpt
+ * and content are all empty — `isEditedPostSaveable()` — and an imported photo
+ * is exactly that, by design: no title is shown as no title. So on a photo with
+ * unsaved changes and nothing WordPress counts as content, the notice bar above
+ * the canvas says so and offers to save or publish it directly through the
+ * entity record.
  *
  * WordPress dependencies
  */
-import { Button, ComboboxControl, Notice } from '@wordpress/components';
+import { Button, ComboboxControl } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import {
 	PluginDocumentSettingPanel,
 	store as editorStore,
 } from '@wordpress/editor';
-import { useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
+import { store as noticesStore } from '@wordpress/notices';
 import { getPlugin, registerPlugin } from '@wordpress/plugins';
 
 /**
@@ -269,14 +271,27 @@ function Camera() {
 }
 
 /**
- * The save row, for a photo WordPress's own Save button refuses.
+ * The id of the save notice, so there is only ever one.
+ *
+ * @type {string}
+ */
+const SAVE_NOTICE_ID = 'dp-photo-save';
+
+/**
+ * The save notice, for a photo WordPress's own Save button refuses.
+ *
+ * It lives in the editor's notice bar above the canvas rather than in a sidebar
+ * panel: a panel can be collapsed, or hidden behind the Block tab or a closed
+ * sidebar, and then a photo has no way to save and nothing saying why. The
+ * notice is there whenever the photo has unsaved changes and nothing WordPress
+ * counts as content, and goes as soon as either stops being true.
  *
  * @param {Object} props          Component props.
  * @param {string} props.postType The post type being edited.
  * @param {number} props.postId   The post being edited.
- * @return {?JSX.Element} The notice, or nothing when core's button works.
+ * @return {null} Renders nothing itself.
  */
-function SaveRow( { postType, postId } ) {
+function SaveNotice( { postType, postId } ) {
 	const { refused, status } = useSelect( ( select ) => {
 		const editor = select( editorStore );
 
@@ -291,37 +306,52 @@ function SaveRow( { postType, postId } ) {
 
 	const { editPost } = useDispatch( editorStore );
 	const { saveEditedEntityRecord } = useDispatch( coreStore );
+	const { createNotice, removeNotice } = useDispatch( noticesStore );
 
-	if ( ! refused ) {
-		return null;
-	}
+	useEffect( () => {
+		if ( ! refused ) {
+			removeNotice( SAVE_NOTICE_ID );
+			return;
+		}
 
-	const save = () => saveEditedEntityRecord( 'postType', postType, postId );
+		const save = () =>
+			saveEditedEntityRecord( 'postType', postType, postId );
+		const actions = [
+			{ label: __( 'Save photo', 'dp-core' ), onClick: save },
+		];
 
-	return (
-		<Notice status="info" isDismissible={ false }>
-			<p>
-				{ __(
-					'This photo has no title, excerpt or story, so the Save button above is switched off. That is fine — the page prints nothing for them. Save it here instead.',
-					'dp-core'
-				) }
-			</p>
-			<Button variant="secondary" onClick={ save }>
-				{ __( 'Save photo', 'dp-core' ) }
-			</Button>
-			{ 'publish' !== status && (
-				<Button
-					variant="primary"
-					onClick={ () => {
-						editPost( { status: 'publish' } );
-						save();
-					} }
-				>
-					{ __( 'Publish photo', 'dp-core' ) }
-				</Button>
-			) }
-		</Notice>
-	);
+		if ( 'publish' !== status ) {
+			actions.push( {
+				label: __( 'Publish photo', 'dp-core' ),
+				onClick: () => {
+					editPost( { status: 'publish' } );
+					save();
+				},
+			} );
+		}
+
+		createNotice(
+			'info',
+			__(
+				'This photo has no title, excerpt or story, so WordPress switches its own Save button off. That is fine — the page prints nothing for them. Save it here instead.',
+				'dp-core'
+			),
+			{ id: SAVE_NOTICE_ID, isDismissible: false, actions }
+		);
+	}, [
+		refused,
+		status,
+		postType,
+		postId,
+		createNotice,
+		removeNotice,
+		editPost,
+		saveEditedEntityRecord,
+	] );
+
+	useEffect( () => () => removeNotice( SAVE_NOTICE_ID ), [ removeNotice ] );
+
+	return null;
 }
 
 /**
@@ -344,11 +374,11 @@ export function PhotoPanels() {
 
 	return (
 		<>
+			<SaveNotice postType={ postType } postId={ postId } />
 			<PluginDocumentSettingPanel
 				name={ `${ PHOTO_PANEL_NAME }-photo` }
 				title={ __( 'Photo', 'dp-core' ) }
 			>
-				<SaveRow postType={ postType } postId={ postId } />
 				<RelatedPost postType={ postType } postId={ postId } />
 			</PluginDocumentSettingPanel>
 			<PluginDocumentSettingPanel

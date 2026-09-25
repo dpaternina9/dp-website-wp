@@ -9,6 +9,7 @@ declare( strict_types=1 );
 
 namespace DP\Core\Photos;
 
+use WP_Post;
 use WP_Query;
 use WP_Term;
 
@@ -51,6 +52,13 @@ final class AdminList {
 	public const DONE_ARG = 'dp-trip-set';
 
 	/**
+	 * The Quick Edit trip select's field name.
+	 *
+	 * @var string
+	 */
+	public const QUICK_TRIP = 'dp_quick_trip';
+
+	/**
 	 * The column on the Trips screen.
 	 *
 	 * @var string
@@ -77,6 +85,9 @@ final class AdminList {
 		add_action( 'admin_notices', $this->notice( ... ) );
 		add_filter( 'manage_edit-' . Taxonomies::TRIP . '_columns', $this->trip_columns( ... ) );
 		add_filter( 'manage_' . Taxonomies::TRIP . '_custom_column', $this->trip_column( ... ), 10, 3 );
+		add_action( 'quick_edit_custom_box', $this->quick_edit_trip( ... ), 10, 2 );
+		add_action( 'add_inline_data', $this->inline_trip( ... ) );
+		add_action( 'save_post_' . PostType::NAME, $this->save_quick_edit_trip( ... ) );
 	}
 
 	/**
@@ -214,6 +225,93 @@ final class AdminList {
 		}
 
 		return add_query_arg( self::DONE_ARG, (string) $changed, $redirect );
+	}
+
+	/**
+	 * A single-choice Trip select in Quick Edit.
+	 *
+	 * Core's own Quick Edit field for a taxonomy is a set of checkboxes, which
+	 * would let a photo take two trips, so `dp_trip` opts out of it
+	 * (`show_in_quick_edit`) and gets this instead: one select, drawn in the
+	 * trip column's slot. `photo-bulk.js` selects the row's current trip when
+	 * the panel opens, from the value `inline_trip()` leaves in the row.
+	 *
+	 * @param string $column    The column the box is for.
+	 * @param string $post_type The screen's post type.
+	 * @return void
+	 */
+	public function quick_edit_trip( string $column, string $post_type ): void {
+		if ( PostType::NAME !== $post_type || 'taxonomy-' . Taxonomies::TRIP !== $column ) {
+			return;
+		}
+
+		$trips = get_terms(
+			array(
+				'taxonomy'   => Taxonomies::TRIP,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+
+		$options = '<option value="0">' . esc_html__( '— No trip —', 'dp-core' ) . '</option>';
+
+		foreach ( is_array( $trips ) ? $trips : array() as $trip ) {
+			if ( $trip instanceof WP_Term ) {
+				$options .= '<option value="' . esc_attr( (string) $trip->term_id ) . '">' . esc_html( $trip->name ) . '</option>';
+			}
+		}
+
+		echo '<fieldset class="inline-edit-col-right dp-quick-trip"><div class="inline-edit-col"><label class="inline-edit-group">'
+			. '<span class="title">' . esc_html__( 'Trip', 'dp-core' ) . '</span>'
+			. '<select name="' . esc_attr( self::QUICK_TRIP ) . '">' . $options . '</select>' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- every option is escaped above.
+			. '</label></div></fieldset>';
+	}
+
+	/**
+	 * Leave the row's trip where Quick Edit's script can find it.
+	 *
+	 * @param WP_Post $post The row's post.
+	 * @return void
+	 */
+	public function inline_trip( WP_Post $post ): void {
+		if ( PostType::NAME !== $post->post_type ) {
+			return;
+		}
+
+		$terms = wp_get_object_terms( $post->ID, Taxonomies::TRIP, array( 'fields' => 'ids' ) );
+		$trip  = is_array( $terms ) && isset( $terms[0] ) ? (int) $terms[0] : 0;
+
+		echo '<div class="dp_trip">' . esc_html( (string) $trip ) . '</div>';
+	}
+
+	/**
+	 * Save the Quick Edit trip — and only when Quick Edit sent one.
+	 *
+	 * Bulk Edit and every other save leave the trip alone: the field has to be
+	 * in the request, which only the Quick Edit panel puts there.
+	 *
+	 * @param int $post_id The photo being saved.
+	 * @return void
+	 */
+	public function save_quick_edit_trip( int $post_id ): void {
+		if ( ! wp_doing_ajax() || ! check_ajax_referer( 'inlineeditnonce', '_inline_edit', false ) ) {
+			return;
+		}
+
+		if ( ! isset( $_POST[ self::QUICK_TRIP ] ) || ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$raw = wp_unslash( $_POST[ self::QUICK_TRIP ] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- narrowed to a numeric string on the next line, then absint().
+
+		$term_id = is_string( $raw ) && ctype_digit( $raw ) ? absint( $raw ) : 0;
+		$term    = $term_id > 0 ? get_term( $term_id, Taxonomies::TRIP ) : null;
+
+		if ( $term_id > 0 && ! $term instanceof WP_Term ) {
+			return;
+		}
+
+		wp_set_object_terms( $post_id, $term instanceof WP_Term ? array( $term->term_id ) : array(), Taxonomies::TRIP, false );
 	}
 
 	/**
