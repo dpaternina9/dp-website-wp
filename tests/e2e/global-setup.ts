@@ -234,6 +234,16 @@ export const SHARED_PHOTOS = {
 		count: 200,
 		slug: ( index: number ) =>
 			`e2e-bulk-${ String( index ).padStart( 3, '0' ) }`,
+
+		/*
+		 * The first sixty of them also carry this topic: a wall of more than
+		 * one page and fewer than the auto-load cap, which scrolls to its end
+		 * with no "Show more" ever on screen.
+		 */
+		some: {
+			topic: { slug: 'e2e-topic-sixty', name: 'Photo fixture — sixty' },
+			count: 60,
+		},
 	},
 	photos: [
 		{
@@ -806,21 +816,32 @@ async function establishBulkPhotos(
 		bulk.trip.name
 	);
 
-	const have = new Set< string >();
+	const sixty = await establishPhotoTerm(
+		requestUtils,
+		'dp_topic',
+		bulk.some.topic.slug,
+		bulk.some.topic.name
+	);
+	const topicsFor = ( index: number ) =>
+		index <= bulk.some.count ? [ sixty ] : [];
+
+	const have = new Map< string, { id: number; dp_topic: number[] } >();
 
 	for ( let page = 1; page <= Math.ceil( bulk.count / 100 ); page++ ) {
-		const found = await requestUtils.rest< Array< { slug: string } > >( {
+		const found = await requestUtils.rest<
+			Array< { id: number; slug: string; dp_topic: number[] } >
+		>( {
 			path: '/wp/v2/dp_photo',
 			params: {
 				dp_trip: trip,
 				status: 'any',
 				per_page: 100,
 				page,
-				_fields: 'slug',
+				_fields: 'id,slug,dp_topic',
 			},
 		} );
 
-		found.forEach( ( photo ) => have.add( photo.slug ) );
+		found.forEach( ( photo ) => have.set( photo.slug, photo ) );
 
 		if ( found.length < 100 ) {
 			break;
@@ -831,6 +852,38 @@ async function establishBulkPhotos(
 		{ length: bulk.count },
 		( _, index ) => index + 1
 	).filter( ( index ) => ! have.has( bulk.slug( index ) ) );
+
+	// Photos made before the topic existed get it now, in one batch.
+	const refile = Array.from(
+		{ length: bulk.count },
+		( _, index ) => index + 1
+	).filter( ( index ) => {
+		const photo = have.get( bulk.slug( index ) );
+
+		return (
+			photo &&
+			photo.dp_topic.includes( sixty ) !== topicsFor( index ).length > 0
+		);
+	} );
+
+	for ( let start = 0; start < refile.length; start += 25 ) {
+		await requestUtils.rest( {
+			path: '/batch/v1',
+			method: 'POST',
+			data: {
+				validation: 'normal',
+				requests: refile
+					.slice( start, start + 25 )
+					.map( ( index ) => ( {
+						method: 'POST',
+						path: `/wp/v2/dp_photo/${
+							have.get( bulk.slug( index ) )!.id
+						}`,
+						body: { dp_topic: topicsFor( index ) },
+					} ) ),
+			},
+		} );
+	}
 
 	if ( ! missing.length ) {
 		return;
@@ -870,6 +923,7 @@ async function establishBulkPhotos(
 								.slice( 0, 19 ),
 							featured_media: media,
 							dp_trip: [ trip ],
+							dp_topic: topicsFor( index ),
 						},
 					} ) ),
 			},

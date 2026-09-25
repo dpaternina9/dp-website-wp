@@ -5688,11 +5688,6 @@ a.dp-pw-tile.is-pointed img.dp-pw-img {
 	transition: none;
 }
 
-/* Loading the next page: the link stays where it is and says so quietly. */
-a.dp-pw-more-link.is-loading {
-	color: var(--text-muted);
-	pointer-events: none;
-}
 
 .dp-pw-tag {
 	position: absolute;
@@ -5765,8 +5760,35 @@ a.dp-pw-tile.is-out {
 }
 
 p.dp-pw-more {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--control-h-md);
 	margin: 32px 0 0;
-	text-align: center;
+}
+
+/*
+ * While the script is loading pages by itself the link is not shown — it stays
+ * in the document as the way on without a script — and the row keeps the
+ * link's height, so the quiet loading line takes its place without moving
+ * anything. Once auto-loading hands over (the cap, or a page that did not
+ * land), `.is-auto` goes and the link is back.
+ */
+p.dp-pw-more.is-auto a.dp-pw-more-link {
+	display: none;
+}
+
+.dp-pw-loading {
+	color: var(--text-muted);
+	font-family: var(--font-mono);
+	font-size: var(--fs-xs);
+	line-height: 1;
+	letter-spacing: var(--ls-caps);
+	text-transform: uppercase;
+}
+
+.dp-pw-loading[hidden] {
+	display: none;
 }
 
 a.dp-pw-more-link {

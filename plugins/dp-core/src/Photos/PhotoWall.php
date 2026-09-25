@@ -79,6 +79,17 @@ final class PhotoWall {
 	public const PART_ARG = 'photos-part';
 
 	/**
+	 * The query arg the script stamps its page fetches with.
+	 *
+	 * Carries `Library::version()` and is read by nothing: its only job is to
+	 * make the URL of a page of a changed set one that no cache has stored.
+	 * Never printed in a link.
+	 *
+	 * @var string
+	 */
+	public const VERSION_ARG = 'photos-v';
+
+	/**
 	 * The query arg that opens one photo.
 	 *
 	 * @var string
@@ -225,6 +236,8 @@ final class PhotoWall {
 				'data-page-arg'    => self::PAGE_ARG,
 				'data-part-arg'    => self::PART_ARG,
 				'data-per-page'    => (string) self::PER_PAGE,
+				'data-version-arg' => self::VERSION_ARG,
+				'data-version'     => $this->library->version(),
 				'data-photo-arg'   => self::PHOTO_ARG,
 				'data-filter'      => $filter->kind,
 				'data-filter-slug' => $filter->slug(),
@@ -613,7 +626,16 @@ final class PhotoWall {
 			return '';
 		}
 
-		return '<p class="dp-pw-more"><a class="dp-pw-more-link" href="' . esc_url( $links->page( $page + 1 ) . '#' . self::page_anchor( $page + 1 ) ) . '" data-page="' . esc_attr( (string) ( $page + 1 ) ) . '">' . esc_html( $this->copy['showMoreLabel'] ) . '</a></p>';
+		/*
+		 * The loading row is the script's to show, in the link's place, while
+		 * it fetches the next page by itself; the link is the way on without a
+		 * script, past the auto-load cap, and whenever auto-loading gives up.
+		 * `aria-hidden`: the wall's `aria-busy` and the polite status already
+		 * say what is happening.
+		 */
+		$loading = '<span class="dp-pw-loading" aria-hidden="true" hidden>' . esc_html__( 'Loading more photos…', 'dp-core' ) . '</span>';
+
+		return '<p class="dp-pw-more"><a class="dp-pw-more-link" href="' . esc_url( $links->page( $page + 1 ) . '#' . self::page_anchor( $page + 1 ) ) . '" data-page="' . esc_attr( (string) ( $page + 1 ) ) . '">' . esc_html( $this->copy['showMoreLabel'] ) . '</a>' . $loading . '</p>';
 	}
 
 	/**
@@ -915,7 +937,7 @@ final class PhotoWall {
 			}
 		}
 
-		return remove_query_arg( array( Filter::TRIP, Filter::TOPIC, self::PHOTO_ARG, self::PAGE_ARG, self::PART_ARG ) );
+		return remove_query_arg( array( Filter::TRIP, Filter::TOPIC, self::PHOTO_ARG, self::PAGE_ARG, self::PART_ARG, self::VERSION_ARG ) );
 	}
 
 	/**
