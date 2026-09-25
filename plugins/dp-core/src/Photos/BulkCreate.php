@@ -55,52 +55,43 @@ final class BulkCreate {
 	 * @return BulkReport
 	 */
 	public function run( array $attachments, int $trip, array $topics, string $status, int $author ): BulkReport {
-		$status  = in_array( $status, self::STATUSES, true ) ? $status : 'draft';
-		$trip    = $trip > 0 && get_term( $trip, Taxonomies::TRIP ) instanceof WP_Term ? $trip : 0;
-		$topics  = array_values(
+		$status = in_array( $status, self::STATUSES, true ) ? $status : 'draft';
+		$trip   = $trip > 0 && get_term( $trip, Taxonomies::TRIP ) instanceof WP_Term ? $trip : 0;
+		$topics = array_values(
 			array_filter(
 				array_unique( $topics ),
 				static fn ( int $id ): bool => $id > 0 && get_term( $id, Taxonomies::TOPIC ) instanceof WP_Term
 			)
 		);
-		$ids     = array_values( array_unique( array_filter( $attachments, static fn ( int $id ): bool => $id > 0 ) ) );
-		$backed  = $this->already_backed( $ids );
-		$report  = new BulkReport();
-		$suspend = static fn (): bool => false;
+		$ids    = array_values( array_unique( array_filter( $attachments, static fn ( int $id ): bool => $id > 0 ) ) );
+		$backed = $this->already_backed( $ids );
+		$report = new BulkReport();
 
 		/*
-		 * `wp_insert_post()` refuses a post whose title, content and excerpt are
-		 * all empty — and an imported photo is exactly that, on purpose. The
-		 * filter is lifted for these inserts and put back straight after, so
-		 * nothing else on the request loses the check.
+		 * An imported photo has no title, excerpt or story, on purpose; that it
+		 * saves at all is `PostType::allow_empty()`'s doing, for every photo.
 		 */
-		add_filter( 'wp_insert_post_empty_content', $suspend );
+		foreach ( $ids as $id ) {
+			$attachment = get_post( $id );
 
-		try {
-			foreach ( $ids as $id ) {
-				$attachment = get_post( $id );
-
-				if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type || ! wp_attachment_is_image( $attachment ) ) {
-					$report->skip( $id, BulkReport::NOT_AN_IMAGE );
-					continue;
-				}
-
-				if ( isset( $backed[ $id ] ) ) {
-					$report->skip( $id, BulkReport::ALREADY_A_PHOTO );
-					continue;
-				}
-
-				$photo = $this->create( $id, $trip, $topics, $status, $author );
-
-				if ( $photo > 0 ) {
-					$report->create( $id, $photo );
-					$backed[ $id ] = true;
-				} else {
-					$report->skip( $id, BulkReport::REFUSED );
-				}
+			if ( ! $attachment instanceof WP_Post || 'attachment' !== $attachment->post_type || ! wp_attachment_is_image( $attachment ) ) {
+				$report->skip( $id, BulkReport::NOT_AN_IMAGE );
+				continue;
 			}
-		} finally {
-			remove_filter( 'wp_insert_post_empty_content', $suspend );
+
+			if ( isset( $backed[ $id ] ) ) {
+				$report->skip( $id, BulkReport::ALREADY_A_PHOTO );
+				continue;
+			}
+
+			$photo = $this->create( $id, $trip, $topics, $status, $author );
+
+			if ( $photo > 0 ) {
+				$report->create( $id, $photo );
+				$backed[ $id ] = true;
+			} else {
+				$report->skip( $id, BulkReport::REFUSED );
+			}
 		}
 
 		return $report;

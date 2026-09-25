@@ -116,6 +116,25 @@ final class PostType {
 				),
 			)
 		);
+
+		add_filter( 'wp_insert_post_empty_content', self::allow_empty( ... ), 10, 2 );
+	}
+
+	/**
+	 * A photo with no title, excerpt or story is still a photo.
+	 *
+	 * `wp_insert_post()` refuses a post whose title, content and excerpt are all
+	 * empty when its type supports all three — `empty_content`, a 400 over REST.
+	 * For a photo that is the ordinary case: the image is the content, and every
+	 * text field is optional. Without this the editor's own save, and the Photo
+	 * panel's "Save photo", both fail on exactly the photos an import creates.
+	 *
+	 * @param bool                 $maybe_empty What core decided.
+	 * @param array<string, mixed> $postarr     The post being saved.
+	 * @return bool
+	 */
+	public static function allow_empty( bool $maybe_empty, array $postarr ): bool {
+		return self::NAME === ( $postarr['post_type'] ?? null ) ? false : $maybe_empty;
 	}
 
 	/**
